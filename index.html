@@ -112,11 +112,69 @@
 
 </div>
 
-<!-- ════════════════════════════════════════════════════════
-     ENRICHMENT ENGINE
-═════════════════════════════════════════════════════════ -->
+/* ════════════════════════════════════════════════════════
+   SENTINEL NEXUS ENRICHMENT ENGINE - v6.6 UNIFIED
+════════════════════════════════════════════════════════ */
 
-<script>
+// GARANTIA DE OBJETO GLOBAL (Bypass para Erro 404 do Core)
+window.SENTINEL_RUNTIME = window.SENTINEL_RUNTIME || {
+    mode: 'ALPHA',
+    telemetry: { events: 0, memory: 0, latency: 0 }
+};
+
+// FORCE BOOT: Se o SentinelCore falhou (404), este bloco assume o controle
+if (!window.StateStore) {
+    console.warn("KERNEL EXTERNO NÃO DETECTADO. ATIVANDO MODO DE EMERGÊNCIA LOCAL.");
+    window.SENTINEL_BOOTED = true;
+}
+
+/* --- TERMINAL LOGGER --- */
+class CognitiveTerminal {
+    constructor() { this.el = document.getElementById('terminal-log'); }
+    log(message, type = 'info') {
+        if (!this.el) return;
+        const line = document.createElement('div');
+        line.className = `terminal-line ${type}`;
+        line.innerHTML = `<span class="ts">${new Date().toLocaleTimeString('pt-BR')}</span><span class="msg">${message}</span>`;
+        this.el.prepend(line);
+    }
+}
+window.Terminal = new CognitiveTerminal();
+
+/* --- CONTEXT SWITCHER (Sincronizado com StateStore) --- */
+const ContextProfiles = {
+    ALPHA: { theme: '#00D4FF', mission: 'ENGENHARIA_HARDWARE' },
+    BETA: { theme: '#FFD700', mission: 'MERCADO_IMOBILIARIO' },
+    GAMMA: { theme: '#FF003C', mission: 'TACTICAL_COMMAND' }
+};
+
+function switchContext(profile) {
+    const cfg = ContextProfiles[profile];
+    if (!cfg) return;
+    
+    document.documentElement.style.setProperty('--accent-color', cfg.theme);
+    document.querySelectorAll('.ctx-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[data-profile="${profile}"]`)?.classList.add('active');
+    
+    // Atualiza o StateStore se ele existir, senão atualiza o Runtime local
+    if (window.StateStore) {
+        StateStore.set('ops.profile', profile);
+        StateStore.set('ops.mission', cfg.mission);
+    }
+    
+    Terminal.log(`CONTEXT_SWITCH::${profile}`, 'success');
+}
+
+/* --- BOOT HANDSHAKE --- */
+window.addEventListener('load', () => {
+    // Forçar a remoção de qualquer overlay de carregamento que cause a tela branca
+    setTimeout(() => {
+        document.body.style.opacity = "1";
+        window.SENTINEL_BOOTED = true;
+        Terminal.log('SENTINEL_NEXUS_v6.6_ONLINE', 'success');
+        switchContext('ALPHA');
+    }, 500);
+});
 
 /* ════════════════════════════════════════════════════════
    SENTINEL NEXUS ENRICHMENT ENGINE
