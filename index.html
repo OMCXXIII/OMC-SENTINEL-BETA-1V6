@@ -3,25 +3,16 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="OMC VR-OS Sentinel Nexus - Sistema de Baixa Latência e Interface Operativa" />
+    <meta name="author" content="OMCXXIII" />
     <title>OMC VR-OS | SENTINEL NEXUS v7.0</title>
 
-    <!-- ═══════════════════════════════════════════════
-         FONTES
-    ═══════════════════════════════════════════════ -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet" />
 
-    <!-- ═══════════════════════════════════════════════
-         A-FRAME (XR ENGINE)
-         Carregado antes dos scripts de cena
-    ═══════════════════════════════════════════════ -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
-    <!-- ═══════════════════════════════════════════════
-         CSS — SENTINEL STACK
-         Ordem: core → fx → hud
-    ═══════════════════════════════════════════════ -->
     <link rel="stylesheet" href="css_sentinel_core.css" />
     <link rel="stylesheet" href="css_sentinel_fx.css" />
     <link rel="stylesheet" href="css_sentinel_hud.css" />
@@ -45,12 +36,13 @@
             --transition-fast: 0.18s ease;
             --transition-med:  0.32s ease;
             --transition-slow: 0.65s ease;
-            --ease-neural:     cubic-bezier(0.16, 1, 0.30, 1);
+            --ease-neural:      cubic-bezier(0.16, 1, 0.30, 1);
             --ease-out-expo:   cubic-bezier(0.19, 1, 0.22, 1);
             --elevation-focus:    0 4px 32px rgba(0,212,255,0.18);
             --elevation-context:  0 2px 16px rgba(0,212,255,0.08);
             --elevation-sovereign:0 1px 8px  rgba(0,0,0,0.45);
             --tracking-wide: 0.12em;
+            --battery-level: 100%;
         }
 
         html, body {
@@ -67,6 +59,30 @@
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+
+        /* ─── FX LAYERS ─────────────────────────────── */
+        .gamma-sync-layer {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,4,8,0.4) 100%);
+            z-index: 1000;
+        }
+
+        .neural-scan-overlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(0deg, transparent 0%, rgba(0,212,255,0.02) 50%, transparent 100%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 1001;
+            animation: scan 8s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
         }
 
         /* ─── LAYOUT PRINCIPAL ──────────────────────── */
@@ -150,12 +166,11 @@
         }
 
         a-scene {
-            display: none; /* revelado após boot */
+            display: none; 
             width: 100%;
             height: 100%;
         }
 
-        /* Fallback para GPU sem WebGL */
         #webgl-fallback {
             display: none;
             position: absolute;
@@ -169,6 +184,7 @@
             letter-spacing: var(--tracking-wide);
             text-align: center;
             padding: 2rem;
+            background: rgba(0,4,8,0.95);
         }
 
         #webgl-fallback.visible {
@@ -252,7 +268,6 @@
         .terminal-line.error   .msg { color: var(--alert); }
         .terminal-line.info    .msg { color: rgba(0,212,255,0.8); }
 
-        /* ─── CMD INPUT ─────────────────────────────── */
         .cmd-input {
             width: 100%;
             background: transparent;
@@ -266,10 +281,6 @@
             letter-spacing: var(--tracking-wide);
         }
 
-        .cmd-input::placeholder {
-            color: rgba(0,212,255,0.3);
-        }
-
         /* ─── NEXUS DISPLAY ─────────────────────────── */
         #nexus-display {
             font-size: 0.65rem;
@@ -280,7 +291,6 @@
             min-height: 80px;
         }
 
-        /* ─── GAMMA HEARTBEAT ───────────────────────── */
         #gamma-heartbeat {
             width: 8px;
             height: 8px;
@@ -295,7 +305,6 @@
             opacity: 0.6;
         }
 
-        /* ─── BATTERY BAR ───────────────────────────── */
         #mental-battery-bar {
             height: 3px;
             background: rgba(0,212,255,0.12);
@@ -313,7 +322,6 @@
             transition: width 0.8s var(--ease-out-expo);
         }
 
-        /* ─── MISSION LOCK DISPLAY ───────────────────── */
         #mission-display {
             font-size: 0.7rem;
             color: var(--green-flow);
@@ -321,36 +329,21 @@
             min-height: 2.5rem;
         }
 
-        /* ─── CLOCK ATC ─────────────────────────────── */
         #clock-display {
             font-size: 1rem;
             color: var(--cyan);
             text-shadow: 0 0 12px rgba(0,212,255,0.3);
-        }
-
-        /* ─── LATENCY MONITOR ───────────────────────── */
-        #latency-value {
-            font-size: 0.7rem;
-            color: var(--green-flow);
         }
     </style>
 </head>
 
 <body>
 
-    <!-- ═══════════════════════════════════════════════
-         FX LAYERS (Pulvinar + Neural Field)
-    ═══════════════════════════════════════════════ -->
-    <div class="gamma-sync-layer"  aria-hidden="true"></div>
-    <div class="neural-field"      aria-hidden="true"></div>
+    <div class="gamma-sync-layer" aria-hidden="true"></div>
     <div class="neural-scan-overlay" aria-hidden="true"></div>
 
-    <!-- ═══════════════════════════════════════════════
-         APP SHELL
-    ═══════════════════════════════════════════════ -->
     <div id="app">
 
-        <!-- TOPBAR -->
         <header id="topbar">
             <span class="sys-id">OMC VR-OS | SENTINEL NEXUS v7.0</span>
 
@@ -367,50 +360,37 @@
             </div>
         </header>
 
-        <!-- PAINEL ESQUERDO -->
-        <aside id="hud-left" class="layer-context">
-
-            <!-- Clock ATC -->
+        <aside id="hud-left">
             <div class="hud-box clock-signal">
                 <div class="hud-label">CLOCK ATC</div>
                 <div id="clock-display" class="hud-value">--:--:--</div>
             </div>
 
-            <!-- Mental Battery -->
             <div class="hud-box mental-battery">
                 <div class="hud-label">MENTAL BATTERY</div>
                 <div id="mental-battery-bar"></div>
-                <div id="mental-battery" class="hud-value battery-percent" style="margin-top:0.4rem;">100%</div>
+                <div id="mental-battery" class="hud-value" style="margin-top:0.4rem;">100%</div>
             </div>
 
-            <!-- Latency Monitor -->
-            <div class="hud-box hud-latency-panel">
+            <div class="hud-box">
                 <div class="hud-label">ACTION LATENCY</div>
-                <div id="latency-value" class="hud-value latency-value">0ms</div>
+                <div id="latency-value" class="hud-value">0ms</div>
             </div>
 
-            <!-- Mission Lock -->
             <div class="hud-box" style="border-color:rgba(0,255,65,0.18);">
                 <div class="hud-label">MISSION LOCK</div>
                 <div id="mission-display">IDLE</div>
             </div>
-
         </aside>
 
-        <!-- CENA CENTRAL -->
         <main id="scene-wrapper">
-
-            <!-- Fallback WebGL -->
             <div id="webgl-fallback">
                 <div style="color:var(--warning);font-size:0.8rem;">⚠ WebGL não disponível</div>
                 <div>GPU: Intel HD sem aceleração hardware detectada.</div>
                 <div>Execute Chrome com: <span style="color:var(--green-flow);">--ignore-gpu-blocklist</span></div>
-                <div style="margin-top:1rem;color:rgba(0,212,255,0.5);">
-                    Sistema operando em modo 2D. Telemetria ativa.
-                </div>
+                <div style="margin-top:1rem;color:rgba(0,212,255,0.5);">Sistema operando em modo 2D. Telemetria ativa.</div>
             </div>
 
-            <!-- A-FRAME SCENE -->
             <a-scene
                 id="main-scene"
                 renderer="antialias: false; colorManagement: true;"
@@ -419,94 +399,43 @@
             >
                 <a-sky color="#000408"></a-sky>
 
-                <!-- Janelas 3D (ghost-window) -->
-                <a-entity
-                    id="window-alpha"
-                    ghost-window
-                    position="-2 1.6 -4"
-                    rotation="0 15 0"
+                <a-entity id="window-alpha" position="-2 1.6 -4" rotation="0 15 0"
                     geometry="primitive: plane; width: 2.4; height: 1.6"
-                    material="color: #001820; opacity: 0.85; transparent: true"
-                    class="sentinel-node"
-                ></a-entity>
+                    material="color: #001820; opacity: 0.85; transparent: true">
+                </a-entity>
 
-                <a-entity
-                    id="window-beta"
-                    ghost-window
-                    position="0 1.6 -4.5"
+                <a-entity id="window-beta" position="0 1.6 -4.5"
                     geometry="primitive: plane; width: 2.8; height: 1.8"
-                    material="color: #001820; opacity: 0.85; transparent: true"
-                    class="sentinel-node"
-                ></a-entity>
+                    material="color: #001820; opacity: 0.85; transparent: true">
+                </a-entity>
 
-                <a-entity
-                    id="window-gamma"
-                    ghost-window
-                    position="2 1.6 -4"
-                    rotation="0 -15 0"
+                <a-entity id="window-gamma" position="2 1.6 -4" rotation="0 -15 0"
                     geometry="primitive: plane; width: 2.4; height: 1.6"
-                    material="color: #001820; opacity: 0.85; transparent: true"
-                    class="sentinel-node"
-                ></a-entity>
-
+                    material="color: #001820; opacity: 0.85; transparent: true">
+                </a-entity>
             </a-scene>
-
         </main>
 
-        <!-- PAINEL DIREITO -->
-        <aside id="hud-right" class="layer-context">
-
-            <!-- Nexus Display -->
+        <aside id="hud-right">
             <div class="hud-box" style="flex:1;display:flex;flex-direction:column;">
                 <div class="hud-label">NEXUS OUTPUT</div>
                 <div id="nexus-display">AGUARDANDO BOOT...</div>
             </div>
 
-            <!-- Terminal Log -->
             <div class="hud-box" style="flex:2;display:flex;flex-direction:column;padding:0;">
                 <div class="hud-label" style="padding:0.5rem 0.75rem 0;">TERMINAL LOG</div>
                 <div id="terminal-log"></div>
-                <input
-                    class="cmd-input"
-                    type="text"
-                    placeholder="NEXUS_CMD > "
-                    autocomplete="off"
-                    spellcheck="false"
-                />
+                <input class="cmd-input" type="text" placeholder="NEXUS_CMD > " autocomplete="off" spellcheck="false" />
             </div>
-
         </aside>
 
-        <!-- BOTTOMBAR -->
         <footer id="bottombar">
-            <span style="font-size:0.6rem;color:rgba(0,212,255,0.35);letter-spacing:var(--tracking-wide);">
-                SENTINEL NEXUS v7.0
-            </span>
-            <span id="boot-status" style="font-size:0.6rem;color:var(--warning);">
-                STANDBY
-            </span>
-            <span style="margin-left:auto;font-size:0.6rem;color:rgba(0,212,255,0.3);">
-                OMC VR-OS | SOBERANIA OPERATIVA
-            </span>
+            <span style="font-size:0.6rem;color:rgba(0,212,255,0.35);letter-spacing:var(--tracking-wide);">SENTINEL NEXUS v7.0</span>
+            <span id="boot-status" style="font-size:0.6rem;color:var(--warning);">STANDBY</span>
+            <span style="margin-left:auto;font-size:0.6rem;color:rgba(0,212,255,0.3);">OMC VR-OS | SOBERANIA OPERATIVA</span>
         </footer>
 
-    </div><!-- /#app -->
-
-
-    <!-- ═══════════════════════════════════════════════
-         SCRIPT STACK — ORDEM OBRIGATÓRIA
-
-         1. sentinel-bus.js      → Event bus (deve ser o PRIMEIRO)
-         2. sentinel-core.js     → StateStore + SentinelKernel (emite boot:complete)
-         3. js_sentinel_engine-xr.js  → XR + A-Frame (ouve boot:complete)
-         4. js_sentinel_protocols.js  → Telemetria + Clock ATC
-         5. js_sentinel_jarvis-voice.js → Mission Lock + Intent
-         6. sentinel-debug-hud.js → Monitor de integridade (deve ser o ÚLTIMO)
-         7. Script inline         → Boot bridge + UI handlers
-
-         ⚠ NÃO altere esta ordem. A Condução Saltatória
-           depende que o Bus exista antes de qualquer emissão.
-    ═══════════════════════════════════════════════ -->
+    </div>
 
     <script src="sentinel-bus.js"></script>
     <script src="sentinel-core.js"></script>
@@ -515,70 +444,27 @@
     <script src="js_sentinel_jarvis-voice.js"></script>
     <script src="sentinel-debug-hud.js"></script>
 
-    <!-- ═══════════════════════════════════════════════
-         BOOT BRIDGE v7.0
-         Responsabilidade: UI handlers + WebGL check +
-         Clock ATC + Nexus Display + Context switcher.
-
-         NÃO emite boot:complete aqui.
-         Quem emite é o SentinelKernel (sentinel-core.js).
-         Este script apenas reage ao evento.
-    ═══════════════════════════════════════════════ -->
     <script>
     (function BootBridge() {
-
-        /* ── WebGL Check ──────────────────────────── */
         function checkWebGL() {
             try {
                 const canvas = document.createElement('canvas');
-                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-                if (!gl) throw new Error('no context');
-                return true;
-            } catch(e) {
-                return false;
-            }
+                return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+            } catch(e) { return false; }
         }
 
-        /* ── Clock ATC ────────────────────────────── */
         let sessionStart = Date.now();
 
         function startClockATC() {
             const clockEl = document.getElementById('clock-display');
             setInterval(() => {
-                const now  = new Date();
-                const hh   = String(now.getHours()).padStart(2,'0');
-                const mm   = String(now.getMinutes()).padStart(2,'0');
-                const ss   = String(now.getSeconds()).padStart(2,'0');
-                const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
-                if (clockEl) clockEl.textContent = `${hh}:${mm}:${ss}`;
-
-                /* Emite tick para SentinelProtocols */
-                window.SentinelBus?.emit('ui:clock-tick', {
-                    time: `${hh}:${mm}:${ss}`,
-                    elapsed
-                });
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('pt-BR', { hour12: false });
+                if (clockEl) clockEl.textContent = timeStr;
+                window.SentinelBus?.emit('ui:clock-tick', { time: timeStr, elapsed: Math.floor((Date.now() - sessionStart) / 1000) });
             }, 1000);
         }
 
-        /* ── Nexus Display listener ───────────────── */
-        function bindNexusDisplay() {
-            const nexus = document.getElementById('nexus-display');
-            if (!nexus) return;
-            window.SentinelBus?.on('ui:nexus-update', ({ text }) => {
-                nexus.textContent = text;
-            });
-        }
-
-        /* ── Mission Display listener ─────────────── */
-        function bindMissionDisplay() {
-            const missionEl = document.getElementById('mission-display');
-            if (!missionEl) return;
-            window.SentinelBus?.on('mission:locked',   ({ mission }) => { missionEl.textContent = mission; });
-            window.SentinelBus?.on('mission:restored', ({ mission }) => { missionEl.textContent = mission; });
-            window.SentinelBus?.on('mission:cleared',  ()            => { missionEl.textContent = 'IDLE'; });
-        }
-
-        /* ── Context Switcher ─────────────────────── */
         const ContextProfiles = {
             ALPHA: { theme: '#00D4FF', mission: 'ENGENHARIA_HARDWARE' },
             BETA:  { theme: '#FFD700', mission: 'MERCADO_IMOBILIARIO' },
@@ -589,9 +475,7 @@
             const cfg = ContextProfiles[profile];
             if (!cfg) return;
             document.documentElement.style.setProperty('--accent-color', cfg.theme);
-            document.querySelectorAll('.ctx-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector(`[data-profile="${profile}"]`)?.classList.add('active');
-            window.StateStore?.set('ops.profile', profile);
+            document.querySelectorAll('.ctx-btn').forEach(b => b.classList.toggle('active', b.dataset.profile === profile));
             window.Terminal?.log(`CONTEXT_SWITCH::${profile}`, 'success');
         }
 
@@ -599,72 +483,52 @@
             btn.addEventListener('click', () => switchContext(btn.dataset.profile));
         });
 
-        /* ── Boot Complete Listener ───────────────── */
         window.SentinelBus?.on('boot:complete', ({ status }) => {
             const bootStatusEl = document.getElementById('boot-status');
             if (bootStatusEl) {
                 bootStatusEl.textContent = `ONLINE · ${status}`;
                 bootStatusEl.style.color = 'var(--green-flow)';
             }
+            document.body.style.opacity = '1';
+            document.body.style.visibility = 'visible';
 
-            /* Revela interface */
-            document.body.style.opacity     = '1';
-            document.body.style.visibility  = 'visible';
-
-            /* Revela cena A-Frame se WebGL disponível */
             const sceneEl = document.getElementById('main-scene');
             if (checkWebGL() && sceneEl) {
-                sceneEl.style.display  = 'block';
-                sceneEl.style.opacity  = '1';
+                sceneEl.style.display = 'block';
             } else {
                 document.getElementById('webgl-fallback')?.classList.add('visible');
             }
 
-            /* UI handlers pós-boot */
             startClockATC();
-            bindNexusDisplay();
-            bindMissionDisplay();
-
-            window.SentinelBus?.emit('ui:nexus-update', {
-                text: `SENTINEL_NEXUS_v7.0\nSTATUS: ${status}\nAGUARDANDO COMANDO.`
-            });
-
-            window.Terminal?.log('SENTINEL_NEXUS_v7.0_ONLINE', 'success');
             switchContext('ALPHA');
-
-            /* GammaSync */
             window.GammaSync?.start();
+            window.Terminal?.log('SENTINEL_NEXUS_v7.0_ONLINE', 'success');
         });
 
-        /* ── FPS Tracker ──────────────────────────── */
-        (function() {
-            let frames = 0, lastTime = performance.now();
-            function loop() {
-                frames++;
-                const now = performance.now();
-                if (now >= lastTime + 1000) {
-                    const fpsEl = document.getElementById('fps-counter');
-                    if (fpsEl) fpsEl.textContent = frames;
-                    frames = 0; lastTime = now;
-                }
-                requestAnimationFrame(loop);
+        // FPS Tracker
+        let frames = 0, lastTime = performance.now();
+        function loop() {
+            frames++;
+            const now = performance.now();
+            if (now >= lastTime + 1000) {
+                const fpsEl = document.getElementById('fps-counter');
+                if (fpsEl) fpsEl.textContent = frames;
+                frames = 0; lastTime = now;
             }
             requestAnimationFrame(loop);
-        })();
+        }
+        requestAnimationFrame(loop);
 
-        /* ── GammaHeartbeat ───────────────────────── */
         window.GammaSync = {
             start() {
                 const node = document.getElementById('gamma-heartbeat');
-                if (!node) return;
                 setInterval(() => {
-                    node.classList.add('heartbeat-active');
-                    setTimeout(() => node.classList.remove('heartbeat-active'), 200);
+                    node?.classList.add('heartbeat-active');
+                    setTimeout(() => node?.classList.remove('heartbeat-active'), 200);
                 }, 1200);
             }
         };
 
-        /* ── CognitiveTerminal ────────────────────── */
         window.Terminal = {
             log(message, type = 'info') {
                 const el = document.getElementById('terminal-log');
@@ -675,9 +539,7 @@
                 el.prepend(line);
             }
         };
-
     })();
     </script>
-
 </body>
 </html>
