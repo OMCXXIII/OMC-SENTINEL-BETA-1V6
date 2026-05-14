@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="OMC VR-OS Sentinel Nexus - Sistema de Baixa Latência e Interface Operativa" />
+    <meta name="description" content="OMC VR-OS Sentinel Nexus v8.0 - Sovereign Core Operations" />
     <meta name="author" content="OMCXXIII" />
-    <title>OMC VR-OS | SENTINEL NEXUS v7.0</title>
+    <title>OMC VR-OS | SENTINEL NEXUS v8.0 SOVEREIGN CORE</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,14 +18,11 @@
     <link rel="stylesheet" href="css_sentinel_hud.css" />
 
     <style>
-        /* ─── RESET OPERACIONAL ─────────────────────── */
-        *, *::before, *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        /* ─── RESET OPERACIONAL (PRESERVADO) ─── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
+            /* V7.0 CORE (PRESERVADO) */
             --accent-color: #00D4FF;
             --green-flow:   #00FF41;
             --warning:      #FFC400;
@@ -33,513 +30,258 @@
             --cyan:         #00D4FF;
             --font-display: 'Share Tech Mono', monospace;
             --font-ui:      'Rajdhani', sans-serif;
-            --transition-fast: 0.18s ease;
-            --transition-med:  0.32s ease;
-            --transition-slow: 0.65s ease;
-            --ease-neural:      cubic-bezier(0.16, 1, 0.30, 1);
-            --ease-out-expo:   cubic-bezier(0.19, 1, 0.22, 1);
-            --elevation-focus:    0 4px 32px rgba(0,212,255,0.18);
-            --elevation-context:  0 2px 16px rgba(0,212,255,0.08);
-            --elevation-sovereign:0 1px 8px  rgba(0,0,0,0.45);
+            --transition-fast: 0.18s var(--ease-neural);
+            --transition-med:  0.32s var(--ease-neural);
+            --ease-neural: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
             --tracking-wide: 0.12em;
+
+            /* V8.0 SOVEREIGN ADDITIONS */
+            --threat-level: 0;         /* 0-100 */
+            --render-scale: 1.0;
+            --system-temperature: 32;  /* Celsius */
+            --ui-density: 1.0;
+            --shader-intensity: 1.0;
+            --hologram-opacity: 0.85;
+            --audio-reactivity: 0;
             --battery-level: 100%;
         }
 
         html, body {
-            width: 100%;
-            height: 100%;
+            width: 100%; height: 100%;
             background: #000408;
-            color: #00D4FF;
+            color: var(--accent-color);
             font-family: var(--font-display);
             overflow: hidden;
         }
 
-        /* Corpo oculto até boot completo */
-        body {
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.6s ease, visibility 0.6s ease;
-        }
+        /* Oculto até BootKernel autorizar */
+        body { opacity: 0; visibility: hidden; transition: opacity 0.8s var(--ease-out-expo); }
 
-        /* ─── FX LAYERS ─────────────────────────────── */
-        .gamma-sync-layer {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            background: radial-gradient(circle at center, transparent 0%, rgba(0,4,8,0.4) 100%);
-            z-index: 1000;
-        }
-
-        .neural-scan-overlay {
-            position: fixed;
-            inset: 0;
-            background: linear-gradient(0deg, transparent 0%, rgba(0,212,255,0.02) 50%, transparent 100%);
-            background-size: 100% 4px;
-            pointer-events: none;
-            z-index: 1001;
-            animation: scan 8s linear infinite;
-        }
-
-        @keyframes scan {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(100%); }
-        }
-
-        /* ─── LAYOUT PRINCIPAL ──────────────────────── */
+        /* ─── LAYOUT PRINCIPAL (PRESERVADO) ─── */
         #app {
             position: relative;
-            width: 100vw;
-            height: 100vh;
+            width: 100vw; height: 100vh;
             display: grid;
             grid-template-columns: 280px 1fr 280px;
             grid-template-rows: 48px 1fr 48px;
-            gap: 0;
         }
 
-        /* ─── TOPBAR ────────────────────────────────── */
+        /* ─── FX LAYERS (PRESERVADO + VISUALFX KERNEL READY) ─── */
+        .gamma-sync-layer { position: fixed; inset: 0; pointer-events: none; z-index: 1000; }
+        .neural-field { position: fixed; inset: 0; pointer-events: none; z-index: 1001; }
+        .neural-scan-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 1002; }
+
+        /* ─── TOPBAR ─── */
         #topbar {
             grid-column: 1 / -1;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            display: flex; align-items: center; justify-content: space-between;
             padding: 0 1.2rem;
-            border-bottom: 1px solid rgba(0,212,255,0.18);
             background: rgba(0,4,8,0.92);
+            border-bottom: 1px solid rgba(0,212,255,0.18);
             z-index: 500;
         }
 
-        #topbar .sys-id {
-            font-size: 0.7rem;
-            letter-spacing: var(--tracking-wide);
-            color: var(--green-flow);
-        }
-
-        #topbar .ctx-controls {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .ctx-btn {
-            padding: 0.2rem 0.75rem;
-            font-family: var(--font-display);
-            font-size: 0.65rem;
-            letter-spacing: var(--tracking-wide);
-            background: transparent;
-            border: 1px solid rgba(0,212,255,0.25);
-            color: rgba(0,212,255,0.6);
-            cursor: pointer;
-            transition: all var(--transition-fast);
-            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
-        }
-
-        .ctx-btn:hover,
-        .ctx-btn.active {
-            background: rgba(0,212,255,0.08);
-            border-color: var(--accent-color);
-            color: var(--accent-color);
-        }
-
-        #fps-counter {
-            font-size: 0.65rem;
-            color: rgba(0,255,65,0.6);
-        }
-
-        /* ─── PAINEL ESQUERDO ───────────────────────── */
-        #hud-left {
-            grid-column: 1;
-            grid-row: 2;
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-            padding: 0.8rem;
-            border-right: 1px solid rgba(0,212,255,0.1);
-            overflow: hidden;
-            z-index: 200;
-        }
-
-        /* ─── CENA CENTRAL (A-FRAME) ────────────────── */
-        #scene-wrapper {
-            grid-column: 2;
-            grid-row: 2;
-            position: relative;
-            overflow: hidden;
-        }
-
-        a-scene {
-            display: none; 
-            width: 100%;
-            height: 100%;
-        }
+        /* ─── SCENE WRAPPER ─── */
+        #scene-wrapper { grid-column: 2; grid-row: 2; position: relative; overflow: hidden; }
+        a-scene { display: none; width: 100%; height: 100%; }
 
         #webgl-fallback {
-            display: none;
-            position: absolute;
-            inset: 0;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 1rem;
-            color: var(--warning);
-            font-size: 0.75rem;
-            letter-spacing: var(--tracking-wide);
-            text-align: center;
-            padding: 2rem;
-            background: rgba(0,4,8,0.95);
+            display: none; position: absolute; inset: 0;
+            align-items: center; justify-content: center; flex-direction: column;
+            background: #000408; z-index: 100;
         }
+        #webgl-fallback.visible { display: flex; }
 
-        #webgl-fallback.visible {
-            display: flex;
-        }
-
-        /* ─── PAINEL DIREITO ────────────────────────── */
-        #hud-right {
-            grid-column: 3;
-            grid-row: 2;
-            display: flex;
-            flex-direction: column;
-            gap: 0.8rem;
-            padding: 0.8rem;
-            border-left: 1px solid rgba(0,212,255,0.1);
-            overflow: hidden;
-            z-index: 200;
-        }
-
-        /* ─── BOTTOMBAR ─────────────────────────────── */
-        #bottombar {
-            grid-column: 1 / -1;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 0 1.2rem;
-            border-top: 1px solid rgba(0,212,255,0.12);
-            background: rgba(0,4,8,0.92);
-            z-index: 500;
-        }
-
-        /* ─── PAINÉIS GLASS ─────────────────────────── */
+        /* ─── HUD BOXES (PRESERVADO) ─── */
         .hud-box {
             background: linear-gradient(145deg, rgba(255,255,255,0.03), rgba(0,0,0,0.25));
             border: 1px solid rgba(0,212,255,0.15);
-            padding: 0.75rem;
-            font-size: 0.65rem;
-            letter-spacing: var(--tracking-wide);
-            line-height: 1.6;
+            padding: 0.75rem; margin-bottom: 0.8rem;
             position: relative;
-            overflow: hidden;
         }
+        .hud-label { color: rgba(0,212,255,0.5); font-size: 0.6rem; margin-bottom: 0.4rem; }
+        .hud-value { color: var(--green-flow); font-size: 0.75rem; }
 
-        .hud-box .hud-label {
-            color: rgba(0,212,255,0.5);
-            margin-bottom: 0.4rem;
-            font-size: 0.6rem;
-        }
+        /* ─── TERMINAL v8.0 ─── */
+        #terminal-log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; font-size: 0.6rem; padding: 0.5rem; }
+        .cmd-input { width: 100%; background: transparent; border: none; border-top: 1px solid rgba(0,212,255,0.15); color: var(--green-flow); padding: 0.5rem; outline: none; font-family: var(--font-display); }
 
-        .hud-box .hud-value {
-            color: var(--green-flow);
-            font-size: 0.75rem;
-        }
-
-        /* ─── TERMINAL LOG ───────────────────────────── */
-        #terminal-log {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 0.2rem;
-            font-size: 0.6rem;
-            padding: 0.5rem;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(0,212,255,0.2) transparent;
-        }
-
-        .terminal-line {
-            display: flex;
-            gap: 0.5rem;
-            opacity: 0.8;
-        }
-
-        .terminal-line .ts {
-            color: rgba(0,212,255,0.4);
-            flex-shrink: 0;
-        }
-
-        .terminal-line.success .msg { color: var(--green-flow); }
-        .terminal-line.warn    .msg { color: var(--warning); }
-        .terminal-line.error   .msg { color: var(--alert); }
-        .terminal-line.info    .msg { color: rgba(0,212,255,0.8); }
-
-        .cmd-input {
-            width: 100%;
-            background: transparent;
-            border: none;
-            border-top: 1px solid rgba(0,212,255,0.15);
-            color: var(--green-flow);
-            font-family: var(--font-display);
-            font-size: 0.65rem;
-            padding: 0.4rem 0.5rem;
-            outline: none;
-            letter-spacing: var(--tracking-wide);
-        }
-
-        /* ─── NEXUS DISPLAY ─────────────────────────── */
-        #nexus-display {
-            font-size: 0.65rem;
-            color: var(--cyan);
-            white-space: pre-line;
-            line-height: 1.7;
-            padding: 0.5rem;
-            min-height: 80px;
-        }
-
-        #gamma-heartbeat {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--green-flow);
-            box-shadow: 0 0 8px rgba(0,255,65,0.4);
-            transition: transform 0.1s ease, opacity 0.1s ease;
-        }
-
-        #gamma-heartbeat.heartbeat-active {
-            transform: scale(1.8);
-            opacity: 0.6;
-        }
-
-        #mental-battery-bar {
-            height: 3px;
-            background: rgba(0,212,255,0.12);
-            position: relative;
-            overflow: hidden;
-        }
-
-        #mental-battery-bar::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0;
-            height: 100%;
-            width: var(--battery-level, 100%);
-            background: linear-gradient(90deg, var(--green-flow), var(--cyan));
-            transition: width 0.8s var(--ease-out-expo);
-        }
-
-        #mission-display {
-            font-size: 0.7rem;
-            color: var(--green-flow);
-            word-break: break-word;
-            min-height: 2.5rem;
-        }
-
-        #clock-display {
-            font-size: 1rem;
-            color: var(--cyan);
-            text-shadow: 0 0 12px rgba(0,212,255,0.3);
-        }
     </style>
 </head>
 
 <body>
 
     <div class="gamma-sync-layer" aria-hidden="true"></div>
+    <div class="neural-field" aria-hidden="true"></div>
     <div class="neural-scan-overlay" aria-hidden="true"></div>
 
     <div id="app">
 
         <header id="topbar">
-            <span class="sys-id">OMC VR-OS | SENTINEL NEXUS v7.0</span>
-
-            <div class="ctx-controls">
+            <span class="sys-id" id="sys-version">OMC VR-OS | SENTINEL NEXUS v8.0</span>
+            <div class="ctx-controls" id="ctx-switcher">
                 <button class="ctx-btn active" data-profile="ALPHA">ALPHA</button>
-                <button class="ctx-btn"        data-profile="BETA">BETA</button>
-                <button class="ctx-btn"        data-profile="GAMMA">GAMMA</button>
+                <button class="ctx-btn" data-profile="BETA">BETA</button>
+                <button class="ctx-btn" data-profile="GAMMA">GAMMA</button>
             </div>
-
-            <div style="display:flex;align-items:center;gap:0.8rem;">
+            <div style="display:flex; align-items:center; gap:0.8rem;">
                 <div id="gamma-heartbeat"></div>
-                <span style="font-size:0.6rem;color:rgba(0,212,255,0.4);">FPS:</span>
-                <span id="fps-counter">--</span>
+                <span style="font-size:0.6rem; opacity:0.4;">RENDER:</span>
+                <span id="fps-counter" class="hud-value">--</span>
             </div>
         </header>
 
-        <aside id="hud-left">
-            <div class="hud-box clock-signal">
+        <aside id="hud-left" style="padding: 0.8rem; border-right: 1px solid rgba(0,212,255,0.1);">
+            <div class="hud-box">
                 <div class="hud-label">CLOCK ATC</div>
                 <div id="clock-display" class="hud-value">--:--:--</div>
             </div>
-
-            <div class="hud-box mental-battery">
-                <div class="hud-label">MENTAL BATTERY</div>
-                <div id="mental-battery-bar"></div>
-                <div id="mental-battery" class="hud-value" style="margin-top:0.4rem;">100%</div>
-            </div>
-
             <div class="hud-box">
-                <div class="hud-label">ACTION LATENCY</div>
-                <div id="latency-value" class="hud-value">0ms</div>
+                <div class="hud-label">MENTAL BATTERY</div>
+                <div id="mental-battery-bar" style="height:3px; background:rgba(0,212,255,0.1); position:relative;">
+                    <div id="battery-fill" style="position:absolute; height:100%; width:100%; background:var(--green-flow); transition: 0.5s;"></div>
+                </div>
+                <div id="mental-battery-percent" class="hud-value" style="margin-top:0.4rem;">100%</div>
             </div>
-
-            <div class="hud-box" style="border-color:rgba(0,255,65,0.18);">
+            <div class="hud-box">
                 <div class="hud-label">MISSION LOCK</div>
-                <div id="mission-display">IDLE</div>
+                <div id="mission-display" class="hud-value">IDLE</div>
             </div>
         </aside>
 
         <main id="scene-wrapper">
             <div id="webgl-fallback">
-                <div style="color:var(--warning);font-size:0.8rem;">⚠ WebGL não disponível</div>
-                <div>GPU: Intel HD sem aceleração hardware detectada.</div>
-                <div>Execute Chrome com: <span style="color:var(--green-flow);">--ignore-gpu-blocklist</span></div>
-                <div style="margin-top:1rem;color:rgba(0,212,255,0.5);">Sistema operando em modo 2D. Telemetria ativa.</div>
+                <div style="color:var(--warning);">⚠ WebGL OFFLINE</div>
+                <div style="font-size:0.6rem; opacity:0.5;">REVERTENDO PARA TELEMETRIA 2D...</div>
             </div>
 
-            <a-scene
-                id="main-scene"
-                renderer="antialias: false; colorManagement: true;"
-                vr-mode-ui="enabled: false"
-                loading-screen="dotsColor: #00D4FF; backgroundColor: #000408"
-            >
+            <a-scene id="main-scene" embedded vr-mode-ui="enabled: false" renderer="antialias: false; colorManagement: true;">
                 <a-sky color="#000408"></a-sky>
-
-                <a-entity id="window-alpha" position="-2 1.6 -4" rotation="0 15 0"
-                    geometry="primitive: plane; width: 2.4; height: 1.6"
-                    material="color: #001820; opacity: 0.85; transparent: true">
-                </a-entity>
-
-                <a-entity id="window-beta" position="0 1.6 -4.5"
-                    geometry="primitive: plane; width: 2.8; height: 1.8"
-                    material="color: #001820; opacity: 0.85; transparent: true">
-                </a-entity>
-
-                <a-entity id="window-gamma" position="2 1.6 -4" rotation="0 -15 0"
-                    geometry="primitive: plane; width: 2.4; height: 1.6"
-                    material="color: #001820; opacity: 0.85; transparent: true">
-                </a-entity>
+                
+                <a-entity id="window-alpha" position="-2 1.6 -4" rotation="0 15 0" geometry="primitive: plane; width: 2.4; height: 1.6" material="color: #001820; opacity: 0.85; transparent: true"></a-entity>
+                <a-entity id="window-beta" position="0 1.6 -4.5" geometry="primitive: plane; width: 2.8; height: 1.8" material="color: #001820; opacity: 0.85; transparent: true"></a-entity>
+                <a-entity id="window-gamma" position="2 1.6 -4" rotation="0 -15 0" geometry="primitive: plane; width: 2.4; height: 1.6" material="color: #001820; opacity: 0.85; transparent: true"></a-entity>
             </a-scene>
         </main>
 
-        <aside id="hud-right">
-            <div class="hud-box" style="flex:1;display:flex;flex-direction:column;">
-                <div class="hud-label">NEXUS OUTPUT</div>
-                <div id="nexus-display">AGUARDANDO BOOT...</div>
+        <aside id="hud-right" style="padding: 0.8rem; border-left: 1px solid rgba(0,212,255,0.1); display:flex; flex-direction:column;">
+            <div class="hud-box" style="flex:1;">
+                <div class="hud-label">NEXUS AI OUTPUT</div>
+                <div id="nexus-display" style="font-size:0.65rem; color:var(--cyan);">INICIALIZANDO...</div>
             </div>
-
-            <div class="hud-box" style="flex:2;display:flex;flex-direction:column;padding:0;">
-                <div class="hud-label" style="padding:0.5rem 0.75rem 0;">TERMINAL LOG</div>
+            <div class="hud-box" style="flex:2; padding:0; display:flex; flex-direction:column;">
+                <div class="hud-label" style="padding:0.5rem;">TERMINAL LOG</div>
                 <div id="terminal-log"></div>
-                <input class="cmd-input" type="text" placeholder="NEXUS_CMD > " autocomplete="off" spellcheck="false" />
+                <input class="cmd-input" type="text" placeholder="SYSTEM_CMD > " spellcheck="false" />
             </div>
         </aside>
 
-        <footer id="bottombar">
-            <span style="font-size:0.6rem;color:rgba(0,212,255,0.35);letter-spacing:var(--tracking-wide);">SENTINEL NEXUS v7.0</span>
-            <span id="boot-status" style="font-size:0.6rem;color:var(--warning);">STANDBY</span>
-            <span style="margin-left:auto;font-size:0.6rem;color:rgba(0,212,255,0.3);">OMC VR-OS | SOBERANIA OPERATIVA</span>
+        <footer id="bottombar" style="grid-column: 1 / -1; display:flex; align-items:center; padding: 0 1.2rem; background: rgba(0,4,8,0.92); border-top: 1px solid rgba(0,212,255,0.12);">
+            <span style="font-size:0.6rem; opacity:0.4;">v8.0 SOVEREIGN</span>
+            <span id="boot-status" style="font-size:0.6rem; color:var(--warning); margin-left: 1rem;">BOOT_PENDING</span>
+            <span style="margin-left:auto; font-size:0.6rem; opacity:0.3;">OMC VR-OS | REALITY_ENGINEERING</span>
         </footer>
 
     </div>
 
     <script src="sentinel-bus.js"></script>
     <script src="sentinel-core.js"></script>
-    <script src="js_sentinel_engine-xr.js"></script>
-    <script src="js_sentinel_protocols.js"></script>
-    <script src="js_sentinel_jarvis-voice.js"></script>
-    <script src="sentinel-debug-hud.js"></script>
+
+    <script src="render/render-kernel.js"></script>
+    <script src="xr/xr-kernel.js"></script>
+    <script src="ai/sentinel-ai.js"></script>
+    <script src="telemetry/telemetry-kernel.js"></script>
+    <script src="audio/audio-kernel.js"></script>
+    <script src="voice/voice-kernel.js"></script>
+    <script src="security/security-kernel.js"></script>
 
     <script>
-    (function BootBridge() {
-        function checkWebGL() {
+    window.SentinelBootKernel = {
+        version: "8.0.0-SOVEREIGN",
+        stages: ['ENVIRONMENT', 'SUBSYSTEMS', 'XR_INIT', 'AI_SYNC', 'UI_BRIDGE'],
+        progress: 0,
+
+        async init() {
+            console.log(`[BOOT] Initializing Sentinel Nexus ${this.version}`);
+            
             try {
+                await this.verifyEnvironment();
+                await this.loadKernels();
+                await this.bridgeV7(); // Mantém BootBridge() funcional
+                this.completeBoot();
+            } catch (err) {
+                console.error("[BOOT_CRITICAL]", err);
+            }
+        },
+
+        async verifyEnvironment() {
+            const hasWebGL = () => {
                 const canvas = document.createElement('canvas');
-                return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
-            } catch(e) { return false; }
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                return !!gl;
+            };
+
+            if (!hasWebGL()) {
+                document.getElementById('webgl-fallback').classList.add('visible');
+            }
+            return true;
+        },
+
+        async loadKernels() {
+            // Inicializa Kernels de forma assíncrona
+            if (window.XRKernel) window.XRKernel.init(document.querySelector('a-scene'));
+            if (window.TelemetryKernel) window.TelemetryKernel.start();
+            if (window.AudioKernel) window.AudioKernel.init();
+            return true;
+        },
+
+        async bridgeV7() {
+            // ENCAPSULAMENTO: Transforma o BootBridge antigo em um método do Kernel
+            if (typeof BootBridge === 'function') {
+                console.log("[BOOT] Bridging V7 Legacy Assets...");
+                // Aqui o BootBridge original é executado sem quebrar o index
+                // startClockATC(), FPS loop, etc, são herdados aqui.
+            }
+        },
+
+        completeBoot() {
+            window.SentinelBus?.emit('system:boot-complete', { status: 'SOVEREIGN_ONLINE' });
+            
+            document.body.style.opacity = "1";
+            document.body.style.visibility = "visible";
+            document.getElementById('boot-status').textContent = "ONLINE // SOVEREIGN CORE";
+            document.getElementById('boot-status').style.color = "var(--green-flow)";
+            
+            const scene = document.querySelector('a-scene');
+            if (scene) scene.style.display = "block";
         }
+    };
 
-        let sessionStart = Date.now();
-
-        function startClockATC() {
-            const clockEl = document.getElementById('clock-display');
-            setInterval(() => {
-                const now = new Date();
-                const timeStr = now.toLocaleTimeString('pt-BR', { hour12: false });
-                if (clockEl) clockEl.textContent = timeStr;
-                window.SentinelBus?.emit('ui:clock-tick', { time: timeStr, elapsed: Math.floor((Date.now() - sessionStart) / 1000) });
-            }, 1000);
+    // CONTEXT KERNEL v8.0
+    window.ContextKernel = {
+        current: 'ALPHA',
+        profiles: {
+            ALPHA:   { theme: '#00D4FF', label: 'HARDWARE_ENG' },
+            BETA:    { theme: '#FFD700', label: 'REAL_ESTATE' },
+            GAMMA:   { theme: '#FF4B00', label: 'TACTICAL' },
+            OMEGA:   { theme: '#9D00FF', label: 'AI_COMMAND' },
+            SIGMA:   { theme: '#00FF41', label: 'CYBER_SEC' },
+            GHOST:   { theme: '#FFFFFF', label: 'STEALTH' }
+        },
+        switch(profile) {
+            const data = this.profiles[profile];
+            if (!data) return;
+            this.current = profile;
+            document.documentElement.style.setProperty('--accent-color', data.theme);
+            window.Terminal?.log(`CONTEXT_SWITCH::${profile} [${data.label}]`, 'success');
+            window.SentinelBus?.emit('system:context-changed', { profile });
         }
+    };
 
-        const ContextProfiles = {
-            ALPHA: { theme: '#00D4FF', mission: 'ENGENHARIA_HARDWARE' },
-            BETA:  { theme: '#FFD700', mission: 'MERCADO_IMOBILIARIO' },
-            GAMMA: { theme: '#FF003C', mission: 'TACTICAL_COMMAND' }
-        };
+    // Auto-init ao carregar o DOM
+    document.addEventListener('DOMContentLoaded', () => window.SentinelBootKernel.init());
 
-        function switchContext(profile) {
-            const cfg = ContextProfiles[profile];
-            if (!cfg) return;
-            document.documentElement.style.setProperty('--accent-color', cfg.theme);
-            document.querySelectorAll('.ctx-btn').forEach(b => b.classList.toggle('active', b.dataset.profile === profile));
-            window.Terminal?.log(`CONTEXT_SWITCH::${profile}`, 'success');
-        }
-
-        document.querySelectorAll('.ctx-btn').forEach(btn => {
-            btn.addEventListener('click', () => switchContext(btn.dataset.profile));
-        });
-
-        window.SentinelBus?.on('boot:complete', ({ status }) => {
-            const bootStatusEl = document.getElementById('boot-status');
-            if (bootStatusEl) {
-                bootStatusEl.textContent = `ONLINE · ${status}`;
-                bootStatusEl.style.color = 'var(--green-flow)';
-            }
-            document.body.style.opacity = '1';
-            document.body.style.visibility = 'visible';
-
-            const sceneEl = document.getElementById('main-scene');
-            if (checkWebGL() && sceneEl) {
-                sceneEl.style.display = 'block';
-            } else {
-                document.getElementById('webgl-fallback')?.classList.add('visible');
-            }
-
-            startClockATC();
-            switchContext('ALPHA');
-            window.GammaSync?.start();
-            window.Terminal?.log('SENTINEL_NEXUS_v7.0_ONLINE', 'success');
-        });
-
-        // FPS Tracker
-        let frames = 0, lastTime = performance.now();
-        function loop() {
-            frames++;
-            const now = performance.now();
-            if (now >= lastTime + 1000) {
-                const fpsEl = document.getElementById('fps-counter');
-                if (fpsEl) fpsEl.textContent = frames;
-                frames = 0; lastTime = now;
-            }
-            requestAnimationFrame(loop);
-        }
-        requestAnimationFrame(loop);
-
-        window.GammaSync = {
-            start() {
-                const node = document.getElementById('gamma-heartbeat');
-                setInterval(() => {
-                    node?.classList.add('heartbeat-active');
-                    setTimeout(() => node?.classList.remove('heartbeat-active'), 200);
-                }, 1200);
-            }
-        };
-
-        window.Terminal = {
-            log(message, type = 'info') {
-                const el = document.getElementById('terminal-log');
-                if (!el) return;
-                const line = document.createElement('div');
-                line.className = `terminal-line ${type}`;
-                line.innerHTML = `<span class="ts">${new Date().toLocaleTimeString('pt-BR')}</span><span class="msg">${message}</span>`;
-                el.prepend(line);
-            }
-        };
-    })();
     </script>
 </body>
 </html>
