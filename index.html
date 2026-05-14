@@ -1,148 +1,491 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OMC VR-OS | SENTINEL v6.0 SOVEREIGNTY CORE</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    <title>OMC VR-OS | SENTINEL v6.2 — SOVEREIGNTY NEXUS</title>
+
+    <!-- ════════════════════════════════════════════════════════
+         PRELOAD | KERNEL AUTHORITY
+    ═════════════════════════════════════════════════════════ -->
     <script>
-        /* ════════════════════════════════════════════════════════
-           MOBILE DETECTION & SYSTEM STATE
-        ════════════════════════════════════════════════════════ */
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           MOBILE DETECTION + LOW LATENCY FLAGS
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
         window.IS_MOBILE = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+
         if (window.IS_MOBILE) {
             document.documentElement.setAttribute('data-mobile', 'true');
         }
 
-        /* ════════════════════════════════════════════════════════
-           BOOT GATE
-        ════════════════════════════════════════════════════════ */
-        window.SENTINEL_BOOTED = false;
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           GLOBAL BOOT HANDSHAKE
+           Kernel inicia em suspensão segura.
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        window.SENTINEL_BOOTED   = false;
+        window.SENTINEL_START_TS = performance.now();
+
+        /* Estado de sincronização Gamma */
+        window.SENTINEL_SYNC = {
+            bootStarted: false,
+            bootCompleted: false,
+            firstActionTS: null
+        };
+
+        console.log('%c[SENTINEL:NEXUS] Kernel Gate carregado.', 'color:#00D4FF;');
     </script>
 
+    <!-- ════════════════════════════════════════════════════════
+         XR FRAMEWORK | A-FRAME
+    ═════════════════════════════════════════════════════════ -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://unpkg.com/aframe-event-set-component@5.0.0/dist/aframe-event-set-component.min.js"></script>
     <script src="https://unpkg.com/aframe-particle-system-component@1.0.x/dist/aframe-particle-system-component.min.js"></script>
 
+    <!-- ════════════════════════════════════════════════════════
+         CMA SCRIPT ORDER | ARQUITETURA MODULAR COGNITIVA
+         ORDEM SERIAL OBRIGATÓRIA
+    ═════════════════════════════════════════════════════════ -->
+
+    <!-- 1. BARRAMENTO -->
     <script src="sentinel-bus.js"></script>
-    <script src="sentinel-core.js"></script> <script src="sentinel-debug-hud.js"></script> <script src="js_sentinel_engine-xr.js"></script>
-    <script src="js_sentinel_jarvis-voice.js"></script>
+
+    <!-- 2. STATE VAULT -->
+    <script src="sentinel-state-store.js"></script>
+
+    <!-- 3. CORE AUTHORITY -->
+    <script src="sentinel-core.js"></script>
+
+    <!-- 4. TELEMETRIA + HUD -->
+    <script src="sentinel-debug-hud.js"></script>
     <script src="js_sentinel_protocols.js"></script>
 
+    <!-- 5. ENGINE XR -->
+    <script src="js_sentinel_engine-xr.js"></script>
+
+    <!-- 6. VOICE + COGNITION -->
+    <script src="js_sentinel_jarvis-voice.js"></script>
+
+    <!-- ════════════════════════════════════════════════════════
+         FONTS + VISUAL STACK
+    ═════════════════════════════════════════════════════════ -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
+
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="css_sentinel_core.css">
     <link rel="stylesheet" href="css_sentinel_hud.css">
     <link rel="stylesheet" href="css_sentinel_fx.css">
+
 </head>
 
 <body class="system-idle">
 
-    <div id="onboarding-overlay">
-        <div class="overlay-inner">
-            <div class="overlay-scan-line"></div>
-            <h1>SENTINEL v6.0</h1>
-            <p>Sincronizando Mielina... Estado: ALPHA</p>
-            <button class="boot-btn" id="master-boot-trigger">
-                INICIALIZAR PROTOCOLO
-            </button>
-            <div class="status-msg" id="boot-status">Sinal de Clock: Estável</div>
-        </div>
+    <!-- ════════════════════════════════════════════════════════
+         LAYER 0 — SOVEREIGN BACKGROUND
+         Telemetria Passiva / Noise Suppression
+    ═════════════════════════════════════════════════════════ -->
+    <div class="layer-sovereign">
+
+        <div class="gamma-grid"></div>
+        <div class="neural-noise"></div>
+        <div class="passive-telemetry"></div>
+
     </div>
 
-    <div id="hud-2d">
-        <div class="hud-corner top-left">
-            <div class="label">SISTEMA</div>
-            <div class="value">SENTINEL_v6_PRO</div>
+    <!-- ════════════════════════════════════════════════════════
+         LAYER 1 — CONTEXT
+         Informações secundárias
+    ═════════════════════════════════════════════════════════ -->
+    <div class="layer-context">
+
+        <div id="context-panel" class="hud-context-panel">
+            <div class="ctx-label">MISSION_LOCK</div>
+            <div id="mission-lock" class="ctx-value">
+                NENHUMA MISSÃO FIXADA
+            </div>
         </div>
-        <div class="hud-corner top-right">
-            <div class="label">LATÊNCIA</div>
-            <div id="latency-value" class="value">0.0ms</div>
+
+        <div class="ambient-clock">
+            <span id="ambient-clock-value">--:--:--</span>
         </div>
-        <div class="hud-corner bottom-left">
-            <div class="label">BATERIA_CPF</div>
-            <div id="battery-value" class="value">100%</div>
-        </div>
+
     </div>
 
-    <a-scene embedded renderer="antialias: true; colorManagement: true;" fog="type: exponential; color: #000; density: 0.03;">
+    <!-- ════════════════════════════════════════════════════════
+         LAYER 2 — FOCUS
+         Estado Natural de Execução (ENE)
+    ═════════════════════════════════════════════════════════ -->
+    <div class="layer-focus">
 
+        <!-- OVERLAY DE BOOT -->
+        <div id="onboarding-overlay">
+
+            <div class="overlay-inner">
+
+                <div class="overlay-scan-line"></div>
+
+                <h1>SENTINEL v6.2</h1>
+
+                <p>
+                    Sincronizando Barramento Saltatório...
+                </p>
+
+                <button class="boot-btn" id="master-boot-trigger">
+                    INICIALIZAR PROTOCOLO
+                </button>
+
+                <div class="status-msg" id="boot-status">
+                    CLOCK_ATC: ESTÁVEL
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- HUD 2D -->
+        <div id="hud-2d">
+
+            <div class="hud-corner top-left telemetry-node">
+                <div class="label">SISTEMA</div>
+                <div class="value">SENTINEL_v6.2</div>
+            </div>
+
+            <div class="hud-corner top-right telemetry-node">
+                <div class="label">LATÊNCIA</div>
+                <div id="latency-value" class="value">
+                    0ms
+                </div>
+            </div>
+
+            <div class="hud-corner bottom-left telemetry-node">
+                <div class="label">BATERIA_CPF</div>
+                <div id="battery-value" class="value">
+                    100%
+                </div>
+            </div>
+
+            <div class="hud-corner bottom-right telemetry-node">
+                <div class="label">CLOCK_ATC</div>
+                <div id="clock-value" class="value">
+                    STANDBY
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         XR SCENE | NEUROADAPTIVE SPACE
+    ═════════════════════════════════════════════════════════ -->
+    <a-scene
+        embedded
+        renderer="
+            antialias: true;
+            colorManagement: true;
+            physicallyCorrectLights: true;
+        "
+        fog="
+            type: exponential;
+            color: #000;
+            density: 0.03;
+        "
+    >
+
+        <!-- ════════════════════════════════════════════════════
+             XR ASSETS
+        ════════════════════════════════════════════════════ -->
         <a-assets>
-            <a-mixin id="window-base"
-                     geometry="primitive: plane; width: 3.2; height: 1.8"
-                     material="shader: standard; transparent: true; opacity: 0.2; side: double; emissive: #00D4FF; emissiveIntensity: 0.15">
+
+            <a-mixin
+                id="window-base"
+                geometry="primitive: plane; width: 3.2; height: 1.8"
+                material="
+                    shader: standard;
+                    transparent: true;
+                    opacity: 0.2;
+                    side: double;
+                    emissive: #00D4FF;
+                    emissiveIntensity: 0.15;
+                "
+            >
             </a-mixin>
+
         </a-assets>
 
-        <a-light type="ambient" color="#0a1a2a" intensity="0.6"></a-light>
-        <a-light type="directional" color="#00D4FF" intensity="0.3" position="0 4 -2"></a-light>
+        <!-- ════════════════════════════════════════════════════
+             XR LIGHTING
+        ════════════════════════════════════════════════════ -->
+        <a-light
+            type="ambient"
+            color="#0a1a2a"
+            intensity="0.6">
+        </a-light>
 
+        <a-light
+            type="directional"
+            color="#00D4FF"
+            intensity="0.3"
+            position="0 4 -2">
+        </a-light>
+
+        <!-- ════════════════════════════════════════════════════
+             REACTOR CORE
+        ════════════════════════════════════════════════════ -->
         <a-entity id="reactor-core" position="0 1 -3.5">
-            <a-sphere radius="0.15" color="#00D4FF" material="emissive: #00D4FF; emissiveIntensity: 2">
-                <a-light type="point" color="#00D4FF" intensity="1.2" distance="8"></a-light>
+
+            <a-sphere
+                radius="0.15"
+                color="#00D4FF"
+                material="
+                    emissive: #00D4FF;
+                    emissiveIntensity: 2
+                "
+            >
+
+                <a-light
+                    type="point"
+                    color="#00D4FF"
+                    intensity="1.2"
+                    distance="8">
+                </a-light>
+
             </a-sphere>
+
         </a-entity>
 
-        <a-entity id="mon-0" class="ghost-window" ghost-window="title: CORE_TERMINAL" mixin="window-base" position="0 1.6 -3">
-            <a-text id="nexus-display" value="SENTINEL ONLINE\nAGUARDANDO BOOT..." color="#00D4FF" width="3" wrap-count="38" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
+        <!-- ════════════════════════════════════════════════════
+             FOCUS WINDOW | NEXUS TERMINAL
+        ════════════════════════════════════════════════════ -->
+        <a-entity
+            id="mon-0"
+            class="ghost-window layer-focus-window"
+            ghost-window="title: CORE_TERMINAL"
+            mixin="window-base"
+            position="0 1.6 -3"
+        >
+
+            <a-text
+                id="nexus-display"
+                value="SENTINEL ONLINE\nAGUARDANDO BOOT..."
+                color="#00D4FF"
+                width="3"
+                wrap-count="38"
+                position="-1.4 0.5 0.01"
+                align="left"
+                font="mozillavr"
+            >
+            </a-text>
+
         </a-entity>
 
-        <a-entity id="mon-2r" class="ghost-window" ghost-window="title: CLOCK_ATC" mixin="window-base" position="5.8 1.6 -1.8" rotation="0 -55 0">
-            <a-text id="clock-display" value="CLOCK_ATC\nSTANDBY" color="#00FF41" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
+        <!-- ════════════════════════════════════════════════════
+             CONTEXT WINDOW | CLOCK
+        ════════════════════════════════════════════════════ -->
+        <a-entity
+            id="mon-2r"
+            class="ghost-window secondary-window"
+            ghost-window="title: CLOCK_ATC"
+            mixin="window-base"
+            position="5.8 1.6 -1.8"
+            rotation="0 -55 0"
+        >
+
+            <a-text
+                id="clock-display"
+                value="CLOCK_ATC\nSTANDBY"
+                color="#00FF41"
+                width="3"
+                wrap-count="34"
+                position="-1.4 0.5 0.01"
+                align="left"
+                font="mozillavr"
+            >
+            </a-text>
+
         </a-entity>
 
+        <!-- ════════════════════════════════════════════════════
+             THALAMIC CLIPPING FIELD
+             Supressão periférica neuroadaptativa
+        ════════════════════════════════════════════════════ -->
+        <a-entity
+            geometry="primitive: circle; radius: 7"
+            material="
+                shader: flat;
+                transparent: true;
+                opacity: 0.04;
+                color: #000;
+            "
+            position="0 1.6 -5">
+        </a-entity>
+
+        <!-- SKY -->
         <a-sky color="#000010"></a-sky>
+
+        <!-- CAMERA -->
         <a-entity id="camera-rig">
-            <a-entity camera id="main-camera" look-controls position="0 1.6 0">
-                <a-cursor color="#00D4FF" fuse="false" raycaster="objects: .ghost-window"></a-cursor>
+
+            <a-entity
+                camera
+                id="main-camera"
+                look-controls
+                position="0 1.6 0"
+            >
+
+                <a-cursor
+                    color="#00D4FF"
+                    fuse="false"
+                    raycaster="objects: .ghost-window">
+                </a-cursor>
+
             </a-entity>
+
         </a-entity>
+
     </a-scene>
 
+    <!-- ════════════════════════════════════════════════════════
+         GLOBAL NEXUS BOOT
+    ═════════════════════════════════════════════════════════ -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const btn     = document.getElementById('master-boot-trigger');
-            const overlay = document.getElementById('onboarding-overlay');
+        document.addEventListener('DOMContentLoaded', function () {
 
+            const btn        = document.getElementById('master-boot-trigger');
+            const overlay    = document.getElementById('onboarding-overlay');
+            const statusText = document.getElementById('boot-status');
+
+            /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+               BOOT SEQUENCE
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
             if (btn) {
-                btn.addEventListener('click', function() {
-                    console.log("[SYSTEM] Iniciando sequência de boot...");
 
-                    // 1. Emite o evento central de Boot
+                btn.addEventListener('click', function () {
+
+                    console.log('[NEXUS] Iniciando boot sequence...');
+
+                    statusText.textContent =
+                        'TRANSPORTE SALTATÓRIO: ATIVO';
+
+                    /* BOOT START */
                     if (window.SentinelBus) {
-                        window.SentinelBus.emit('boot:complete', { timestamp: Date.now() });
+
+                        window.SENTINEL_SYNC.bootStarted = true;
+
+                        SentinelBus.emit('boot:start', {
+                            timestamp: performance.now()
+                        });
+
                     }
 
-                    // 2. Atualiza flags e classes visuais
-                    window.SENTINEL_BOOTED = true;
+                    /* TRANSIÇÃO VISUAL */
                     document.body.classList.remove('system-idle');
-                    document.body.classList.add('system-ready');
+                    document.body.classList.add('system-booting');
 
-                    // 3. Transição de Saída do Overlay
-                    overlay.style.transition = 'opacity 1s ease, filter 1s ease';
-                    overlay.style.opacity    = '0';
-                    overlay.style.filter     = 'blur(20px)';
-                    overlay.style.pointerEvents = 'none';
+                    setTimeout(() => {
 
-                    setTimeout(() => { overlay.style.display = 'none'; }, 1000);
+                        /* FLAG GLOBAL */
+                        window.SENTINEL_BOOTED = true;
+
+                        window.SENTINEL_SYNC.bootCompleted = true;
+
+                        /* HANDSHAKE GLOBAL */
+                        if (window.SentinelBus) {
+
+                            SentinelBus.emit('boot:complete', {
+                                timestamp: performance.now(),
+                                gammaSync: true
+                            });
+
+                        }
+
+                        document.body.classList.remove('system-booting');
+                        document.body.classList.add('system-ready');
+                        document.body.classList.add('sentinel-active');
+
+                        /* OVERLAY EXIT */
+                        overlay.style.transition =
+                            'opacity 1s ease, filter 1s ease';
+
+                        overlay.style.opacity = '0';
+                        overlay.style.filter  = 'blur(20px)';
+                        overlay.style.pointerEvents = 'none';
+
+                        setTimeout(() => {
+                            overlay.style.display = 'none';
+                        }, 1000);
+
+                    }, 800);
+
                 });
+
             }
 
-            // ATALHOS DE TECLADO
-            window.addEventListener('keydown', (e) => {
-                if (e.key.toLowerCase() === 'j' && typeof VoiceListener !== 'undefined') {
-                    VoiceListener.start();
+            /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+               GLOBAL INPUT TELEMETRY
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+            const registerInput = () => {
+
+                if (!window.SENTINEL_SYNC.firstActionTS) {
+                    window.SENTINEL_SYNC.firstActionTS = performance.now();
                 }
-                // Dispara sinal de atividade para o Barramento (reseta idle)
-                window.SentinelBus?.emit('telemetry:input');
+
+                window.SentinelBus?.emit('telemetry:input', {
+                    timestamp: performance.now()
+                });
+
+            };
+
+            ['keydown', 'click', 'mousemove', 'touchstart']
+                .forEach(evt => {
+                    window.addEventListener(evt, registerInput);
+                });
+
+            /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+               VOICE SHORTCUT
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+            window.addEventListener('keydown', (e) => {
+
+                if (
+                    e.key.toLowerCase() === 'j' &&
+                    typeof VoiceListener !== 'undefined'
+                ) {
+
+                    VoiceListener.start();
+
+                    window.SentinelBus?.emit('jarvis:feedback', {
+                        type: 'confirm'
+                    });
+
+                }
+
             });
 
-            /* NOTA TÉCNICA: O setInterval de telemetria anterior foi removido.
-               A atualização do clock-display e nexus-display agora é tratada 
-               pelos ouvintes dentro de 'sentinel-core.js' e 'js_sentinel_protocols.js',
-               evitando concorrência de processamento.
-            */
+            /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+               AMBIENT CLOCK LOOP
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+            setInterval(() => {
+
+                const clockEl = document.getElementById('ambient-clock-value');
+
+                if (!clockEl) return;
+
+                const now = new Date();
+
+                clockEl.textContent =
+                    now.toLocaleTimeString('pt-BR');
+
+            }, 1000);
+
+            console.log(
+                '%c[NEXUS] Estrutura CMA carregada.',
+                'color:#00FF41;font-weight:bold;'
+            );
+
         });
     </script>
+
 </body>
 </html>
