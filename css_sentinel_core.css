@@ -1,0 +1,626 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   OMC VR-OS | SENTINEL CORE — NEUROADAPTIVE EXPANSION v6.6
+   CAMADA COMPLEMENTAR | SOBERANIA DE RENDERIZAÇÃO
+   Zero Latency Cognitive Rendering System
+   FRAGMENTO 2/3 — COGNITIVE HIERARCHY EXPANSION
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ROOT TOKENS EXPANSION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+:root {
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       HIERARQUIA COGNITIVA
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+    --focus-priority:           1;
+    --context-priority:         0.75;
+    --sovereign-priority:       0.45;
+
+    --attention-bandwidth:      7;
+    --attention-safe-zone:      4;
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       BUFFER DE ATENÇÃO
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+    --attention-opacity-focus:      1;
+    --attention-opacity-context:    0.78;
+    --attention-opacity-sovereign:  0.42;
+
+    --attention-blur-focus:         0px;
+    --attention-blur-context:       1px;
+    --attention-blur-sovereign:     3px;
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       NEURAL CONTRAST
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+    --contrast-focus:           1.15;
+    --contrast-context:         0.95;
+    --contrast-sovereign:       0.75;
+
+    --saturation-focus:         1.1;
+    --saturation-context:       0.9;
+    --saturation-sovereign:     0.65;
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       CLIPPING SENSORIAL
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+    --pulvinar-mask-opacity:    0.72;
+    --pulvinar-fade-speed:      0.45s;
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       Z-INDEX SOBERANO
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+    --z-background:             -10;
+    --z-grid:                   -5;
+    --z-sovereign:              100;
+    --z-context:                200;
+    --z-focus:                  300;
+    --z-hover:                  400;
+    --z-modal:                  9000;
+    --z-overlay:                99999;
+    --z-absolute:               2147483647;
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       NEURAL TIMING
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+    --timing-focus:             0.18s;
+    --timing-context:           0.32s;
+    --timing-sovereign:         0.65s;
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       ISOLAMENTO VISUAL
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+    --visual-noise-floor:       0.08;
+    --focus-retention:          0.92;
+    --context-decay:            0.65;
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       ENE DYNAMICS
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+    --ene-focus-boost:          1.2;
+    --ene-context-dim:          0.85;
+    --ene-sovereign-dim:        0.65;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ROOT ISOLATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+html,
+body {
+    contain: strict;
+
+    overscroll-behavior: none;
+
+    touch-action: manipulation;
+
+    image-rendering: auto;
+
+    transform-style: preserve-3d;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   COGNITIVE RENDER PIPELINE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.render-pipeline,
+.neural-stage,
+.cognitive-layer {
+    position: relative;
+
+    isolation: isolate;
+
+    transform-style: preserve-3d;
+
+    contain: layout paint style;
+
+    will-change:
+        transform,
+        opacity,
+        filter;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   COGNITIVE HIERARCHY LOCK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.layer-focus,
+.layer-context,
+.layer-sovereign {
+    position: relative;
+
+    transition:
+        opacity var(--transition-med),
+        transform var(--transition-med),
+        filter var(--transition-fast),
+        box-shadow var(--transition-fast);
+
+    will-change:
+        transform,
+        opacity,
+        filter;
+
+    transform-style: preserve-3d;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LAYER FOCUS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.layer-focus {
+
+    z-index: var(--z-focus);
+
+    opacity: var(--attention-opacity-focus);
+
+    filter:
+        blur(var(--attention-blur-focus))
+        contrast(var(--contrast-focus))
+        saturate(var(--saturation-focus));
+
+    pointer-events: auto;
+
+    isolation: isolate;
+
+    contain: layout paint;
+
+    box-shadow:
+        var(--elevation-focus),
+        0 0 120px rgba(0,255,65,0.08);
+}
+
+.layer-focus::before {
+
+    content: '';
+
+    position: absolute;
+    inset: 0;
+
+    border:
+        1px solid rgba(0,255,65,0.12);
+
+    pointer-events: none;
+
+    mix-blend-mode: screen;
+
+    opacity: 0.35;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LAYER CONTEXT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.layer-context {
+
+    z-index: var(--z-context);
+
+    opacity: var(--attention-opacity-context);
+
+    filter:
+        blur(var(--attention-blur-context))
+        contrast(var(--contrast-context))
+        saturate(var(--saturation-context));
+
+    pointer-events: auto;
+
+    contain: paint;
+
+    box-shadow:
+        var(--elevation-context);
+}
+
+.layer-context.dimmed {
+
+    opacity: 0.35;
+
+    filter:
+        blur(2px)
+        brightness(0.7);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LAYER SOVEREIGN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.layer-sovereign {
+
+    z-index: var(--z-sovereign);
+
+    opacity: var(--attention-opacity-sovereign);
+
+    filter:
+        blur(var(--attention-blur-sovereign))
+        contrast(var(--contrast-sovereign))
+        saturate(var(--saturation-sovereign));
+
+    pointer-events: none;
+
+    contain: strict;
+
+    box-shadow:
+        var(--elevation-sovereign);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SOBERANIA DE OVERLAY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.overlay-sovereign,
+.overlay-lock,
+.overlay-critical {
+
+    position: fixed;
+    inset: 0;
+
+    z-index: var(--z-overlay);
+
+    isolation: isolate;
+
+    contain: strict;
+
+    backdrop-filter:
+        blur(24px)
+        brightness(0.45);
+
+    -webkit-backdrop-filter:
+        blur(24px)
+        brightness(0.45);
+
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(0,0,0,0.96),
+            rgba(0,4,8,0.98)
+        );
+
+    will-change:
+        opacity,
+        backdrop-filter;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PULVINAR CLIPPING ENGINE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.pulvinar-mask {
+
+    position: fixed;
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: calc(var(--z-focus) - 1);
+
+    background:
+        radial-gradient(
+            circle at center,
+            transparent 0%,
+            rgba(0,0,0,var(--pulvinar-mask-opacity)) 100%
+        );
+
+    opacity: 0;
+
+    transition:
+        opacity var(--pulvinar-fade-speed)
+        var(--ease-neural);
+
+    mix-blend-mode: multiply;
+}
+
+.focus-lock .pulvinar-mask {
+
+    opacity: 1;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ATTENTION BANDWIDTH PROTECTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.cognitive-noise {
+
+    opacity:
+        var(--visual-noise-floor);
+
+    filter:
+        blur(4px)
+        saturate(0.6);
+
+    pointer-events: none;
+}
+
+.attention-anchor {
+
+    position: relative;
+
+    z-index: calc(var(--z-focus) + 10);
+
+    isolation: isolate;
+
+    transform:
+        translateZ(0.75m)
+        scale(1.015);
+
+    box-shadow:
+        0 0 45px rgba(0,255,65,0.18),
+        0 0 100px rgba(0,212,255,0.08);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   INTERFACE SILENCE SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.neural-silence .layer-context,
+.neural-silence .layer-sovereign {
+
+    opacity: 0.15 !important;
+
+    filter:
+        blur(5px)
+        brightness(0.45)
+        saturate(0.45);
+
+    pointer-events: none;
+}
+
+.neural-silence .layer-focus {
+
+    opacity: 1 !important;
+
+    transform:
+        translateZ(0.65m)
+        scale(1.01);
+
+    box-shadow:
+        0 0 30px rgba(0,255,65,0.12),
+        0 0 80px rgba(0,212,255,0.06);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   HOVER PRIORITY ELEVATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.layer-context:hover,
+.layer-sovereign:hover {
+
+    z-index: var(--z-hover);
+
+    opacity: 0.95;
+
+    filter:
+        blur(0px)
+        brightness(1.05);
+
+    transform:
+        translateY(-2px)
+        scale(1.01);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FOCUS MODE LOCK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+body.focus-mode-active .layer-context {
+
+    opacity: 0.28;
+
+    filter:
+        blur(3px)
+        brightness(0.65);
+}
+
+body.focus-mode-active .layer-sovereign {
+
+    opacity: 0.08;
+
+    filter:
+        blur(6px)
+        brightness(0.45);
+}
+
+body.focus-mode-active .layer-focus {
+
+    z-index: calc(var(--z-focus) + 50);
+
+    transform:
+        translateZ(0.8m)
+        scale(1.02);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LOW LATENCY UI PIPELINE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.low-latency-ui *,
+.low-latency-ui *::before,
+.low-latency-ui *::after {
+
+    animation-duration: 0.01ms !important;
+
+    transition-duration: 0.08s !important;
+
+    scroll-behavior: auto !important;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TELEMETRY PANELS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.telemetry-panel,
+.system-stats,
+.neural-monitor {
+
+    z-index: var(--z-sovereign);
+
+    opacity: 0.55;
+
+    filter:
+        blur(1px)
+        saturate(0.75);
+
+    pointer-events: none;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CRITICAL ACTION ZONE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.action-critical,
+.confirmation-critical,
+.kernel-authority {
+
+    position: relative;
+
+    z-index: calc(var(--z-focus) + 100);
+
+    isolation: isolate;
+
+    box-shadow:
+        0 0 25px rgba(255,75,0,0.16),
+        0 0 90px rgba(255,75,0,0.08);
+
+    border-color:
+        rgba(255,75,0,0.28) !important;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   EGO INTERFERENCE SHIELD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.ego-interference-detected .layer-context,
+.ego-interference-detected .layer-sovereign {
+
+    opacity: 0.12;
+
+    filter:
+        blur(8px)
+        grayscale(0.45)
+        brightness(0.45);
+
+    transition:
+        opacity 0.45s ease,
+        filter 0.45s ease;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   MOBILE COGNITIVE ISOLATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@media (max-width: 768px) {
+
+    :root {
+
+        --attention-opacity-context: 0.55;
+        --attention-opacity-sovereign: 0.28;
+
+        --attention-blur-context: 2px;
+        --attention-blur-sovereign: 4px;
+    }
+
+    .layer-context {
+
+        transform:
+            translateZ(1m)
+            scale(0.98);
+    }
+
+    .layer-sovereign {
+
+        transform:
+            translateZ(2m)
+            scale(0.92);
+    }
+
+    .overlay-inner {
+
+        max-height: 90vh;
+
+        overflow-y: auto;
+    }
+
+    .focus-lock .layer-context,
+    .focus-lock .layer-sovereign {
+
+        opacity: 0.08;
+    }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PERFORMANCE CONTAINMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.performance-lock .layer-sovereign {
+
+    display: none !important;
+}
+
+.performance-lock .layer-context {
+
+    filter: none !important;
+
+    backdrop-filter: none !important;
+}
+
+.performance-lock * {
+
+    animation-play-state: paused !important;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   COGNITIVE TRANSITIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.cognitive-transition {
+
+    transition:
+        opacity var(--transition-med),
+        filter var(--transition-med),
+        transform var(--transition-med),
+        backdrop-filter var(--transition-fast);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FINAL RENDER NORMALIZATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.layer-focus,
+.layer-context,
+.layer-sovereign,
+.overlay-system,
+.overlay-sovereign,
+.glass-panel,
+.glass-card,
+.panel,
+.hud-box {
+
+    isolation: isolate;
+
+    backface-visibility: hidden;
+
+    transform-style: preserve-3d;
+
+    contain:
+        layout
+        paint
+        style;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SOBERANIA OPERATIVA v6.6
+   ESTADO FINAL:
+   ✓ Z-INDEX NORMALIZADO
+   ✓ BUFFER DE ATENÇÃO PROTEGIDO
+   ✓ CLIPPING SENSORIAL ATIVO
+   ✓ PULVINAR MASK READY
+   ✓ ZERO OVERLAP CONFLICT
+   ✓ ENE RENDER PIPELINE STABLE
+═══════════════════════════════════════════════════════════════════════════ */

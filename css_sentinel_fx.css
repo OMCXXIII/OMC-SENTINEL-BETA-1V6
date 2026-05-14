@@ -1,0 +1,584 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   OMC VR-OS | CSS_SENTINEL_FX v6.6 — EXPANSÃO SENSORIAL
+   MOTOR DE BLINDAGEM SENSORIAL
+   Pulvinar Firewall + Gamma Sync + AeroGlass v2
+   FRAGMENTO COMPLEMENTAR — ENE IMMERSION ENGINE
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ROOT FX TOKENS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+:root {
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       PULVINAR FIREWALL
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+    --pulvinar-inner:
+        transparent 14%;
+
+    --pulvinar-mid:
+        rgba(0,0,0,0.18) 34%;
+
+    --pulvinar-outer:
+        rgba(0,0,0,1) 90%;
+
+    --pulvinar-opacity:
+        0.96;
+
+    --pulvinar-blur:
+        blur(18px);
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       GAMMA SYNC ENGINE
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+    --gamma-frequency:
+        0.025s;
+
+    --gamma-opacity:
+        0.035;
+
+    --gamma-scale:
+        1.015;
+
+    --gamma-brightness:
+        1.06;
+
+    --gamma-energy:
+        rgba(0,255,65,0.06);
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       AERO GLASS v2
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+    --glass-blur-v2:
+        blur(12px);
+
+    --glass-saturation-v2:
+        saturate(180%);
+
+    --glass-depth:
+        rgba(0,10,20,0.72);
+
+    --glass-highlight:
+        rgba(255,255,255,0.05);
+
+    --glass-edge:
+        rgba(0,212,255,0.18);
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       SENSORIAL DAMPING
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+    --peripheral-dim:
+        0.55;
+
+    --focus-amplification:
+        1.08;
+
+    --background-noise:
+        0.12;
+
+    --autocritic-suppression:
+        0.72;
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       ENE IMMERSION
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+    --ene-sync-speed:
+        2.8s;
+
+    --ene-sync-opacity:
+        0.28;
+
+    --ene-neural-wave:
+        rgba(0,212,255,0.04);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PULVINAR FIREWALL
+   Clipping Sensorial Periférico
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+body::after {
+
+    content: '';
+
+    position: fixed;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    background:
+        radial-gradient(
+            circle at center,
+            var(--pulvinar-inner),
+            var(--pulvinar-mid),
+            var(--pulvinar-outer)
+        );
+
+    opacity: var(--pulvinar-opacity);
+
+    backdrop-filter: var(--pulvinar-blur);
+
+    -webkit-backdrop-filter: var(--pulvinar-blur);
+
+    pointer-events: none;
+
+    mix-blend-mode: multiply;
+
+    z-index: 998;
+
+    isolation: isolate;
+
+    will-change:
+        opacity,
+        backdrop-filter;
+
+    transition:
+        opacity var(--transition-slow),
+        backdrop-filter var(--transition-med);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   NEURAL GAMMA SYNC
+   Estabilização de Clock Neural
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.gamma-sync-layer {
+
+    position: fixed;
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: 997;
+
+    opacity: var(--gamma-opacity);
+
+    background:
+        repeating-linear-gradient(
+            180deg,
+            transparent 0px,
+            rgba(0,255,65,0.015) 1px,
+            transparent 2px,
+            transparent 4px
+        );
+
+    mix-blend-mode: screen;
+
+    animation:
+        gammaSync var(--gamma-frequency) linear infinite,
+        gammaBreath var(--ene-sync-speed) ease-in-out infinite;
+
+    will-change:
+        opacity,
+        transform,
+        filter;
+}
+
+@keyframes gammaSync {
+
+    0% {
+        opacity: 0.02;
+        transform: scale(1);
+        filter: brightness(1);
+    }
+
+    50% {
+        opacity: var(--gamma-opacity);
+        transform: scale(var(--gamma-scale));
+        filter: brightness(var(--gamma-brightness));
+    }
+
+    100% {
+        opacity: 0.02;
+        transform: scale(1);
+        filter: brightness(1);
+    }
+}
+
+@keyframes gammaBreath {
+
+    0%,
+    100% {
+        opacity: 0.02;
+    }
+
+    50% {
+        opacity: 0.08;
+    }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   NEURAL FIELD
+   Cola Neural de Sincronização
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.neural-field {
+
+    position: fixed;
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: 996;
+
+    background:
+        radial-gradient(
+            circle at center,
+            var(--gamma-energy),
+            transparent 70%
+        );
+
+    mix-blend-mode: screen;
+
+    opacity: var(--ene-sync-opacity);
+
+    animation:
+        neuralFieldPulse 4s ease-in-out infinite;
+
+    will-change:
+        transform,
+        opacity;
+}
+
+@keyframes neuralFieldPulse {
+
+    0%,
+    100% {
+        opacity: 0.08;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.22;
+        transform: scale(1.04);
+    }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   AERO GLASS v2
+   Hipofrontalidade Transitória
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.glass-panel,
+.glass-card,
+.cyber-glass,
+.panel,
+.hud-box,
+.overlay-inner {
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.04),
+            rgba(255,255,255,0.01)
+        ),
+        var(--glass-depth);
+
+    backdrop-filter:
+        var(--glass-blur-v2)
+        var(--glass-saturation-v2);
+
+    -webkit-backdrop-filter:
+        var(--glass-blur-v2)
+        var(--glass-saturation-v2);
+
+    border:
+        1px solid var(--glass-edge);
+
+    box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.02),
+        0 0 18px rgba(0,212,255,0.06),
+        0 0 40px rgba(0,0,0,0.45);
+
+    isolation: isolate;
+
+    overflow: hidden;
+
+    will-change:
+        transform,
+        opacity,
+        backdrop-filter;
+}
+
+.glass-panel::after,
+.glass-card::after,
+.cyber-glass::after,
+.panel::after,
+.hud-box::after {
+
+    content: '';
+
+    position: absolute;
+    inset: 0;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--glass-highlight),
+            transparent 45%
+        );
+
+    opacity: 0.45;
+
+    pointer-events: none;
+
+    mix-blend-mode: screen;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BACKGROUND SUPPRESSION
+   Redução de Ruído Cognitivo
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.background-muted,
+.context-muted,
+.secondary-window {
+
+    opacity: var(--peripheral-dim);
+
+    filter:
+        blur(5px)
+        brightness(0.62)
+        saturate(0.55);
+
+    transform:
+        scale(0.985);
+
+    transition:
+        opacity var(--transition-med),
+        filter var(--transition-med),
+        transform var(--transition-fast);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FOCUS AMPLIFIER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.focus-amplified,
+.primary-task,
+.neural-anchor {
+
+    opacity: 1 !important;
+
+    filter:
+        brightness(var(--focus-amplification))
+        saturate(1.15)
+        contrast(1.08);
+
+    transform:
+        translateZ(20px)
+        scale(1.01);
+
+    z-index: 1200;
+
+    box-shadow:
+        0 0 24px rgba(0,255,65,0.12),
+        0 0 80px rgba(0,212,255,0.08);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   AUTORITICAL SILENCING
+   Hipofrontalidade Transitória
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.deep-flow-mode .layer-context,
+.deep-flow-mode .layer-sovereign {
+
+    opacity: 0.14;
+
+    filter:
+        blur(8px)
+        brightness(0.45)
+        saturate(0.35);
+
+    pointer-events: none;
+}
+
+.deep-flow-mode .layer-focus {
+
+    opacity: 1;
+
+    transform:
+        translateZ(0.8m)
+        scale(1.015);
+
+    filter:
+        brightness(1.08)
+        saturate(1.12);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   NEURAL SCAN OVERLAY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.neural-scan-overlay {
+
+    position: fixed;
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: 995;
+
+    background:
+        repeating-linear-gradient(
+            180deg,
+            transparent 0px,
+            rgba(0,212,255,0.02) 1px,
+            transparent 3px,
+            transparent 5px
+        );
+
+    mix-blend-mode: overlay;
+
+    opacity: 0.16;
+
+    animation:
+        neuralSweep 10s linear infinite;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ENE IMMERSION FIELD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.ene-immersion {
+
+    position: relative;
+
+    isolation: isolate;
+}
+
+.ene-immersion::before {
+
+    content: '';
+
+    position: absolute;
+    inset: -15%;
+
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(0,255,65,0.04),
+            transparent 65%
+        );
+
+    opacity: 0.45;
+
+    filter: blur(40px);
+
+    pointer-events: none;
+
+    animation:
+        eneFieldBreath 6s ease-in-out infinite;
+}
+
+@keyframes eneFieldBreath {
+
+    0%,
+    100% {
+        opacity: 0.18;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.42;
+        transform: scale(1.08);
+    }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PERFORMANCE SAFE MODE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.low-power-mode .gamma-sync-layer,
+.low-power-mode .neural-field,
+.low-power-mode .neural-scan-overlay {
+
+    display: none !important;
+}
+
+.low-power-mode body::after {
+
+    backdrop-filter: blur(6px);
+
+    opacity: 0.75;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   MOBILE SENSORIAL LOCK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@media (max-width: 768px) {
+
+    body::after {
+
+        opacity: 0.82;
+
+        backdrop-filter: blur(10px);
+    }
+
+    .glass-panel,
+    .glass-card,
+    .cyber-glass {
+
+        backdrop-filter:
+            blur(10px)
+            saturate(160%);
+
+        -webkit-backdrop-filter:
+            blur(10px)
+            saturate(160%);
+    }
+
+    .gamma-sync-layer {
+
+        opacity: 0.02;
+    }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FINAL SENSORIAL NORMALIZATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.gamma-sync-layer,
+.neural-field,
+.neural-scan-overlay,
+.glass-panel,
+.glass-card,
+.cyber-glass,
+.panel,
+.hud-box {
+
+    transform:
+        translate3d(0,0,0);
+
+    backface-visibility: hidden;
+
+    contain:
+        layout
+        paint
+        style;
+
+    will-change:
+        transform,
+        opacity,
+        filter;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CSS_SENTINEL_FX v6.6
+   ESTADO FINAL:
+   ✓ PULVINAR FIREWALL ONLINE
+   ✓ GAMMA SYNC ACTIVE
+   ✓ AERO GLASS v2 STABLE
+   ✓ SENSORIAL CLIPPING ENABLED
+   ✓ ENE IMMERSION FIELD ACTIVE
+   ✓ BACKGROUND NOISE SUPPRESSED
+═══════════════════════════════════════════════════════════════════════════ */

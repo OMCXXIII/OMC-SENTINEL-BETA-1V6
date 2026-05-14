@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OMC VR-OS | SENTINEL v6.0 SOVEREIGNTY CORE</title>
+
+    <script>
+        /* ════════════════════════════════════════════════════════
+           MOBILE DETECTION & SYSTEM STATE
+        ════════════════════════════════════════════════════════ */
+        window.IS_MOBILE = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+        if (window.IS_MOBILE) {
+            document.documentElement.setAttribute('data-mobile', 'true');
+        }
+
+        /* ════════════════════════════════════════════════════════
+           BOOT GATE
+        ════════════════════════════════════════════════════════ */
+        window.SENTINEL_BOOTED = false;
+    </script>
+
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-event-set-component@5.0.0/dist/aframe-event-set-component.min.js"></script>
+    <script src="https://unpkg.com/aframe-particle-system-component@1.0.x/dist/aframe-particle-system-component.min.js"></script>
+
+    <script src="sentinel-bus.js"></script>
+    <script src="sentinel-core.js"></script> <script src="sentinel-debug-hud.js"></script> <script src="js_sentinel_engine-xr.js"></script>
+    <script src="js_sentinel_jarvis-voice.js"></script>
+    <script src="js_sentinel_protocols.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css_sentinel_core.css">
+    <link rel="stylesheet" href="css_sentinel_hud.css">
+    <link rel="stylesheet" href="css_sentinel_fx.css">
+</head>
+
+<body class="system-idle">
+
+    <div id="onboarding-overlay">
+        <div class="overlay-inner">
+            <div class="overlay-scan-line"></div>
+            <h1>SENTINEL v6.0</h1>
+            <p>Sincronizando Mielina... Estado: ALPHA</p>
+            <button class="boot-btn" id="master-boot-trigger">
+                INICIALIZAR PROTOCOLO
+            </button>
+            <div class="status-msg" id="boot-status">Sinal de Clock: Estável</div>
+        </div>
+    </div>
+
+    <div id="hud-2d">
+        <div class="hud-corner top-left">
+            <div class="label">SISTEMA</div>
+            <div class="value">SENTINEL_v6_PRO</div>
+        </div>
+        <div class="hud-corner top-right">
+            <div class="label">LATÊNCIA</div>
+            <div id="latency-value" class="value">0.0ms</div>
+        </div>
+        <div class="hud-corner bottom-left">
+            <div class="label">BATERIA_CPF</div>
+            <div id="battery-value" class="value">100%</div>
+        </div>
+    </div>
+
+    <a-scene embedded renderer="antialias: true; colorManagement: true;" fog="type: exponential; color: #000; density: 0.03;">
+
+        <a-assets>
+            <a-mixin id="window-base"
+                     geometry="primitive: plane; width: 3.2; height: 1.8"
+                     material="shader: standard; transparent: true; opacity: 0.2; side: double; emissive: #00D4FF; emissiveIntensity: 0.15">
+            </a-mixin>
+        </a-assets>
+
+        <a-light type="ambient" color="#0a1a2a" intensity="0.6"></a-light>
+        <a-light type="directional" color="#00D4FF" intensity="0.3" position="0 4 -2"></a-light>
+
+        <a-entity id="reactor-core" position="0 1 -3.5">
+            <a-sphere radius="0.15" color="#00D4FF" material="emissive: #00D4FF; emissiveIntensity: 2">
+                <a-light type="point" color="#00D4FF" intensity="1.2" distance="8"></a-light>
+            </a-sphere>
+        </a-entity>
+
+        <a-entity id="mon-0" class="ghost-window" ghost-window="title: CORE_TERMINAL" mixin="window-base" position="0 1.6 -3">
+            <a-text id="nexus-display" value="SENTINEL ONLINE\nAGUARDANDO BOOT..." color="#00D4FF" width="3" wrap-count="38" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
+        </a-entity>
+
+        <a-entity id="mon-2r" class="ghost-window" ghost-window="title: CLOCK_ATC" mixin="window-base" position="5.8 1.6 -1.8" rotation="0 -55 0">
+            <a-text id="clock-display" value="CLOCK_ATC\nSTANDBY" color="#00FF41" width="3" wrap-count="34" position="-1.4 0.5 0.01" align="left" font="mozillavr"></a-text>
+        </a-entity>
+
+        <a-sky color="#000010"></a-sky>
+        <a-entity id="camera-rig">
+            <a-entity camera id="main-camera" look-controls position="0 1.6 0">
+                <a-cursor color="#00D4FF" fuse="false" raycaster="objects: .ghost-window"></a-cursor>
+            </a-entity>
+        </a-entity>
+    </a-scene>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const btn     = document.getElementById('master-boot-trigger');
+            const overlay = document.getElementById('onboarding-overlay');
+
+            if (btn) {
+                btn.addEventListener('click', function() {
+                    console.log("[SYSTEM] Iniciando sequência de boot...");
+
+                    // 1. Emite o evento central de Boot
+                    if (window.SentinelBus) {
+                        window.SentinelBus.emit('boot:complete', { timestamp: Date.now() });
+                    }
+
+                    // 2. Atualiza flags e classes visuais
+                    window.SENTINEL_BOOTED = true;
+                    document.body.classList.remove('system-idle');
+                    document.body.classList.add('system-ready');
+
+                    // 3. Transição de Saída do Overlay
+                    overlay.style.transition = 'opacity 1s ease, filter 1s ease';
+                    overlay.style.opacity    = '0';
+                    overlay.style.filter     = 'blur(20px)';
+                    overlay.style.pointerEvents = 'none';
+
+                    setTimeout(() => { overlay.style.display = 'none'; }, 1000);
+                });
+            }
+
+            // ATALHOS DE TECLADO
+            window.addEventListener('keydown', (e) => {
+                if (e.key.toLowerCase() === 'j' && typeof VoiceListener !== 'undefined') {
+                    VoiceListener.start();
+                }
+                // Dispara sinal de atividade para o Barramento (reseta idle)
+                window.SentinelBus?.emit('telemetry:input');
+            });
+
+            /* NOTA TÉCNICA: O setInterval de telemetria anterior foi removido.
+               A atualização do clock-display e nexus-display agora é tratada 
+               pelos ouvintes dentro de 'sentinel-core.js' e 'js_sentinel_protocols.js',
+               evitando concorrência de processamento.
+            */
+        });
+    </script>
+</body>
+</html>
