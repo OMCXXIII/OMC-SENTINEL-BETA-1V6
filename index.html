@@ -3,285 +3,138 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="OMC VR-OS Sentinel Nexus v8.0 - Sovereign Core Operations" />
-    <meta name="author" content="OMCXXIII" />
     <title>OMC VR-OS | SENTINEL NEXUS v8.0 SOVEREIGN CORE</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet" />
-
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
     <link rel="stylesheet" href="css_sentinel_core.css" />
     <link rel="stylesheet" href="css_sentinel_fx.css" />
     <link rel="stylesheet" href="css_sentinel_hud.css" />
-
+    
     <style>
-        /* ─── RESET OPERACIONAL (PRESERVADO) ─── */
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+        /* CSS Crítico de Transição v8.0 */
         :root {
-            /* V7.0 CORE (PRESERVADO) */
-            --accent-color: #00D4FF;
-            --green-flow:   #00FF41;
-            --warning:      #FFC400;
-            --alert:        #FF4B00;
-            --cyan:         #00D4FF;
-            --font-display: 'Share Tech Mono', monospace;
-            --font-ui:      'Rajdhani', sans-serif;
-            --transition-fast: 0.18s var(--ease-neural);
-            --transition-med:  0.32s var(--ease-neural);
-            --ease-neural: cubic-bezier(0.16, 1, 0.3, 1);
-            --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
-            --tracking-wide: 0.12em;
-
-            /* V8.0 SOVEREIGN ADDITIONS */
-            --threat-level: 0;         /* 0-100 */
+            --threat-level: 0;
             --render-scale: 1.0;
-            --system-temperature: 32;  /* Celsius */
+            --system-temperature: 32;
             --ui-density: 1.0;
-            --shader-intensity: 1.0;
-            --hologram-opacity: 0.85;
-            --audio-reactivity: 0;
-            --battery-level: 100%;
         }
-
-        html, body {
-            width: 100%; height: 100%;
-            background: #000408;
-            color: var(--accent-color);
-            font-family: var(--font-display);
-            overflow: hidden;
-        }
-
-        /* Oculto até BootKernel autorizar */
-        body { opacity: 0; visibility: hidden; transition: opacity 0.8s var(--ease-out-expo); }
-
-        /* ─── LAYOUT PRINCIPAL (PRESERVADO) ─── */
-        #app {
-            position: relative;
-            width: 100vw; height: 100vh;
+        body { background: #000408; overflow: hidden; opacity: 0; transition: opacity 1s var(--ease-out-expo); }
+        body.runtime-active { opacity: 1; }
+        
+        /* Containers Atômicos */
+        #nexus-os {
             display: grid;
-            grid-template-columns: 280px 1fr 280px;
-            grid-template-rows: 48px 1fr 48px;
-        }
-
-        /* ─── FX LAYERS (PRESERVADO + VISUALFX KERNEL READY) ─── */
-        .gamma-sync-layer { position: fixed; inset: 0; pointer-events: none; z-index: 1000; }
-        .neural-field { position: fixed; inset: 0; pointer-events: none; z-index: 1001; }
-        .neural-scan-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 1002; }
-
-        /* ─── TOPBAR ─── */
-        #topbar {
-            grid-column: 1 / -1;
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 1.2rem;
-            background: rgba(0,4,8,0.92);
-            border-bottom: 1px solid rgba(0,212,255,0.18);
-            z-index: 500;
-        }
-
-        /* ─── SCENE WRAPPER ─── */
-        #scene-wrapper { grid-column: 2; grid-row: 2; position: relative; overflow: hidden; }
-        a-scene { display: none; width: 100%; height: 100%; }
-
-        #webgl-fallback {
-            display: none; position: absolute; inset: 0;
-            align-items: center; justify-content: center; flex-direction: column;
-            background: #000408; z-index: 100;
-        }
-        #webgl-fallback.visible { display: flex; }
-
-        /* ─── HUD BOXES (PRESERVADO) ─── */
-        .hud-box {
-            background: linear-gradient(145deg, rgba(255,255,255,0.03), rgba(0,0,0,0.25));
-            border: 1px solid rgba(0,212,255,0.15);
-            padding: 0.75rem; margin-bottom: 0.8rem;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: 50px 1fr 50px;
+            height: 100vh; width: 100vw;
             position: relative;
         }
-        .hud-label { color: rgba(0,212,255,0.5); font-size: 0.6rem; margin-bottom: 0.4rem; }
-        .hud-value { color: var(--green-flow); font-size: 0.75rem; }
-
-        /* ─── TERMINAL v8.0 ─── */
-        #terminal-log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; font-size: 0.6rem; padding: 0.5rem; }
-        .cmd-input { width: 100%; background: transparent; border: none; border-top: 1px solid rgba(0,212,255,0.15); color: var(--green-flow); padding: 0.5rem; outline: none; font-family: var(--font-display); }
-
     </style>
-</head>
 
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+
+    <script src="sentinel-bus.js"></script>           <script src="sentinel-core.js"></script>          <script src="js_sentinel_protocols.js"></script>  </head>
 <body>
 
-    <div class="gamma-sync-layer" aria-hidden="true"></div>
-    <div class="neural-field" aria-hidden="true"></div>
-    <div class="neural-scan-overlay" aria-hidden="true"></div>
+    <div id="fx-pipeline">
+        <div class="gamma-sync-layer"></div>
+        <div class="neural-field"></div>
+        <div class="neural-scan-overlay"></div>
+    </div>
 
-    <div id="app">
-
-        <header id="topbar">
-            <span class="sys-id" id="sys-version">OMC VR-OS | SENTINEL NEXUS v8.0</span>
-            <div class="ctx-controls" id="ctx-switcher">
-                <button class="ctx-btn active" data-profile="ALPHA">ALPHA</button>
-                <button class="ctx-btn" data-profile="BETA">BETA</button>
-                <button class="ctx-btn" data-profile="GAMMA">GAMMA</button>
-            </div>
-            <div style="display:flex; align-items:center; gap:0.8rem;">
-                <div id="gamma-heartbeat"></div>
-                <span style="font-size:0.6rem; opacity:0.4;">RENDER:</span>
-                <span id="fps-counter" class="hud-value">--</span>
+    <div id="nexus-os">
+        <header id="topbar" class="overlay-system">
+            <div class="sys-id">SENTINEL NEXUS v8.0</div>
+            <div id="gamma-heartbeat"></div>
+            <div class="telemetry-compact">
+                FPS: <span id="fps-counter">--</span>
+                LATENCY: <span id="latency-value">--</span>
             </div>
         </header>
 
-        <aside id="hud-left" style="padding: 0.8rem; border-right: 1px solid rgba(0,212,255,0.1);">
+        <aside id="hud-left" class="layer-context">
             <div class="hud-box">
                 <div class="hud-label">CLOCK ATC</div>
-                <div id="clock-display" class="hud-value">--:--:--</div>
+                <div id="clock-display" class="hud-value">00:00:00</div>
             </div>
             <div class="hud-box">
                 <div class="hud-label">MENTAL BATTERY</div>
-                <div id="mental-battery-bar" style="height:3px; background:rgba(0,212,255,0.1); position:relative;">
-                    <div id="battery-fill" style="position:absolute; height:100%; width:100%; background:var(--green-flow); transition: 0.5s;"></div>
-                </div>
-                <div id="mental-battery-percent" class="hud-value" style="margin-top:0.4rem;">100%</div>
+                <div id="mental-battery" class="hud-value">100%</div>
+                <div class="battery-track"><div id="battery-fill"></div></div>
             </div>
             <div class="hud-box">
-                <div class="hud-label">MISSION LOCK</div>
-                <div id="mission-display" class="hud-value">IDLE</div>
+                <div class="hud-label">MISSION_LOCK</div>
+                <div id="mission-display" class="hud-value">STANDBY</div>
             </div>
         </aside>
 
         <main id="scene-wrapper">
-            <div id="webgl-fallback">
-                <div style="color:var(--warning);">⚠ WebGL OFFLINE</div>
-                <div style="font-size:0.6rem; opacity:0.5;">REVERTENDO PARA TELEMETRIA 2D...</div>
-            </div>
-
             <a-scene id="main-scene" embedded vr-mode-ui="enabled: false" renderer="antialias: false; colorManagement: true;">
                 <a-sky color="#000408"></a-sky>
                 
-                <a-entity id="window-alpha" position="-2 1.6 -4" rotation="0 15 0" geometry="primitive: plane; width: 2.4; height: 1.6" material="color: #001820; opacity: 0.85; transparent: true"></a-entity>
-                <a-entity id="window-beta" position="0 1.6 -4.5" geometry="primitive: plane; width: 2.8; height: 1.8" material="color: #001820; opacity: 0.85; transparent: true"></a-entity>
-                <a-entity id="window-gamma" position="2 1.6 -4" rotation="0 -15 0" geometry="primitive: plane; width: 2.4; height: 1.6" material="color: #001820; opacity: 0.85; transparent: true"></a-entity>
+                <a-entity id="window-alpha" ghost-window="title: ALPHA_NEXUS; layer: focus" position="-2 1.6 -4"></a-entity>
+                <a-entity id="window-beta"  ghost-window="title: BETA_NEXUS; layer: context" position="0 1.6 -4.5"></a-entity>
+                <a-entity id="window-gamma" ghost-window="title: GAMMA_NEXUS; layer: sovereign" position="2 1.6 -4"></a-entity>
+                
+                <a-entity camera look-controls cursor="rayOrigin: mouse"></a-entity>
             </a-scene>
         </main>
 
-        <aside id="hud-right" style="padding: 0.8rem; border-left: 1px solid rgba(0,212,255,0.1); display:flex; flex-direction:column;">
-            <div class="hud-box" style="flex:1;">
-                <div class="hud-label">NEXUS AI OUTPUT</div>
-                <div id="nexus-display" style="font-size:0.65rem; color:var(--cyan);">INICIALIZANDO...</div>
+        <aside id="hud-right" class="layer-context">
+            <div class="hud-box" style="flex-grow: 1;">
+                <div class="hud-label">AI_NEXUS_OUTPUT</div>
+                <div id="nexus-display" class="terminal-window">INICIALIZANDO SOBERANIA...</div>
             </div>
-            <div class="hud-box" style="flex:2; padding:0; display:flex; flex-direction:column;">
-                <div class="hud-label" style="padding:0.5rem;">TERMINAL LOG</div>
+            
+            <div class="hud-box terminal-container">
+                <div class="hud-label">CORE_TERMINAL</div>
                 <div id="terminal-log"></div>
-                <input class="cmd-input" type="text" placeholder="SYSTEM_CMD > " spellcheck="false" />
+                <input type="text" class="cmd-input" placeholder="SENTINEL_CMD >" spellcheck="false">
             </div>
         </aside>
 
-        <footer id="bottombar" style="grid-column: 1 / -1; display:flex; align-items:center; padding: 0 1.2rem; background: rgba(0,4,8,0.92); border-top: 1px solid rgba(0,212,255,0.12);">
-            <span style="font-size:0.6rem; opacity:0.4;">v8.0 SOVEREIGN</span>
-            <span id="boot-status" style="font-size:0.6rem; color:var(--warning); margin-left: 1rem;">BOOT_PENDING</span>
-            <span style="margin-left:auto; font-size:0.6rem; opacity:0.3;">OMC VR-OS | REALITY_ENGINEERING</span>
+        <footer id="bottombar" class="overlay-sovereign">
+            <div id="boot-status">KERNEL_INIT_PENDING</div>
+            <div class="sys-signature">OMCXXIII | SOVEREIGN CORE</div>
         </footer>
-
     </div>
 
-    <script src="sentinel-bus.js"></script>
-    <script src="sentinel-core.js"></script>
+    <script src="js_sentinel_engine-xr.js"></script>  <script src="js_sentinel_jarvis-voice.js"></script> <script src="sentinel-debug-hud.js"></script>     <script>
+        window.SentinelBootKernel = {
+            async init() {
+                console.log("[BOOT] Sentinel Nexus v8.0 Boot Sequence Initiated...");
+                
+                // 1. Handshake de Protocols (v6.1)
+                if (typeof SentinelProtocols !== 'undefined') {
+                    SentinelProtocols.init();
+                }
 
-    <script src="render/render-kernel.js"></script>
-    <script src="xr/xr-kernel.js"></script>
-    <script src="ai/sentinel-ai.js"></script>
-    <script src="telemetry/telemetry-kernel.js"></script>
-    <script src="audio/audio-kernel.js"></script>
-    <script src="voice/voice-kernel.js"></script>
-    <script src="security/security-kernel.js"></script>
+                // 2. Inicialização do Loop de Tempo Real
+                this.startRuntimeLoop();
 
-    <script>
-    window.SentinelBootKernel = {
-        version: "8.0.0-SOVEREIGN",
-        stages: ['ENVIRONMENT', 'SUBSYSTEMS', 'XR_INIT', 'AI_SYNC', 'UI_BRIDGE'],
-        progress: 0,
+                // 3. Verificação de Integridade (Debug HUD)
+                window.SentinelBus?.emit('boot:complete', { ts: Date.now(), mode: 'SOVEREIGN' });
 
-        async init() {
-            console.log(`[BOOT] Initializing Sentinel Nexus ${this.version}`);
-            
-            try {
-                await this.verifyEnvironment();
-                await this.loadKernels();
-                await this.bridgeV7(); // Mantém BootBridge() funcional
-                this.completeBoot();
-            } catch (err) {
-                console.error("[BOOT_CRITICAL]", err);
+                // 4. Ativação Visual
+                document.body.classList.add('runtime-active');
+                document.getElementById('boot-status').innerHTML = "SYSTEM_ONLINE // SOVEREIGN_MODE_ACTIVE";
+                document.getElementById('boot-status').style.color = "var(--green-flow)";
+            },
+
+            startRuntimeLoop() {
+                // Centralização do Loop de Performance
+                const tick = () => {
+                    // Aqui os Kernels plugam sua telemetria
+                    if (window.TelemetryKernel) window.TelemetryKernel.update();
+                    requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
             }
-        },
+        };
 
-        async verifyEnvironment() {
-            const hasWebGL = () => {
-                const canvas = document.createElement('canvas');
-                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-                return !!gl;
-            };
-
-            if (!hasWebGL()) {
-                document.getElementById('webgl-fallback').classList.add('visible');
-            }
-            return true;
-        },
-
-        async loadKernels() {
-            // Inicializa Kernels de forma assíncrona
-            if (window.XRKernel) window.XRKernel.init(document.querySelector('a-scene'));
-            if (window.TelemetryKernel) window.TelemetryKernel.start();
-            if (window.AudioKernel) window.AudioKernel.init();
-            return true;
-        },
-
-        async bridgeV7() {
-            // ENCAPSULAMENTO: Transforma o BootBridge antigo em um método do Kernel
-            if (typeof BootBridge === 'function') {
-                console.log("[BOOT] Bridging V7 Legacy Assets...");
-                // Aqui o BootBridge original é executado sem quebrar o index
-                // startClockATC(), FPS loop, etc, são herdados aqui.
-            }
-        },
-
-        completeBoot() {
-            window.SentinelBus?.emit('system:boot-complete', { status: 'SOVEREIGN_ONLINE' });
-            
-            document.body.style.opacity = "1";
-            document.body.style.visibility = "visible";
-            document.getElementById('boot-status').textContent = "ONLINE // SOVEREIGN CORE";
-            document.getElementById('boot-status').style.color = "var(--green-flow)";
-            
-            const scene = document.querySelector('a-scene');
-            if (scene) scene.style.display = "block";
-        }
-    };
-
-    // CONTEXT KERNEL v8.0
-    window.ContextKernel = {
-        current: 'ALPHA',
-        profiles: {
-            ALPHA:   { theme: '#00D4FF', label: 'HARDWARE_ENG' },
-            BETA:    { theme: '#FFD700', label: 'REAL_ESTATE' },
-            GAMMA:   { theme: '#FF4B00', label: 'TACTICAL' },
-            OMEGA:   { theme: '#9D00FF', label: 'AI_COMMAND' },
-            SIGMA:   { theme: '#00FF41', label: 'CYBER_SEC' },
-            GHOST:   { theme: '#FFFFFF', label: 'STEALTH' }
-        },
-        switch(profile) {
-            const data = this.profiles[profile];
-            if (!data) return;
-            this.current = profile;
-            document.documentElement.style.setProperty('--accent-color', data.theme);
-            window.Terminal?.log(`CONTEXT_SWITCH::${profile} [${data.label}]`, 'success');
-            window.SentinelBus?.emit('system:context-changed', { profile });
-        }
-    };
-
-    // Auto-init ao carregar o DOM
-    document.addEventListener('DOMContentLoaded', () => window.SentinelBootKernel.init());
-
+        // Início do ciclo de vida
+        window.addEventListener('DOMContentLoaded', () => {
+            window.SentinelBootKernel.init();
+        });
     </script>
 </body>
 </html>
