@@ -1,491 +1,1021 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- ════════════════════════════════════════════════════════
+     NEXUS ENRICHMENT LAYER v6.6
+     SOVEREIGNTY MATERIALIZATION PATCH
+     ACRESCENTAR ANTES DO </body>
+═════════════════════════════════════════════════════════ -->
 
-    <title>OMC VR-OS | SENTINEL v6.2 — SOVEREIGNTY NEXUS</title>
+<!-- ════════════════════════════════════════════════════════
+     SOVEREIGN COGNITIVE LAYERS
+═════════════════════════════════════════════════════════ -->
 
-    <!-- ════════════════════════════════════════════════════════
-         PRELOAD | KERNEL AUTHORITY
-    ═════════════════════════════════════════════════════════ -->
-    <script>
-        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-           MOBILE DETECTION + LOW LATENCY FLAGS
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-        window.IS_MOBILE = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+<div id="gamma-heartbeat"></div>
 
-        if (window.IS_MOBILE) {
-            document.documentElement.setAttribute('data-mobile', 'true');
-        }
+<div id="pulvinar-firewall"></div>
 
-        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-           GLOBAL BOOT HANDSHAKE
-           Kernel inicia em suspensão segura.
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-        window.SENTINEL_BOOTED   = false;
-        window.SENTINEL_START_TS = performance.now();
+<div id="neural-pulse-field"></div>
 
-        /* Estado de sincronização Gamma */
-        window.SENTINEL_SYNC = {
-            bootStarted: false,
-            bootCompleted: false,
-            firstActionTS: null
-        };
+<div id="system-threat-overlay"></div>
 
-        console.log('%c[SENTINEL:NEXUS] Kernel Gate carregado.', 'color:#00D4FF;');
-    </script>
+<div id="cognitive-runtime-indicator">
 
-    <!-- ════════════════════════════════════════════════════════
-         XR FRAMEWORK | A-FRAME
-    ═════════════════════════════════════════════════════════ -->
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://unpkg.com/aframe-event-set-component@5.0.0/dist/aframe-event-set-component.min.js"></script>
-    <script src="https://unpkg.com/aframe-particle-system-component@1.0.x/dist/aframe-particle-system-component.min.js"></script>
+    <div class="runtime-status">
 
-    <!-- ════════════════════════════════════════════════════════
-         CMA SCRIPT ORDER | ARQUITETURA MODULAR COGNITIVA
-         ORDEM SERIAL OBRIGATÓRIA
-    ═════════════════════════════════════════════════════════ -->
+        <span class="runtime-dot"></span>
 
-    <!-- 1. BARRAMENTO -->
-    <script src="sentinel-bus.js"></script>
+        <span id="runtime-mode">
 
-    <!-- 2. STATE VAULT -->
-    <script src="sentinel-state-store.js"></script>
+            ENE_ACTIVE
 
-    <!-- 3. CORE AUTHORITY -->
-    <script src="sentinel-core.js"></script>
-
-    <!-- 4. TELEMETRIA + HUD -->
-    <script src="sentinel-debug-hud.js"></script>
-    <script src="js_sentinel_protocols.js"></script>
-
-    <!-- 5. ENGINE XR -->
-    <script src="js_sentinel_engine-xr.js"></script>
-
-    <!-- 6. VOICE + COGNITION -->
-    <script src="js_sentinel_jarvis-voice.js"></script>
-
-    <!-- ════════════════════════════════════════════════════════
-         FONTS + VISUAL STACK
-    ═════════════════════════════════════════════════════════ -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
-
-    <link rel="stylesheet" href="css_sentinel_core.css">
-    <link rel="stylesheet" href="css_sentinel_hud.css">
-    <link rel="stylesheet" href="css_sentinel_fx.css">
-
-</head>
-
-<body class="system-idle">
-
-    <!-- ════════════════════════════════════════════════════════
-         LAYER 0 — SOVEREIGN BACKGROUND
-         Telemetria Passiva / Noise Suppression
-    ═════════════════════════════════════════════════════════ -->
-    <div class="layer-sovereign">
-
-        <div class="gamma-grid"></div>
-        <div class="neural-noise"></div>
-        <div class="passive-telemetry"></div>
+        </span>
 
     </div>
 
-    <!-- ════════════════════════════════════════════════════════
-         LAYER 1 — CONTEXT
-         Informações secundárias
-    ═════════════════════════════════════════════════════════ -->
-    <div class="layer-context">
+</div>
 
-        <div id="context-panel" class="hud-context-panel">
-            <div class="ctx-label">MISSION_LOCK</div>
-            <div id="mission-lock" class="ctx-value">
-                NENHUMA MISSÃO FIXADA
-            </div>
+<!-- ════════════════════════════════════════════════════════
+     XR TELEMETRY NEXUS
+═════════════════════════════════════════════════════════ -->
+
+<div id="xr-telemetry-panel" class="glass-panel">
+
+    <div class="telemetry-header">
+
+        XR_TELEMETRY
+
+    </div>
+
+    <div class="telemetry-grid">
+
+        <div class="metric">
+            <span>FPS</span>
+            <strong id="fps-counter">0</strong>
         </div>
 
-        <div class="ambient-clock">
-            <span id="ambient-clock-value">--:--:--</span>
+        <div class="metric">
+            <span>MEM</span>
+            <strong id="memory-counter">0MB</strong>
+        </div>
+
+        <div class="metric">
+            <span>BUS</span>
+            <strong id="bus-traffic">0</strong>
+        </div>
+
+        <div class="metric">
+            <span>SYNC</span>
+            <strong id="gamma-sync-status">LOCKED</strong>
         </div>
 
     </div>
 
-    <!-- ════════════════════════════════════════════════════════
-         LAYER 2 — FOCUS
-         Estado Natural de Execução (ENE)
-    ═════════════════════════════════════════════════════════ -->
-    <div class="layer-focus">
+</div>
 
-        <!-- OVERLAY DE BOOT -->
-        <div id="onboarding-overlay">
+<!-- ════════════════════════════════════════════════════════
+     CONTEXT SWITCHER
+═════════════════════════════════════════════════════════ -->
 
-            <div class="overlay-inner">
+<div id="context-switcher">
 
-                <div class="overlay-scan-line"></div>
+    <button class="ctx-btn active" data-profile="ALPHA">
 
-                <h1>SENTINEL v6.2</h1>
+        HARDWARE
 
-                <p>
-                    Sincronizando Barramento Saltatório...
-                </p>
+    </button>
 
-                <button class="boot-btn" id="master-boot-trigger">
-                    INICIALIZAR PROTOCOLO
-                </button>
+    <button class="ctx-btn" data-profile="BETA">
 
-                <div class="status-msg" id="boot-status">
-                    CLOCK_ATC: ESTÁVEL
-                </div>
+        REAL_ESTATE
 
-            </div>
+    </button>
 
-        </div>
+    <button class="ctx-btn" data-profile="GAMMA">
 
-        <!-- HUD 2D -->
-        <div id="hud-2d">
+        COMMAND
 
-            <div class="hud-corner top-left telemetry-node">
-                <div class="label">SISTEMA</div>
-                <div class="value">SENTINEL_v6.2</div>
-            </div>
+    </button>
 
-            <div class="hud-corner top-right telemetry-node">
-                <div class="label">LATÊNCIA</div>
-                <div id="latency-value" class="value">
-                    0ms
-                </div>
-            </div>
+</div>
 
-            <div class="hud-corner bottom-left telemetry-node">
-                <div class="label">BATERIA_CPF</div>
-                <div id="battery-value" class="value">
-                    100%
-                </div>
-            </div>
+<!-- ════════════════════════════════════════════════════════
+     COGNITIVE TERMINAL
+═════════════════════════════════════════════════════════ -->
 
-            <div class="hud-corner bottom-right telemetry-node">
-                <div class="label">CLOCK_ATC</div>
-                <div id="clock-value" class="value">
-                    STANDBY
-                </div>
-            </div>
+<div id="cognitive-terminal">
 
-        </div>
+    <div class="terminal-header">
+
+        SENTINEL::COGNITIVE_RUNTIME
 
     </div>
 
-    <!-- ════════════════════════════════════════════════════════
-         XR SCENE | NEUROADAPTIVE SPACE
-    ═════════════════════════════════════════════════════════ -->
-    <a-scene
-        embedded
-        renderer="
-            antialias: true;
-            colorManagement: true;
-            physicallyCorrectLights: true;
-        "
-        fog="
-            type: exponential;
-            color: #000;
-            density: 0.03;
-        "
-    >
+    <div id="terminal-log"></div>
 
-        <!-- ════════════════════════════════════════════════════
-             XR ASSETS
-        ════════════════════════════════════════════════════ -->
-        <a-assets>
+</div>
 
-            <a-mixin
-                id="window-base"
-                geometry="primitive: plane; width: 3.2; height: 1.8"
-                material="
-                    shader: standard;
-                    transparent: true;
-                    opacity: 0.2;
-                    side: double;
-                    emissive: #00D4FF;
-                    emissiveIntensity: 0.15;
-                "
-            >
-            </a-mixin>
+<!-- ════════════════════════════════════════════════════════
+     ENRICHMENT ENGINE
+═════════════════════════════════════════════════════════ -->
 
-        </a-assets>
+<script>
 
-        <!-- ════════════════════════════════════════════════════
-             XR LIGHTING
-        ════════════════════════════════════════════════════ -->
-        <a-light
-            type="ambient"
-            color="#0a1a2a"
-            intensity="0.6">
-        </a-light>
+/* ════════════════════════════════════════════════════════
+   SENTINEL NEXUS ENRICHMENT ENGINE
+════════════════════════════════════════════════════════ */
 
-        <a-light
-            type="directional"
-            color="#00D4FF"
-            intensity="0.3"
-            position="0 4 -2">
-        </a-light>
+window.SENTINEL_RUNTIME = {
 
-        <!-- ════════════════════════════════════════════════════
-             REACTOR CORE
-        ════════════════════════════════════════════════════ -->
-        <a-entity id="reactor-core" position="0 1 -3.5">
+    mode: 'ALPHA',
 
-            <a-sphere
-                radius="0.15"
-                color="#00D4FF"
-                material="
-                    emissive: #00D4FF;
-                    emissiveIntensity: 2
-                "
-            >
+    fps: 0,
 
-                <a-light
-                    type="point"
-                    color="#00D4FF"
-                    intensity="1.2"
-                    distance="8">
-                </a-light>
+    telemetry: {
 
-            </a-sphere>
+        events: 0,
 
-        </a-entity>
+        memory: 0,
 
-        <!-- ════════════════════════════════════════════════════
-             FOCUS WINDOW | NEXUS TERMINAL
-        ════════════════════════════════════════════════════ -->
-        <a-entity
-            id="mon-0"
-            class="ghost-window layer-focus-window"
-            ghost-window="title: CORE_TERMINAL"
-            mixin="window-base"
-            position="0 1.6 -3"
-        >
+        latency: 0
 
-            <a-text
-                id="nexus-display"
-                value="SENTINEL ONLINE\nAGUARDANDO BOOT..."
-                color="#00D4FF"
-                width="3"
-                wrap-count="38"
-                position="-1.4 0.5 0.01"
-                align="left"
-                font="mozillavr"
-            >
-            </a-text>
+    },
 
-        </a-entity>
+    threatLevel: 0,
 
-        <!-- ════════════════════════════════════════════════════
-             CONTEXT WINDOW | CLOCK
-        ════════════════════════════════════════════════════ -->
-        <a-entity
-            id="mon-2r"
-            class="ghost-window secondary-window"
-            ghost-window="title: CLOCK_ATC"
-            mixin="window-base"
-            position="5.8 1.6 -1.8"
-            rotation="0 -55 0"
-        >
+    cognitiveLoad: 0,
 
-            <a-text
-                id="clock-display"
-                value="CLOCK_ATC\nSTANDBY"
-                color="#00FF41"
-                width="3"
-                wrap-count="34"
-                position="-1.4 0.5 0.01"
-                align="left"
-                font="mozillavr"
-            >
-            </a-text>
+    multitaskingDetected: false
 
-        </a-entity>
+};
 
-        <!-- ════════════════════════════════════════════════════
-             THALAMIC CLIPPING FIELD
-             Supressão periférica neuroadaptativa
-        ════════════════════════════════════════════════════ -->
-        <a-entity
-            geometry="primitive: circle; radius: 7"
-            material="
-                shader: flat;
-                transparent: true;
-                opacity: 0.04;
-                color: #000;
-            "
-            position="0 1.6 -5">
-        </a-entity>
+/* ════════════════════════════════════════════════════════
+   TERMINAL LOGGER
+════════════════════════════════════════════════════════ */
 
-        <!-- SKY -->
-        <a-sky color="#000010"></a-sky>
+class CognitiveTerminal {
 
-        <!-- CAMERA -->
-        <a-entity id="camera-rig">
+    constructor() {
 
-            <a-entity
-                camera
-                id="main-camera"
-                look-controls
-                position="0 1.6 0"
-            >
+        this.el = document.getElementById('terminal-log');
 
-                <a-cursor
-                    color="#00D4FF"
-                    fuse="false"
-                    raycaster="objects: .ghost-window">
-                </a-cursor>
+    }
 
-            </a-entity>
+    log(message, type = 'info') {
 
-        </a-entity>
+        if (!this.el) return;
 
-    </a-scene>
+        const line = document.createElement('div');
 
-    <!-- ════════════════════════════════════════════════════════
-         GLOBAL NEXUS BOOT
-    ═════════════════════════════════════════════════════════ -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        line.className = `terminal-line ${type}`;
 
-            const btn        = document.getElementById('master-boot-trigger');
-            const overlay    = document.getElementById('onboarding-overlay');
-            const statusText = document.getElementById('boot-status');
+        line.innerHTML = `
 
-            /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-               BOOT SEQUENCE
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-            if (btn) {
+            <span class="ts">
 
-                btn.addEventListener('click', function () {
+                ${new Date().toLocaleTimeString('pt-BR')}
 
-                    console.log('[NEXUS] Iniciando boot sequence...');
+            </span>
 
-                    statusText.textContent =
-                        'TRANSPORTE SALTATÓRIO: ATIVO';
+            <span class="msg">
 
-                    /* BOOT START */
-                    if (window.SentinelBus) {
+                ${message}
 
-                        window.SENTINEL_SYNC.bootStarted = true;
+            </span>
 
-                        SentinelBus.emit('boot:start', {
-                            timestamp: performance.now()
-                        });
+        `;
 
-                    }
+        this.el.prepend(line);
 
-                    /* TRANSIÇÃO VISUAL */
-                    document.body.classList.remove('system-idle');
-                    document.body.classList.add('system-booting');
+    }
 
-                    setTimeout(() => {
+}
 
-                        /* FLAG GLOBAL */
-                        window.SENTINEL_BOOTED = true;
+window.Terminal = new CognitiveTerminal();
 
-                        window.SENTINEL_SYNC.bootCompleted = true;
+/* ════════════════════════════════════════════════════════
+   GAMMA HEARTBEAT ENGINE
+════════════════════════════════════════════════════════ */
 
-                        /* HANDSHAKE GLOBAL */
-                        if (window.SentinelBus) {
+class GammaHeartbeat {
 
-                            SentinelBus.emit('boot:complete', {
-                                timestamp: performance.now(),
-                                gammaSync: true
-                            });
+    constructor() {
 
-                        }
+        this.interval = null;
 
-                        document.body.classList.remove('system-booting');
-                        document.body.classList.add('system-ready');
-                        document.body.classList.add('sentinel-active');
+    }
 
-                        /* OVERLAY EXIT */
-                        overlay.style.transition =
-                            'opacity 1s ease, filter 1s ease';
+    start() {
 
-                        overlay.style.opacity = '0';
-                        overlay.style.filter  = 'blur(20px)';
-                        overlay.style.pointerEvents = 'none';
+        const node = document.getElementById('gamma-heartbeat');
 
-                        setTimeout(() => {
-                            overlay.style.display = 'none';
-                        }, 1000);
+        this.interval = setInterval(() => {
 
-                    }, 800);
+            node.classList.add('heartbeat-active');
 
-                });
+            setTimeout(() => {
+
+                node.classList.remove('heartbeat-active');
+
+            }, 200);
+
+        }, 1200);
+
+    }
+
+}
+
+window.GammaSync = new GammaHeartbeat();
+
+/* ════════════════════════════════════════════════════════
+   FPS ENGINE
+════════════════════════════════════════════════════════ */
+
+class FPSTracker {
+
+    constructor() {
+
+        this.frames = 0;
+
+        this.lastTime = performance.now();
+
+        this.loop();
+
+    }
+
+    loop() {
+
+        this.frames++;
+
+        const now = performance.now();
+
+        if (now >= this.lastTime + 1000) {
+
+            window.SENTINEL_RUNTIME.fps = this.frames;
+
+            this.frames = 0;
+
+            this.lastTime = now;
+
+            const fpsNode = document.getElementById('fps-counter');
+
+            if (fpsNode) {
+
+                fpsNode.textContent = window.SENTINEL_RUNTIME.fps;
 
             }
 
-            /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-               GLOBAL INPUT TELEMETRY
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-            const registerInput = () => {
+        }
 
-                if (!window.SENTINEL_SYNC.firstActionTS) {
-                    window.SENTINEL_SYNC.firstActionTS = performance.now();
-                }
+        requestAnimationFrame(() => this.loop());
 
-                window.SentinelBus?.emit('telemetry:input', {
-                    timestamp: performance.now()
-                });
+    }
 
-            };
+}
 
-            ['keydown', 'click', 'mousemove', 'touchstart']
-                .forEach(evt => {
-                    window.addEventListener(evt, registerInput);
-                });
+window.FPS_ENGINE = new FPSTracker();
 
-            /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-               VOICE SHORTCUT
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-            window.addEventListener('keydown', (e) => {
+/* ════════════════════════════════════════════════════════
+   MEMORY TELEMETRY
+════════════════════════════════════════════════════════ */
 
-                if (
-                    e.key.toLowerCase() === 'j' &&
-                    typeof VoiceListener !== 'undefined'
-                ) {
+function updateMemoryTelemetry() {
 
-                    VoiceListener.start();
+    if (!performance.memory) return;
 
-                    window.SentinelBus?.emit('jarvis:feedback', {
-                        type: 'confirm'
-                    });
+    const used = performance.memory.usedJSHeapSize / 1048576;
 
-                }
+    window.SENTINEL_RUNTIME.telemetry.memory = used;
 
-            });
+    const node = document.getElementById('memory-counter');
 
-            /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-               AMBIENT CLOCK LOOP
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-            setInterval(() => {
+    if (node) {
 
-                const clockEl = document.getElementById('ambient-clock-value');
+        node.textContent = `${used.toFixed(0)}MB`;
 
-                if (!clockEl) return;
+    }
 
-                const now = new Date();
+}
 
-                clockEl.textContent =
-                    now.toLocaleTimeString('pt-BR');
+setInterval(updateMemoryTelemetry, 1500);
 
-            }, 1000);
+/* ════════════════════════════════════════════════════════
+   CONTEXT SWITCH ENGINE
+════════════════════════════════════════════════════════ */
 
-            console.log(
-                '%c[NEXUS] Estrutura CMA carregada.',
-                'color:#00FF41;font-weight:bold;'
-            );
+const ContextProfiles = {
 
-        });
-    </script>
+    ALPHA: {
 
-</body>
-</html>
+        theme: '#00D4FF',
+
+        mission: 'ENGENHARIA_HARDWARE',
+
+        voice: 'technical'
+
+    },
+
+    BETA: {
+
+        theme: '#FFD700',
+
+        mission: 'MERCADO_IMOBILIARIO',
+
+        voice: 'persuasive'
+
+    },
+
+    GAMMA: {
+
+        theme: '#FF003C',
+
+        mission: 'TACTICAL_COMMAND',
+
+        voice: 'aggressive'
+
+    }
+
+};
+
+function switchContext(profile) {
+
+    const cfg = ContextProfiles[profile];
+
+    if (!cfg) return;
+
+    window.SENTINEL_RUNTIME.mode = profile;
+
+    document.documentElement.style
+        .setProperty('--accent-color', cfg.theme);
+
+    document.querySelectorAll('.ctx-btn')
+        .forEach(btn => btn.classList.remove('active'));
+
+    document.querySelector(`[data-profile="${profile}"]`)
+        ?.classList.add('active');
+
+    const lock = document.getElementById('mission-lock');
+
+    if (lock) {
+
+        lock.textContent = cfg.mission;
+
+    }
+
+    Terminal.log(
+        `CONTEXT_SWITCH::${profile}`,
+        'success'
+    );
+
+    window.SentinelBus?.emit('context:switch', {
+
+        profile,
+
+        timestamp: performance.now()
+
+    });
+
+}
+
+/* ════════════════════════════════════════════════════════
+   MULTITASK DETECTOR
+════════════════════════════════════════════════════════ */
+
+document.addEventListener('visibilitychange', () => {
+
+    const ctx = document.querySelector('.layer-context');
+
+    if (document.hidden) {
+
+        window.SENTINEL_RUNTIME.multitaskingDetected = true;
+
+        if (ctx) {
+
+            ctx.style.opacity = '0.2';
+
+        }
+
+        Terminal.log(
+            'MULTITASKING_DETECTED',
+            'warning'
+        );
+
+    } else {
+
+        window.SENTINEL_RUNTIME.multitaskingDetected = false;
+
+        if (ctx) {
+
+            ctx.style.opacity = '1';
+
+        }
+
+        Terminal.log(
+            'FOCUS_RESTORED',
+            'success'
+        );
+
+    }
+
+});
+
+/* ════════════════════════════════════════════════════════
+   BUS TELEMETRY
+════════════════════════════════════════════════════════ */
+
+if (window.SentinelBus) {
+
+    const originalEmit = SentinelBus.emit;
+
+    SentinelBus.emit = function(event, payload) {
+
+        window.SENTINEL_RUNTIME.telemetry.events++;
+
+        const traffic = document.getElementById('bus-traffic');
+
+        if (traffic) {
+
+            traffic.textContent =
+                window.SENTINEL_RUNTIME.telemetry.events;
+
+        }
+
+        return originalEmit.call(this, event, payload);
+
+    };
+
+}
+
+/* ════════════════════════════════════════════════════════
+   THREAT ANALYSIS ENGINE
+════════════════════════════════════════════════════════ */
+
+class ThreatEngine {
+
+    constructor() {
+
+        this.overlay =
+            document.getElementById('system-threat-overlay');
+
+    }
+
+    setThreat(level) {
+
+        window.SENTINEL_RUNTIME.threatLevel = level;
+
+        if (!this.overlay) return;
+
+        const opacity = Math.min(level * 0.05, 0.35);
+
+        this.overlay.style.background =
+            `rgba(255,0,60,${opacity})`;
+
+    }
+
+}
+
+window.ThreatEngine = new ThreatEngine();
+
+/* ════════════════════════════════════════════════════════
+   XR REACTOR CORE ANIMATION
+════════════════════════════════════════════════════════ */
+
+AFRAME.registerComponent('reactor-pulse', {
+
+    tick: function(time) {
+
+        const scale =
+            1 + Math.sin(time / 400) * 0.08;
+
+        this.el.object3D.scale.set(
+            scale,
+            scale,
+            scale
+        );
+
+    }
+
+});
+
+document
+    .querySelector('#reactor-core a-sphere')
+    ?.setAttribute('reactor-pulse', '');
+
+/* ════════════════════════════════════════════════════════
+   COGNITIVE LOAD ANALYZER
+════════════════════════════════════════════════════════ */
+
+setInterval(() => {
+
+    const load =
+        Math.random() * 100;
+
+    window.SENTINEL_RUNTIME.cognitiveLoad = load;
+
+    if (load > 75) {
+
+        document.body.classList.add('high-load');
+
+        Terminal.log(
+            'CPF_OVERLOAD_DETECTED',
+            'warning'
+        );
+
+    } else {
+
+        document.body.classList.remove('high-load');
+
+    }
+
+}, 5000);
+
+/* ════════════════════════════════════════════════════════
+   INPUT HEATMAP
+════════════════════════════════════════════════════════ */
+
+window.addEventListener('mousemove', (e) => {
+
+    const pulse = document.createElement('div');
+
+    pulse.className = 'cursor-pulse';
+
+    pulse.style.left = `${e.clientX}px`;
+
+    pulse.style.top  = `${e.clientY}px`;
+
+    document.body.appendChild(pulse);
+
+    setTimeout(() => pulse.remove(), 600);
+
+});
+
+/* ════════════════════════════════════════════════════════
+   PROFILE BUTTONS
+════════════════════════════════════════════════════════ */
+
+document.querySelectorAll('.ctx-btn')
+.forEach(btn => {
+
+    btn.addEventListener('click', () => {
+
+        switchContext(
+            btn.dataset.profile
+        );
+
+    });
+
+});
+
+/* ════════════════════════════════════════════════════════
+   BOOT HANDSHAKE
+════════════════════════════════════════════════════════ */
+
+window.addEventListener('load', () => {
+
+    GammaSync.start();
+
+    Terminal.log(
+        'SENTINEL_NEXUS_v6.6_ONLINE',
+        'success'
+    );
+
+    Terminal.log(
+        'GAMMA_HEARTBEAT_LOCKED',
+        'info'
+    );
+
+    Terminal.log(
+        'PULVINAR_FIREWALL_ACTIVE',
+        'info'
+    );
+
+    switchContext('ALPHA');
+
+});
+
+/* ════════════════════════════════════════════════════════
+   AMBIENT LATENCY ENGINE
+════════════════════════════════════════════════════════ */
+
+setInterval(() => {
+
+    const latency =
+        Math.floor(Math.random() * 6) + 2;
+
+    const node =
+        document.getElementById('latency-value');
+
+    if (node) {
+
+        node.textContent = `${latency}ms`;
+
+    }
+
+}, 1200);
+
+</script>
+
+<!-- ════════════════════════════════════════════════════════
+     MATERIALIZATION CSS
+════════════════════════════════════════════════════════ -->
+
+<style>
+
+:root {
+
+    --accent-color: #00D4FF;
+
+}
+
+/* ════════════════════════════════════════════════════════
+   GAMMA HEARTBEAT
+════════════════════════════════════════════════════════ */
+
+#gamma-heartbeat {
+
+    position: fixed;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: 9999;
+
+}
+
+.heartbeat-active {
+
+    animation: gammaFlash .25s ease;
+
+}
+
+@keyframes gammaFlash {
+
+    0% {
+
+        background: rgba(0,212,255,0);
+
+    }
+
+    50% {
+
+        background: rgba(0,212,255,0.03);
+
+    }
+
+    100% {
+
+        background: rgba(0,212,255,0);
+
+    }
+
+}
+
+/* ════════════════════════════════════════════════════════
+   PULVINAR FIREWALL
+════════════════════════════════════════════════════════ */
+
+#pulvinar-firewall {
+
+    position: fixed;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: 90;
+
+    background:
+
+        radial-gradient(
+
+            circle at center,
+
+            transparent 20%,
+
+            rgba(0,0,0,0.55) 100%
+
+        );
+
+}
+
+/* ════════════════════════════════════════════════════════
+   XR TELEMETRY PANEL
+════════════════════════════════════════════════════════ */
+
+#xr-telemetry-panel {
+
+    position: fixed;
+
+    top: 20px;
+
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    width: 340px;
+
+    z-index: 1000;
+
+    padding: 14px;
+
+    border-radius: 18px;
+
+    border: 1px solid rgba(255,255,255,0.08);
+
+    backdrop-filter: blur(18px);
+
+    background: rgba(5,10,20,0.45);
+
+}
+
+.telemetry-header {
+
+    font-family: 'Orbitron';
+
+    font-size: 12px;
+
+    color: var(--accent-color);
+
+    margin-bottom: 10px;
+
+}
+
+.telemetry-grid {
+
+    display: grid;
+
+    grid-template-columns: repeat(4,1fr);
+
+    gap: 10px;
+
+}
+
+.metric {
+
+    text-align: center;
+
+}
+
+.metric span {
+
+    display: block;
+
+    font-size: 10px;
+
+    color: #8aa0b4;
+
+}
+
+.metric strong {
+
+    color: white;
+
+    font-size: 14px;
+
+}
+
+/* ════════════════════════════════════════════════════════
+   CONTEXT SWITCHER
+════════════════════════════════════════════════════════ */
+
+#context-switcher {
+
+    position: fixed;
+
+    right: 20px;
+
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+
+    z-index: 1200;
+
+}
+
+.ctx-btn {
+
+    border: none;
+
+    padding: 12px 18px;
+
+    background: rgba(0,0,0,0.55);
+
+    color: white;
+
+    border-left: 3px solid transparent;
+
+    font-family: 'Orbitron';
+
+    cursor: pointer;
+
+    transition: .3s;
+
+}
+
+.ctx-btn.active {
+
+    border-left: 3px solid var(--accent-color);
+
+    background: rgba(255,255,255,0.08);
+
+}
+
+/* ════════════════════════════════════════════════════════
+   TERMINAL
+════════════════════════════════════════════════════════ */
+
+#cognitive-terminal {
+
+    position: fixed;
+
+    left: 20px;
+
+    bottom: 20px;
+
+    width: 420px;
+
+    height: 220px;
+
+    overflow: hidden;
+
+    z-index: 1200;
+
+    border-radius: 16px;
+
+    border: 1px solid rgba(255,255,255,0.08);
+
+    background: rgba(0,0,0,0.5);
+
+    backdrop-filter: blur(12px);
+
+}
+
+.terminal-header {
+
+    padding: 10px;
+
+    background: rgba(255,255,255,0.04);
+
+    font-family: 'Orbitron';
+
+    color: var(--accent-color);
+
+    font-size: 12px;
+
+}
+
+#terminal-log {
+
+    padding: 10px;
+
+    overflow-y: auto;
+
+    height: calc(100% - 40px);
+
+}
+
+.terminal-line {
+
+    font-size: 11px;
+
+    margin-bottom: 8px;
+
+    font-family: 'Share Tech Mono';
+
+}
+
+.terminal-line.success {
+
+    color: #00FF88;
+
+}
+
+.terminal-line.warning {
+
+    color: #FFD000;
+
+}
+
+.terminal-line.info {
+
+    color: #00D4FF;
+
+}
+
+.ts {
+
+    opacity: .4;
+
+    margin-right: 8px;
+
+}
+
+/* ════════════════════════════════════════════════════════
+   CURSOR PULSE
+════════════════════════════════════════════════════════ */
+
+.cursor-pulse {
+
+    position: fixed;
+
+    width: 12px;
+
+    height: 12px;
+
+    border-radius: 50%;
+
+    background: rgba(0,212,255,0.25);
+
+    pointer-events: none;
+
+    transform: translate(-50%,-50%);
+
+    animation: pulseFade .6s linear forwards;
+
+    z-index: 9999;
+
+}
+
+@keyframes pulseFade {
+
+    from {
+
+        opacity: 1;
+
+        transform: translate(-50%,-50%) scale(1);
+
+    }
+
+    to {
+
+        opacity: 0;
+
+        transform: translate(-50%,-50%) scale(4);
+
+    }
+
+}
+
+/* ════════════════════════════════════════════════════════
+   THREAT OVERLAY
+════════════════════════════════════════════════════════ */
+
+#system-threat-overlay {
+
+    position: fixed;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: 95;
+
+    transition: .4s;
+
+}
+
+/* ════════════════════════════════════════════════════════
+   HIGH LOAD STATE
+════════════════════════════════════════════════════════ */
+
+body.high-load {
+
+    filter: saturate(.85);
+
+}
+
+body.high-load #pulvinar-firewall {
+
+    backdrop-filter: blur(4px);
+
+}
+
+/* ════════════════════════════════════════════════════════
+   MOBILE XR
+════════════════════════════════════════════════════════ */
+
+html[data-mobile='true'] #xr-telemetry-panel {
+
+    width: 92%;
+
+    top: auto;
+
+    bottom: 10px;
+
+}
+
+html[data-mobile='true'] #cognitive-terminal {
+
+    width: calc(100% - 20px);
+
+    left: 10px;
+
+    bottom: 10px;
+
+}
+
+</style>
