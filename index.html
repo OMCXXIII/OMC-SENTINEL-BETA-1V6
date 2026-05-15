@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="css_sentinel_core.css" />
     <link rel="stylesheet" href="css_sentinel_fx.css" />
     <link rel="stylesheet" href="css_sentinel_hud.css" />
-    
+
     <style>
         /* CSS Crítico de Transição v8.0 */
         :root {
@@ -17,22 +17,32 @@
             --system-temperature: 32;
             --ui-density: 1.0;
         }
-        body { background: #000408; overflow: hidden; opacity: 0; transition: opacity 1s var(--ease-out-expo); }
+        body {
+            background: #000408;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 1s var(--ease-out-expo);
+        }
         body.runtime-active { opacity: 1; }
-        
+
         /* Containers Atômicos */
         #nexus-os {
             display: grid;
             grid-template-columns: 300px 1fr 300px;
             grid-template-rows: 50px 1fr 50px;
-            height: 100vh; width: 100vw;
+            height: 100vh;
+            width: 100vw;
             position: relative;
         }
     </style>
 
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
-    <script src="sentinel-bus.js"></script>           <script src="sentinel-core.js"></script>          <script src="js_sentinel_protocols.js"></script>  </head>
+    <!-- ORDEM DE CARGA: Bus → Core → Protocols (pré-DOM) -->
+    <script src="sentinel-bus.js"></script>
+    <script src="sentinel-core.js"></script>
+    <script src="js_sentinel_protocols.js"></script>
+</head>
 <body>
 
     <div id="fx-pipeline">
@@ -42,6 +52,7 @@
     </div>
 
     <div id="nexus-os">
+
         <header id="topbar" class="overlay-system">
             <div class="sys-id">SENTINEL NEXUS v8.0</div>
             <div id="gamma-heartbeat"></div>
@@ -68,13 +79,38 @@
         </aside>
 
         <main id="scene-wrapper">
-            <a-scene id="main-scene" embedded vr-mode-ui="enabled: false" renderer="antialias: false; colorManagement: true;">
+            <a-scene
+                id="main-scene"
+                embedded
+                vr-mode-ui="enabled: false"
+                renderer="antialias: false; colorManagement: true;"
+            >
                 <a-sky color="#000408"></a-sky>
-                
-                <a-entity id="window-alpha" ghost-window="title: ALPHA_NEXUS; layer: focus" position="-2 1.6 -4"></a-entity>
-                <a-entity id="window-beta"  ghost-window="title: BETA_NEXUS; layer: context" position="0 1.6 -4.5"></a-entity>
-                <a-entity id="window-gamma" ghost-window="title: GAMMA_NEXUS; layer: sovereign" position="2 1.6 -4"></a-entity>
-                
+
+                <!--
+                    PATCH v7.1: `title` → `label`
+                    `title` é propriedade reservada do A-Frame v1.4.
+                    Usar `title` no schema gerava "Unknown property" e
+                    silenciava o componente ghost-window inteiro.
+                -->
+                <a-entity
+                    id="window-alpha"
+                    ghost-window="label: ALPHA_NEXUS; layer: focus"
+                    position="-2 1.6 -4"
+                ></a-entity>
+
+                <a-entity
+                    id="window-beta"
+                    ghost-window="label: BETA_NEXUS; layer: context"
+                    position="0 1.6 -4.5"
+                ></a-entity>
+
+                <a-entity
+                    id="window-gamma"
+                    ghost-window="label: GAMMA_NEXUS; layer: sovereign"
+                    position="2 1.6 -4"
+                ></a-entity>
+
                 <a-entity camera look-controls cursor="rayOrigin: mouse"></a-entity>
             </a-scene>
         </main>
@@ -84,11 +120,15 @@
                 <div class="hud-label">AI_NEXUS_OUTPUT</div>
                 <div id="nexus-display" class="terminal-window">INICIALIZANDO SOBERANIA...</div>
             </div>
-            
             <div class="hud-box terminal-container">
                 <div class="hud-label">CORE_TERMINAL</div>
                 <div id="terminal-log"></div>
-                <input type="text" class="cmd-input" placeholder="SENTINEL_CMD >" spellcheck="false">
+                <input
+                    type="text"
+                    class="cmd-input"
+                    placeholder="SENTINEL_CMD >"
+                    spellcheck="false"
+                >
             </div>
         </aside>
 
@@ -96,34 +136,53 @@
             <div id="boot-status">KERNEL_INIT_PENDING</div>
             <div class="sys-signature">OMCXXIII | SOVEREIGN CORE</div>
         </footer>
-    </div>
 
-    <script src="js_sentinel_engine-xr.js"></script>  <script src="js_sentinel_jarvis-voice.js"></script> <script src="sentinel-debug-hud.js"></script>     <script>
+    </div><!-- #nexus-os -->
+
+    <!-- ORDEM DE CARGA: Engine → Jarvis → Debug (pós-DOM) -->
+    <script src="js_sentinel_engine-xr.js"></script>
+    <script src="js_sentinel_jarvis-voice.js"></script>
+    <script src="sentinel-debug-hud.js"></script>
+
+    <script>
+        /*
+         * SentinelBootKernel — Inline Boot Controller
+         * Responsabilidade: disparar boot:complete UMA VEZ via Bus.
+         * O SentinelKernel (sentinel-core.js) tem seu próprio _bootSealed,
+         * então este emit será silenciado se o Core já selou o boot.
+         * Isso é seguro e intencional.
+         */
         window.SentinelBootKernel = {
+
             async init() {
-                console.log("[BOOT] Sentinel Nexus v8.0 Boot Sequence Initiated...");
-                
-                // 1. Handshake de Protocols (v6.1)
+                console.log('[BOOT] Sentinel Nexus v8.0 Boot Sequence Initiated...');
+
+                /* 1. Handshake de Protocols */
                 if (typeof SentinelProtocols !== 'undefined') {
                     SentinelProtocols.init();
                 }
 
-                // 2. Inicialização do Loop de Tempo Real
+                /* 2. Loop de Performance */
                 this.startRuntimeLoop();
 
-                // 3. Verificação de Integridade (Debug HUD)
-                window.SentinelBus?.emit('boot:complete', { ts: Date.now(), mode: 'SOVEREIGN' });
+                /* 3. Emit de boot:complete — bloqueado por _bootSealed se Core já emitiu */
+                window.SentinelBus?.emit('boot:complete', {
+                    ts:   Date.now(),
+                    mode: 'SOVEREIGN'
+                });
 
-                // 4. Ativação Visual
+                /* 4. Ativação Visual */
                 document.body.classList.add('runtime-active');
-                document.getElementById('boot-status').innerHTML = "SYSTEM_ONLINE // SOVEREIGN_MODE_ACTIVE";
-                document.getElementById('boot-status').style.color = "var(--green-flow)";
+
+                const bootStatus = document.getElementById('boot-status');
+                if (bootStatus) {
+                    bootStatus.innerHTML   = 'SYSTEM_ONLINE // SOVEREIGN_MODE_ACTIVE';
+                    bootStatus.style.color = 'var(--green-flow)';
+                }
             },
 
             startRuntimeLoop() {
-                // Centralização do Loop de Performance
                 const tick = () => {
-                    // Aqui os Kernels plugam sua telemetria
                     if (window.TelemetryKernel) window.TelemetryKernel.update();
                     requestAnimationFrame(tick);
                 };
@@ -131,7 +190,6 @@
             }
         };
 
-        // Início do ciclo de vida
         window.addEventListener('DOMContentLoaded', () => {
             window.SentinelBootKernel.init();
         });
