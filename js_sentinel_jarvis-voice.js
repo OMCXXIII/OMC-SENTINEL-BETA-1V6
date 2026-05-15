@@ -1,9 +1,21 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   S_SENTINEL_JARVIS-VOICE v6.2
+   S_SENTINEL_JARVIS-VOICE v6.3 — PATCH BUG 5 + BUG 6
    PROCESSADOR DE INTENÇÕES + MISSION LOCK v1.1
-   ENRIQUECIMENTO COGNITIVO NÃO-INTRUSIVO
    ---------------------------------------------------------------------------
-   OBJETIVO:
+   CHANGELOG v6.3:
+   ✓ BUG 5 — `state:change` → `state:changed`
+             O evento emitido pelo Jarvis era `state:change` (sem `d`).
+             O StateStore e todos os outros módulos escutam `state:changed`.
+             A missão era travada no localStorage mas nunca chegava ao
+             StateStore.set() — ops.activeMission ficava null para sempre.
+   ✓ BUG 6 — `SentinelBus.emit()` sem `window.` dentro de MissionLockEngine
+             MissionLockEngine é um objeto literal no escopo global.
+             Dentro de seus métodos, `SentinelBus` é resolvido via escopo
+             léxico — que não inclui `window` automaticamente em strict mode
+             ou após bundle. Substituído por `window.SentinelBus?.emit()`
+             em todos os pontos de chamada dentro do objeto.
+   ---------------------------------------------------------------------------
+   OBJETIVO ORIGINAL:
    - Reduzir a latência entre verbo → ação
    - Persistir intenção ativa fora do CPF (RAM Mental)
    - Neutralizar loops de background [ZEI-LOOP]
@@ -34,16 +46,9 @@ const MissionLockEngine = {
                 'color:#00FF41;'
             );
 
-            if (window.SentinelBus) {
-
-                SentinelBus.emit('mission:restored', {
-                    mission: saved
-                });
-
-                SentinelBus.emit('ui:nexus-update', {
-                    text: `MISSION_RESTORED:\n${saved}`
-                });
-            }
+            // BUG 6 FIX: window.SentinelBus?.emit() em vez de SentinelBus.emit()
+            window.SentinelBus?.emit('mission:restored', { mission: saved });
+            window.SentinelBus?.emit('ui:nexus-update',  { text: `MISSION_RESTORED:\n${saved}` });
         }
     },
 
@@ -57,32 +62,40 @@ const MissionLockEngine = {
         localStorage.setItem(this.STORAGE_KEY, mission);
 
         console.log(
-            `%c[MISSION-LOCK] Persistência Zeigarnik ativa.`,
+            '%c[MISSION-LOCK] Persistência Zeigarnik ativa.',
             'color:#00D4FF;'
         );
 
+        // BUG 6 FIX: window.SentinelBus?.emit() em todos os pontos abaixo
+
         /* Feedback no HUD */
-        SentinelBus.emit('ui:nexus-update', {
+        window.SentinelBus?.emit('ui:nexus-update', {
             text: `MISSION_LOCK:\n${mission}`
         });
 
-        /* Estado Global */
-        SentinelBus.emit('state:change', {
-            key: 'ops.activeMission',
-            val: mission,
-            prev: null
+        /* Estado Global — BUG 5 FIX: state:change → state:changed */
+        window.SentinelBus?.emit('state:changed', {
+            path:  'ops.activeMission',
+            value: mission,
+            previous: null,
+            ts: Date.now()
         });
 
         /* Telemetria */
-        SentinelBus.emit('telemetry:mission-lock', {
+        window.SentinelBus?.emit('telemetry:mission-lock', {
             mission,
             timestamp: Date.now()
         });
 
         /* Feedback Neural */
-        SentinelBus.emit('jarvis:feedback', {
+        window.SentinelBus?.emit('jarvis:feedback', {
             type: 'mission'
         });
+
+        /* Sincroniza StateStore nativo se disponível */
+        if (window.StateStore?.missionLock) {
+            window.StateStore.missionLock(mission);
+        }
     },
 
     clear() {
@@ -91,9 +104,15 @@ const MissionLockEngine = {
 
         this.activeMission = null;
 
-        SentinelBus.emit('ui:nexus-update', {
+        // BUG 6 FIX: window.SentinelBus?.emit()
+        window.SentinelBus?.emit('ui:nexus-update', {
             text: 'MISSION_LOCK_CLEARED'
         });
+
+        /* Sincroniza StateStore nativo se disponível */
+        if (window.StateStore?.missionLock) {
+            window.StateStore.missionLock(null);
+        }
 
         console.warn('[MISSION-LOCK] Buffer cognitivo liberado.');
     }
@@ -123,23 +142,23 @@ const MissionLockEngine = {
 
 if (window.SentinelBus) {
 
-    SentinelBus.on('jarvis:intent', ({ intent, value }) => {
+    window.SentinelBus.on('jarvis:intent', ({ intent, value }) => {
 
         /* MISSÃO */
         if (intent === 'mission') {
 
             MissionLockEngine.lock(value);
 
-            SentinelBus.emit('jarvis:speak', {
-                text: `Missão consolidada. Buffer cognitivo protegido.`
+            window.SentinelBus?.emit('jarvis:speak', {
+                text: 'Missão consolidada. Buffer cognitivo protegido.'
             });
         }
 
         /* DEEP FLOW */
         if (intent === 'deepflow') {
 
-            SentinelBus.emit('telemetry:focus-state', {
-                mode: 'deepflow',
+            window.SentinelBus?.emit('telemetry:focus-state', {
+                mode:      'deepflow',
                 timestamp: Date.now()
             });
 
@@ -149,13 +168,13 @@ if (window.SentinelBus) {
         /* FOCUS */
         if (intent === 'focus') {
 
-            SentinelBus.emit('xr:focus-isolate', {
+            window.SentinelBus?.emit('xr:focus-isolate', {
                 opacity: 0.05,
-                blur: 6
+                blur:    6
             });
 
-            SentinelBus.emit('telemetry:focus-state', {
-                mode: 'focus',
+            window.SentinelBus?.emit('telemetry:focus-state', {
+                mode:      'focus',
                 timestamp: Date.now()
             });
         }
@@ -166,29 +185,19 @@ if (window.SentinelBus) {
    COGNITIVE SAFETY LOOP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
-/**
- * Detecta ausência de missão ativa durante estados
- * prolongados de execução e sugere realinhamento.
- */
-
 setInterval(() => {
 
     if (!window.SentinelBus) return;
 
-    const hasMission =
-        !!localStorage.getItem('OMC_MISSION_LOCK');
+    const hasMission = !!localStorage.getItem('OMC_MISSION_LOCK');
 
     if (!hasMission && window.SENTINEL_BOOTED) {
 
-        SentinelBus.emit('ui:nexus-update', {
-            text:
-                '[MISSION-NULL]\n' +
-                'Nenhuma missão ativa detectada.'
+        window.SentinelBus.emit('ui:nexus-update', {
+            text: '[MISSION-NULL]\nNenhuma missão ativa detectada.'
         });
 
-        console.warn(
-            '[MISSION-NULL] Sistema sem vetor prioritário.'
-        );
+        console.warn('[MISSION-NULL] Sistema sem vetor prioritário.');
     }
 
 }, 180000);
@@ -199,7 +208,7 @@ setInterval(() => {
 
 if (window.SentinelBus) {
 
-    SentinelBus.once('boot:complete', () => {
+    window.SentinelBus.once('boot:complete', () => {
 
         MissionLockEngine.init();
 
@@ -211,54 +220,30 @@ if (window.SentinelBus) {
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   OPTIONAL COMMANDS
+   OPTIONAL COMMANDS — Ctrl+Shift+X → Clear Mission
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 document.addEventListener('keydown', (e) => {
 
-    /* CTRL + SHIFT + X → CLEAR MISSION */
-
-    if (
-        e.ctrlKey &&
-        e.shiftKey &&
-        e.key.toLowerCase() === 'x'
-    ) {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'x') {
 
         MissionLockEngine.clear();
 
-        SentinelBus.emit('jarvis:speak', {
+        window.SentinelBus?.emit('jarvis:speak', {
             text: 'Mission Lock removido.'
         });
     }
 });
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   RESULTADO OPERACIONAL
-═══════════════════════════════════════════════════════════════════════════ */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   EXPOSIÇÃO GLOBAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
-/**
- * MISSION LOCK v1.1
- * -----------------
- * - Persistência externa da intenção ativa
- * - Blindagem contra loops cognitivos concorrentes
- * - Redução de latência verbo → ação
- * - Menor retenção ativa no CPF
- * - Integração total com SentinelBus
- * - Compatível com Engine-XR + Protocols + HUD
- *
- * EVENTOS UTILIZADOS:
- *
- * → mission:lock
- * → mission:restored
- * → telemetry:mission-lock
- * → telemetry:focus-state
- * → ui:nexus-update
- * → state:change
- * → xr:focus-isolate
- *
- * LOGS:
- *
- * [MISSION-LOCK]
- * [MISSION-NULL]
- * [ZEI-LOOP]
- */
+window.MissionLockEngine = MissionLockEngine;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESULTADO OPERACIONAL v6.3
+   ✓ state:changed (com `d`) — StateStore recebe a mutação
+   ✓ window.SentinelBus?.emit() — sem ReferenceError em qualquer contexto
+   ✓ StateStore.missionLock() sincronizado para dupla persistência L1+L2
+═══════════════════════════════════════════════════════════════════════════ */
