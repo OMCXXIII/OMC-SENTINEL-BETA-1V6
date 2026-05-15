@@ -595,6 +595,7 @@ const SentinelKernel = (() => {
             if (!_bootSealed) {
                 _log('Failsafe: hardware não respondeu em 2s. Ativando OVERRIDE...');
                 _sealBoot('OVERRIDE_ENABLED');
+               window.SENTINEL_BOOTED = true; //
             }
         }, 2000);
 
