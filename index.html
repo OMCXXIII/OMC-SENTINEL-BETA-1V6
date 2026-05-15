@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OMC VR-OS | SENTINEL NEXUS v8.0 SOVEREIGN CORE</title>
-   <link rel="stylesheet" href="css_sentinel_tokens.css" />
+    <link rel="stylesheet" href="css_sentinel_tokens.css" />
     <link rel="stylesheet" href="css_sentinel_core.css" />
     <link rel="stylesheet" href="css_sentinel_fx.css" />
     <link rel="stylesheet" href="css_sentinel_hud.css" />
@@ -40,11 +40,11 @@
 
     <!-- ORDEM DE CARGA: Bus → Core → Protocols (pré-DOM) -->
     
-    <script src="sentinel-core.js"></script>
+    <script src="./sentinel-core.js"></script>
     
-    <script src="sentinel-bus.js"></script>
+    <script src="./sentinel-bus.js"></script>
     
-    <script src="js_sentinel_protocols.js"></script>
+    <script src="./js_sentinel_protocols.js"></script>
 </head>
 <body>
 
@@ -143,9 +143,9 @@
     </div><!-- #nexus-os -->
 
     <!-- ORDEM DE CARGA: Engine → Jarvis → Debug (pós-DOM) -->
-    <script src="js_sentinel_engine-xr.js"></script>
-    <script src="js_sentinel_jarvis-voice.js"></script>
-    <script src="sentinel-debug-hud.js"></script>
+    <script src="./js_sentinel_engine-xr.js"></script>
+    <script src="./js_sentinel_jarvis-voice.js"></script>
+    <script src="./sentinel-debug-hud.js"></script>
 
     <script>
         /*
@@ -170,7 +170,7 @@
 
                 /* 3. Emit de boot:complete — bloqueado por _bootSealed se Core já emitiu */
                 window.SentinelBus?.emit('boot:complete', {
-                    ts:   Date.now(),
+                    ts:    Date.now(),
                     mode: 'SOVEREIGN'
                 });
 
