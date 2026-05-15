@@ -110,14 +110,29 @@
                 });
             },
 
-            update: function () {
-                this.applyInhibition(this.data.focus);
-            },
+                         update: function () {
+                 // FIX: evita aplicar opacidade em modo 2D
+                 if (!GPU_AVAILABLE) return;
+                 this.applyInhibition(this.data.focus);
+                         applyInhibition: function (isFocused) {
+                 /* Guard: em modo 2D, não há material */
+                 if (!GPU_AVAILABLE) {
+                     // Fallback CSS puro
+                     this.el.style.opacity = isFocused ? '1' : '0.5';
+                     this.el.style.filter = isFocused ? 'brightness(1.2)' : 'brightness(0.8)';
+                 } else if (this.el.getAttribute('material') !== null) {
+                     try {
+                         this.el.setAttribute('material', 'opacity', isFocused ? 0.85 : 0.2);
+                     } catch (_) { }
+                 }
 
-            applyInhibition: function (isFocused) {
-                /* Em modo 2D, setAttribute('material') não existe — guard incluído */
-                if (this.el.getAttribute('material') !== null || GPU_AVAILABLE) {
-                    try {
+                 if (isFocused) {
+                     this.el.classList.add('attention-anchor');
+                     document.body.classList.add('focus-lock');
+                 } else {
+                     this.el.classList.remove('attention-anchor');
+                 }
+             }
                         this.el.setAttribute('material', 'opacity', isFocused ? 0.85 : 0.2);
                     } catch (_) { /* silencioso em fallback 2D */ }
                 }
