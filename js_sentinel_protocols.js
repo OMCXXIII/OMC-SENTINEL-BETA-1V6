@@ -442,3 +442,7 @@ window.SentinelProtocols =
    - consistência da execução
 
 ═══════════════════════════════════════════════════════════════════════════ */
+/* Exportar para global scope */
+window.SentinelProtocols = SentinelProtocols || {};
+console.log('%c OMC SENTINEL PROTOCOLS ONLINE ', 
+    'background:#000;color:#00FF41;border:1px solid #00FF41;padding:5px;font-family:monospace;');
