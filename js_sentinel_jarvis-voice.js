@@ -247,3 +247,5 @@ window.MissionLockEngine = MissionLockEngine;
    ✓ window.SentinelBus?.emit() — sem ReferenceError em qualquer contexto
    ✓ StateStore.missionLock() sincronizado para dupla persistência L1+L2
 ═══════════════════════════════════════════════════════════════════════════ */
+console.log('%c OMC SENTINEL JARVIS v8.0 ONLINE ', 
+    'background:#000;color:#00FF41;border:1px solid #00FF41;padding:5px;font-family:monospace;');
