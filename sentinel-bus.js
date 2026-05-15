@@ -487,3 +487,25 @@ SentinelBus.emit('boot:start', {
     buffer: true,
     transport: 'saltatory'
 });
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FALLBACK PARA NAVEGADORES SEM WEBGL
+   Injeta modo 2D-ONLY quando necessário
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+(function () {
+    const canvas = document.createElement('canvas');
+    const hasWebGL = !!(window.WebGLRenderingContext && 
+                       (canvas.getContext('webgl') || 
+                        canvas.getContext('experimental-webgl')));
+    
+    if (!hasWebGL) {
+        console.warn('%c[BUS] WebGL não disponível. Sistema em modo 2D.', 
+                     'color:#FFD500;font-weight:bold;');
+        SentinelBus.emit('telemetry:graphics-low', {
+            reason: 'no_webgl',
+            mode: '2D_FALLBACK',
+            ts: Date.now()
+        });
+    }
+})();
