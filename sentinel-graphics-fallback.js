@@ -1,21 +1,12 @@
 /**
- * SENTINEL GRAPHICS FALLBACK v1.1
- * 
- * Objetivo: Substituir A-Frame/THREE.js WebGL por renderização Canvas 2D pura
- * quando WebGL não está disponível (hardware antigo, drivers desatualizados, etc)
- * 
- * Este sistema:
- * - Detecta falha de WebGL ANTES de A-Frame tentar com os MESMOS parâmetros
+ * SENTINEL GRAPHICS FALLBACK v1.1 - PATCHED
+ * * Objetivo: Substituir A-Frame/THREE.js WebGL por renderização Canvas 2D pura
+ * quando WebGL não está disponível ou apresenta falhas estruturais de driver.
+ * * Este sistema:
+ * - Detecta falha de WebGL ANTES de A-Frame tentar (com teste rigoroso de pipeline)
  * - Substitui <a-scene> por <canvas> + renderização 2D
  * - Mantém Bus de eventos operacional
  * - Renderiza entidades como retângulos com labels
- * 
- * CHANGELOG v1.1:
- * ✓ Parâmetros de contexto alinhados com index.html (linha 63-64)
- * ✓ Detecção WebGL agora usa os MESMOS atributos que A-Frame
- * ✓ Supressão de warnings: powerPreference, failIfMajorPerformanceCaveat
- * ✓ Fallback forçado ANTES de THREE.js tentar renderizar
- * ✓ Teste de shader para validação real de WebGL
  */
 
 window.SentinelGraphicsFallback = (() => {
@@ -30,55 +21,67 @@ window.SentinelGraphicsFallback = (() => {
     };
 
     /**
-     * Verifica se WebGL pode ser criado com segurança
-     * Usa os MESMOS parâmetros que A-Frame usa em index.html
+     * Verifica se WebGL pode ser criado E operado com segurança.
+     * Realiza teste rigoroso de linkagem e execução para capturar falhas ocultas do ANGLE.
      */
     const canCreateWebGL = () => {
         try {
             const c = document.createElement('canvas');
             const contextNames = ['webgl', 'experimental-webgl'];
+            let gl = null;
             
             for (let name of contextNames) {
                 try {
-                    // ALINHADO COM index.html linhas 63-64
-                    const gl = c.getContext(name, {
+                    gl = c.getContext(name, {
                         antialias: false,
                         alpha: false,
                         powerPreference: 'low-power',
-                        premultipliedAlpha: false,
-                        preserveDrawingBuffer: false,
                         failIfMajorPerformanceCaveat: false
                     });
                     
-                    if (gl) {
-                        // Teste de verificação: tenta criar um shader simples
-                        try {
-                            const shader = gl.createShader(gl.VERTEX_SHADER);
-                            if (!shader) {
-                                throw new Error('Shader creation failed');
-                            }
-                            gl.deleteShader(shader);
-                        } catch (shaderError) {
-                            console.warn('[GRAPHICS] Shader test falhou:', shaderError.message);
-                            continue;
-                        }
-                        
-                        // Cleanup: perde contexto limpo
-                        const ext = gl.getExtension('WEBGL_lose_context');
-                        if (ext) ext.loseContext();
-                        
-                        console.log('[GRAPHICS] WebGL test passed com parâmetros de compatibilidade');
-                        return true;
-                    }
+                    if (gl) break;
                 } catch (e) {
-                    console.warn(`[GRAPHICS] ${name} context failed:`, e.message);
                     // Continua para próximo contexto
                 }
             }
             
-            return false;
+            if (!gl) return false;
+
+            // --- INÍCIO DO TESTE RIGOROSO DE PIPELINE ---
+            
+            // 1. Criar Shaders Mínimos (Vertex e Fragment Dummy)
+            const vs = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vs, 'void main() { gl_Position = vec4(0.0, 0.0, 0.0, 1.0); }');
+            gl.compileShader(vs);
+
+            const fs = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fs, 'void main() { gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0); }');
+            gl.compileShader(fs);
+
+            // 2. Criar e Linkar o Programa Gráfico
+            const program = gl.createProgram();
+            gl.attachShader(program, vs);
+            gl.attachShader(program, fs);
+            gl.linkProgram(program);
+
+            // Se o driver/ANGLE falhar na linkagem interna da sequência, aborta aqui
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                throw new Error('Falha crítica de linkagem (Bug de driver/ANGLE detectado).');
+            }
+
+            // 3. Forçar o Bind e Execução Ativa do Contexto
+            gl.useProgram(program);
+            gl.viewport(0, 0, 1, 1);
+            gl.clearColor(0, 0, 0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            // Se passou por todo o pipeline ativo, o contexto é real e seguro
+            const ext = gl.getExtension('WEBGL_lose_context');
+            if (ext) ext.loseContext();
+            return true;
+
         } catch (e) {
-            console.error('[GRAPHICS] Erro ao verificar WebGL:', e.message);
+            console.error('%c[GRAPHICS-PATCH] WebGL reprovou no teste ativo de stress:', 'color:#FF4A4A; font-weight:bold;', e.message);
             return false;
         }
     };
@@ -214,7 +217,7 @@ window.SentinelGraphicsFallback = (() => {
             // Info global
             ctx.fillStyle = 'rgba(0, 255, 136, 0.7)';
             ctx.font = 'bold 14px monospace';
-            ctx.fillText('GRAPHICS FALLBACK: Canvas 2D', 20, 30);
+            ctx.fillText('GRAPHICS FALLBACK: Canvas 2D (Safe Mode)', 20, 30);
 
             STATE.animationFrameId = requestAnimationFrame(render);
         };
@@ -230,12 +233,12 @@ window.SentinelGraphicsFallback = (() => {
             console.log('[GRAPHICS] Iniciando verificação de compatibilidade...');
 
             if (!canCreateWebGL()) {
-                console.warn('[GRAPHICS] WebGL não disponível. Ativando fallback Canvas 2D.');
+                console.warn('[GRAPHICS] WebGL corrompido ou indisponível. Forçando fallback Canvas 2D.');
                 activate();
-                return false; // WebGL indisponível
+                return false; // WebGL indisponível / Bloqueado
             } else {
-                console.log('[GRAPHICS] WebGL disponível. Mantendo A-Frame.');
-                return true; // WebGL disponível
+                console.log('[GRAPHICS] WebGL passou em todos os testes ativos. Mantendo A-Frame.');
+                return true; // WebGL perfeitamente operacional
             }
         },
 
