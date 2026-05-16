@@ -1,9 +1,9 @@
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SENTINEL ENGINE XR - V7.1 "PATCH TRIPLO"
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SENTINEL ENGINE XR - V8.0 "DUPLICIDADE REMOVIDA"
    Core: Gestão de Camadas de Intencionalidade e Supressão Atencional
    Target: Nexus ALPHA/BETA/GAMMA
 
-   CHANGELOG v7.1:
+   CHANGELOG v8.0:
    ✓ BUG 1 — Schema `title` → `label` (nome reservado A-Frame v1.4, gerava
              "Unknown property" e silenciava o componente inteiro)
    ✓ BUG 2 — `window.addEventListener('boot:complete')` substituído por
@@ -15,7 +15,9 @@
              componente ghost-window em modo 2D, injeta o pulvinar-shield
              via CSS e mantém o listener de boot ativo. O sistema degrada
              com elegância em vez de morrer silenciosamente.
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+   ✓ BUG 4 — Duplicidade removida: `applyInhibition` agora é método separado
+             do schema, sem replicação de código. Sintaxe corrigida.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 (function () {
     'use strict';
@@ -110,31 +112,24 @@
                 });
             },
 
-                         update: function () {
-                 // FIX: evita aplicar opacidade em modo 2D
-                 if (!GPU_AVAILABLE) return;
-                 this.applyInhibition(this.data.focus);
-                         applyInhibition: function (isFocused) {
-                 /* Guard: em modo 2D, não há material */
-                 if (!GPU_AVAILABLE) {
-                     // Fallback CSS puro
-                     this.el.style.opacity = isFocused ? '1' : '0.5';
-                     this.el.style.filter = isFocused ? 'brightness(1.2)' : 'brightness(0.8)';
-                 } else if (this.el.getAttribute('material') !== null) {
-                     try {
-                         this.el.setAttribute('material', 'opacity', isFocused ? 0.85 : 0.2);
-                     } catch (_) { }
-                 }
+            update: function () {
+                // FIX: evita aplicar opacidade em modo 2D
+                if (!GPU_AVAILABLE) return;
+                this.applyInhibition(this.data.focus);
+            },
 
-                 if (isFocused) {
-                     this.el.classList.add('attention-anchor');
-                     document.body.classList.add('focus-lock');
-                 } else {
-                     this.el.classList.remove('attention-anchor');
-                 }
-             }
+            applyInhibition: function (isFocused) {
+                /* Guard: em modo 2D, não há material */
+                if (!GPU_AVAILABLE) {
+                    // Fallback CSS puro
+                    this.el.style.opacity = isFocused ? '1' : '0.5';
+                    this.el.style.filter = isFocused ? 'brightness(1.2)' : 'brightness(0.8)';
+                } else if (this.el.getAttribute('material') !== null) {
+                    try {
                         this.el.setAttribute('material', 'opacity', isFocused ? 0.85 : 0.2);
-                    } catch (_) { /* silencioso em fallback 2D */ }
+                    } catch (_) { 
+                        /* silencioso em fallback 2D */ 
+                    }
                 }
 
                 if (isFocused) {
@@ -142,6 +137,11 @@
                     document.body.classList.add('focus-lock');
                 } else {
                     this.el.classList.remove('attention-anchor');
+                    // Remove focus-lock apenas se nenhuma outra entidade está focada
+                    const anyFocused = document.querySelectorAll('[ghost-window][focus]').length > 0;
+                    if (!anyFocused) {
+                        document.body.classList.remove('focus-lock');
+                    }
                 }
             }
         });
@@ -175,7 +175,7 @@
 
         document.body.appendChild(overlay);
 
-        window.addEventListener('ene:activated', () => {
+        window.addEventListener('xr:activated', () => {
             overlay.style.opacity = '1';
         });
 
@@ -247,7 +247,7 @@
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
     console.log(
-        `%c SENTINEL ENGINE-XR v7.1 [${GPU_AVAILABLE ? 'XR_MODE' : '2D_STABLE'}][BUS_SYNC][GHOST-WINDOW_PATCHED] `,
+        `%c SENTINEL ENGINE-XR v8.0 [${GPU_AVAILABLE ? 'XR_MODE' : '2D_STABLE'}][BUS_SYNC][GHOST-WINDOW_PATCHED][DUPLICIDAD-REMOVED] `,
         'background:#000;color:#00FF41;border:1px solid #00FF41;padding:5px;font-family:monospace;'
     );
 
