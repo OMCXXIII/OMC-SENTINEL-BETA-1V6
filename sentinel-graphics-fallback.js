@@ -1,14 +1,21 @@
 /**
- * SENTINEL GRAPHICS FALLBACK v1.0
+ * SENTINEL GRAPHICS FALLBACK v1.1
  * 
  * Objetivo: Substituir A-Frame/THREE.js WebGL por renderização Canvas 2D pura
  * quando WebGL não está disponível (hardware antigo, drivers desatualizados, etc)
  * 
  * Este sistema:
- * - Detecta falha de WebGL ANTES de A-Frame tentar
+ * - Detecta falha de WebGL ANTES de A-Frame tentar com os MESMOS parâmetros
  * - Substitui <a-scene> por <canvas> + renderização 2D
  * - Mantém Bus de eventos operacional
  * - Renderiza entidades como retângulos com labels
+ * 
+ * CHANGELOG v1.1:
+ * ✓ Parâmetros de contexto alinhados com index.html (linha 63-64)
+ * ✓ Detecção WebGL agora usa os MESMOS atributos que A-Frame
+ * ✓ Supressão de warnings: powerPreference, failIfMajorPerformanceCaveat
+ * ✓ Fallback forçado ANTES de THREE.js tentar renderizar
+ * ✓ Teste de shader para validação real de WebGL
  */
 
 window.SentinelGraphicsFallback = (() => {
@@ -24,6 +31,7 @@ window.SentinelGraphicsFallback = (() => {
 
     /**
      * Verifica se WebGL pode ser criado com segurança
+     * Usa os MESMOS parâmetros que A-Frame usa em index.html
      */
     const canCreateWebGL = () => {
         try {
@@ -32,19 +40,38 @@ window.SentinelGraphicsFallback = (() => {
             
             for (let name of contextNames) {
                 try {
+                    // ALINHADO COM index.html linhas 63-64
                     const gl = c.getContext(name, {
                         antialias: false,
                         alpha: false,
                         powerPreference: 'low-power',
+                        premultipliedAlpha: false,
+                        preserveDrawingBuffer: false,
                         failIfMajorPerformanceCaveat: false
                     });
                     
                     if (gl) {
+                        // Teste de verificação: tenta criar um shader simples
+                        try {
+                            const shader = gl.createShader(gl.VERTEX_SHADER);
+                            if (!shader) {
+                                throw new Error('Shader creation failed');
+                            }
+                            gl.deleteShader(shader);
+                        } catch (shaderError) {
+                            console.warn('[GRAPHICS] Shader test falhou:', shaderError.message);
+                            continue;
+                        }
+                        
+                        // Cleanup: perde contexto limpo
                         const ext = gl.getExtension('WEBGL_lose_context');
                         if (ext) ext.loseContext();
+                        
+                        console.log('[GRAPHICS] WebGL test passed com parâmetros de compatibilidade');
                         return true;
                     }
                 } catch (e) {
+                    console.warn(`[GRAPHICS] ${name} context failed:`, e.message);
                     // Continua para próximo contexto
                 }
             }
