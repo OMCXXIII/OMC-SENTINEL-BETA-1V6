@@ -36,6 +36,44 @@
         }
     </style>
 
+    <!-- COMPATIBILIDADE FALLBACK: WebGL Polyfill para Hardware Antigo -->
+    <script>
+        window.SENTINEL_GRAPHICS_CONFIG = {
+            webgl: {
+                antialias: false,
+                alpha: false,
+                powerPreference: 'low-power',
+                premultipliedAlpha: false,
+                preserveDrawingBuffer: false,
+                failIfMajorPerformanceCaveat: false
+            },
+            canvas2d: {
+                enabled: true,
+                renderScale: 0.75
+            },
+            performance: {
+                maxFrameRate: 30,
+                enablePostProcessing: false,
+                shadowMap: false
+            }
+        };
+        
+        (function() {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl', window.SENTINEL_GRAPHICS_CONFIG.webgl) ||
+                       canvas.getContext('experimental-webgl', window.SENTINEL_GRAPHICS_CONFIG.webgl);
+            
+            if (!gl) {
+                console.warn('[SENTINEL] WebGL não disponível. Canvas 2D ativado.');
+                window.SENTINEL_GRAPHICS_FALLBACK = true;
+                window.SENTINEL_GRAPHICS_CONFIG.canvas2d.enabled = true;
+            } else {
+                console.log('[SENTINEL] WebGL disponível com parâmetros de compatibilidade.');
+                window.SENTINEL_GRAPHICS_FALLBACK = false;
+            }
+        })();
+    </script>
+
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
     <!-- ORDEM DE CARGA: Bus → Core → Protocols (pré-DOM) -->
@@ -86,7 +124,7 @@
                 id="main-scene"
                 embedded
                 vr-mode-ui="enabled: false"
-                renderer="antialias: false; colorManagement: true;"
+                renderer="antialias: false; colorManagement: true; alpha: false; powerPreference: low-power; failIfMajorPerformanceCaveat: false;"
             >
                 <a-sky color="#000408"></a-sky>
 
@@ -198,7 +236,7 @@
         });
     </script> 
         <!-- FAVICON & PRELOAD -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23000408' width='100' height='100'/><text x='50' y='60' font-size='80' fill='%2300FF41' text-anchor='middle'>S</text></svg>" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23000408' width='100' height='100'/><text x='50' y='60' font-size='80' fil[...]
     <meta name="theme-color" content="#000408" />
 </body>
 </html>
