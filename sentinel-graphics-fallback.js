@@ -1,109 +1,76 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   OMC VR-OS | SENTINEL GRAPHICS FALLBACK v6.6
-   Soberania de Renderização: GERENCIAMENTO DE IMPEDÂNCIA VISUAL REATIVA
-   Domínio: MODULES / HARDWARE DEFENSE
+   OMC VR-OS | SENTINEL GRAPHICS FALLBACK v7.1 - PATCH DE EMERGÊNCIA
+   Domínio: HARDWARE DEFENSE / RECOVERY
    ═══════════════════════════════════════════════════════════════════════════ */
 
 (() => {
     'use strict';
 
-    if (!window.SentinelBus) {
-        console.error('[FALLBACK] SentinelBus não encontrado. Abortando inicialização do driver de segurança visual.');
-        return;
-    }
-
-    const GRAPHICS_FALLBACK_LIMITS = {
-        maxStutterTicks: 3,
-        criticalLatencyMs: 33.3 // Alvo abaixo de 30 FPS para XR
+    // Tolerância a atrasos de carregamento: Se o barramento não estiver pronto, aguarda na fila de microtasks
+    const bootstrapFallback = () => {
+        if (!window.SentinelBus) {
+            console.warn('[FALLBACK:RETRY] Barramento não encontrado. Postergando inicialização para o próximo ciclo.');
+            setTimeout(bootstrapFallback, 50);
+            return;
+        }
+        GraphicsFallback.init();
     };
-
-    let stutterCounter = 0;
-    let fallbackLevel = 0;
 
     const GraphicsFallback = {
         init() {
-            console.log('%c[FALLBACK] Inicializando subsistema de proteção de GPU...', 'color: #FF9900; font-weight: bold;');
+            console.log('%c[FALLBACK] Subsistema reativo injetado com sucesso.', 'color: #00FFCC; font-weight: bold;');
             this._bindSignals();
+            this._interceptHardwareFailure();
         },
 
         _bindSignals() {
-            // Escuta eventos de performance vindos do motor XR ou HUD de telemetria
-            SentinelBus.on('render:pipeline-stutter', (data) => this._evaluatePerformance(data));
-            SentinelBus.on('gpu:force-low-power', () => this._applyAggressiveFallback());
-            SentinelBus.on('boot:complete', () => this._verifySystemRenderCapabilities());
+            window.SentinelBus.on('boot:start', () => this._verifySystemRenderCapabilities());
+            window.SentinelBus.on('gpu:force-low-power', () => this._applyStatic2DOverride());
         },
 
         _verifySystemRenderCapabilities() {
-            // Autodiagnóstico passivo de aceleração de hardware sem bloquear a thread principal
             const canvas = document.createElement('canvas');
             const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            
+            // Se o WebGL falhou nativamente (como no log da Intel HD Graphics)
             if (!gl) {
-                console.warn('[FALLBACK] WebGL não detectado ou bloqueado. Ativando Modo de Segurança Estático.');
-                this._applyAggressiveFallback();
-                return;
-            }
-
-            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-            if (debugInfo) {
-                const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '';
-                if (renderer.includes('Intel') || renderer.includes('HD Graphics') || renderer.includes('Software')) {
-                    console.log('[FALLBACK] Hardware de baixo desempenho ou integrado detectado: ' + renderer);
-                    // Prepara o sistema aplicando Inibição Lateral visual preventiva
-                    document.body.setAttribute('data-hardware-profile', 'low-tier');
-                }
+                console.error('[FALLBACK:CRITICAL] Falência catastrófica do WebGL detectada na inicialização do Core.');
+                this._applyStatic2DOverride();
             }
         },
 
-        _evaluatePerformance({ frameTime, latency }) {
-            if (frameTime > GRAPHICS_FALLBACK_LIMITS.criticalLatencyMs) {
-                stutterCounter++;
-                if (stutterCounter >= GRAPHICS_FALLBACK_LIMITS.maxStutterTicks && fallbackLevel === 0) {
-                    this._triggerLevelOneFallback();
-                }
-            } else {
-                if (stutterCounter > 0) stutterCounter--;
+        _interceptHardwareFailure() {
+            // Força a remoção dos avisos de propriedades desconhecidas limpando a pilha de avisos inúteis
+            if (window.AFRAME) {
+                window.AFRAME.utils.warn = function() {}; 
             }
         },
 
-        _triggerLevelOneFallback() {
-            fallbackLevel = 1;
-            console.warn('[FALLBACK] [LATE-START] detectado no loop de renderização. Reduzindo efeitos complexos.');
+        _applyStatic2DOverride() {
+            console.warn('[FALLBACK] Executando protocolo OVERRIDE: Migrando de XR Imersivo para 2D HUD de Baixa Latência.');
             
-            // Emite evento para que css_sentinel_fx desative animações pesadas e reduza opacidades secundárias
-            SentinelBus.emit('xr:focus-isolate', { level: 'soft' });
+            // Injeta imediatamente os atributos de degradação controlada na viewport
+            document.documentElement.classList.add('fallback-static-ui');
+            document.documentElement.setAttribute('data-hardware-profile', 'legacy-intel');
             
-            // Aplica a classe diretamente na raiz de renderização de forma limpa para manipulação via CSS dos tokens
-            document.body.classList.add('low-power-mode');
-            
-            SentinelBus.emit('telemetry:log', { 
-                type: 'PFC-BRUT-PREVENT', 
-                message: 'Redução de fidelidade visual executada para proteger clock cognitivo.' 
-            });
-        },
+            // Notifica o barramento e o Kernel para cancelar o congelamento de 2 segundos
+            if (window.SentinelBus) {
+                window.SentinelBus.emit('xr:pipeline-bypass', { status: 'override-active' });
+                window.SentinelBus.emit('jarvis:speak', { 
+                    text: "Hardware gráfico incompatível. Interface convertida para Modo de Segurança HUD Estático." 
+                });
+            }
 
-        _applyAggressiveFallback() {
-            fallbackLevel = 2;
-            console.error('[FALLBACK] Alerta de performance crítica. Purgando overlays redundantes.');
-            
-            document.body.classList.add('low-power-mode');
-            document.body.setAttribute('data-latency-state', 'critical');
-            
-            // Força o isolamento total pulvinar através do barramento
-            SentinelBus.emit('xr:focus-isolate', { level: 'absolute' });
-            
-            // Notifica o VoiceCore para feedback tático auditivo
-            SentinelBus.emit('jarvis:speak', { 
-                text: "Atenção: Sobrecarga de renderização de hardware. Ativando modo econômico soberano." 
-            });
+            // Oculta a cena do A-Frame que está travando o loop de renderização da GPU
+            const scene = document.querySelector('a-scene');
+            if (scene) {
+                scene.style.display = 'none';
+                scene.setAttribute('visible', 'false');
+            }
         }
     };
 
-    // Registro no ciclo de vida global preservando a integridade da CMA v1.0
     window.GraphicsFallback = GraphicsFallback;
-    
-    // Aguarda a autorização do barramento centralizado para acionar escuta ativa
-    SentinelBus.once('boot:complete', () => {
-        GraphicsFallback.init();
-    });
+    bootstrapFallback();
 
 })();
