@@ -625,5 +625,3 @@ class SentinelSpatialEngine {
 // Inicialização e ancoragem formal no ecossistema global do SENTINEL
 const SovereignSpatialEngine = new SentinelSpatialEngine();
 window.SentinelSpatialEngine = SovereignSpatialEngine;
-
-export default SovereignSpatialEngine;
