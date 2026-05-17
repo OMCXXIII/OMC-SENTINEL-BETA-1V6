@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OMC VR-OS | SENTINEL NEXUS v8.0 SOVEREIGN CORE</title>
+    <link rel="stylesheet" href="css_sentinel_tokens.css" />
+    <link rel="stylesheet" href="css_sentinel_core.css" />
+    <link rel="stylesheet" href="css_sentinel_fx.css" />
+    <link rel="stylesheet" href="css_sentinel_hud.css" />
+
+    <style>
+        /* CSS Crítico de Transição v8.0 */
+        :root {
+            --threat-level: 0;
+            --render-scale: 1.0;
+            --system-temperature: 32;
+            --ui-density: 1.0;
+        }
+        body {
+            background: #000408;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 1s var(--ease-out-expo);
+        }
+        body.runtime-active { opacity: 1; }
+
+        /* Containers Atômicos */
+        #nexus-os {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: 50px 1fr 50px;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+    </style>
+
+    <!-- COMPATIBILIDADE FALLBACK: WebGL Polyfill para Hardware Antigo -->
+    <script>
+        window.SENTINEL_GRAPHICS_CONFIG = {
+            webgl: {
+                antialias: false,
+                alpha: false,
+                powerPreference: 'low-power',
+                premultipliedAlpha: false,
+                preserveDrawingBuffer: false,
+                failIfMajorPerformanceCaveat: false
+            },
+            canvas2d: {
+                enabled: true,
+                renderScale: 0.75
+            },
+            performance: {
+                maxFrameRate: 30,
+                enablePostProcessing: false,
+                shadowMap: false
+            }
+        };
+        
+        (function() {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl', window.SENTINEL_GRAPHICS_CONFIG.webgl) ||
+                       canvas.getContext('experimental-webgl', window.SENTINEL_GRAPHICS_CONFIG.webgl);
+            
+            if (!gl) {
+                console.warn('[SENTINEL] WebGL não disponível. Canvas 2D ativado.');
+                window.SENTINEL_GRAPHICS_FALLBACK = true;
+                window.SENTINEL_GRAPHICS_CONFIG.canvas2d.enabled = true;
+            } else {
+                console.log('[SENTINEL] WebGL disponível com parâmetros de compatibilidade.');
+                window.SENTINEL_GRAPHICS_FALLBACK = false;
+            }
+        })();
+    </script>
+
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+
+    <!-- ORDEM DE CARGA: Bus → Core → Protocols (pré-DOM) -->
+    <script src="./sentinel-graphics-fallback.js"></script>
+    <script src="./sentinel-bus.js"></script>
+    <script src="./sentinel-core.js"></script>
+    <script src="./js_sentinel_protocols.js"></script>
+</head>
+<body>
+
+    <div id="fx-pipeline">
+        <div class="gamma-sync-layer"></div>
+        <div class="neural-field"></div>
+        <div class="neural-scan-overlay"></div>
+    </div>
+
+    <div id="nexus-os">
+
+        <header id="topbar" class="overlay-system">
+            <div class="sys-id">SENTINEL NEXUS v8.0</div>
+            <div id="gamma-heartbeat"></div>
+            <div class="telemetry-compact">
+                FPS: <span id="fps-counter">--</span>
+                LATENCY: <span id="latency-value">--</span>
+            </div>
+        </header>
+
+        <aside id="hud-left" class="layer-context">
+            <div class="hud-box">
+                <div class="hud-label">CLOCK ATC</div>
+                <div id="clock-display" class="hud-value">00:00:00</div>
+            </div>
+            <div class="hud-box">
+                <div class="hud-label">MENTAL BATTERY</div>
+                <div id="mental-battery" class="hud-value">100%</div>
+                <div class="battery-track"><div id="battery-fill"></div></div>
+            </div>
+            <div class="hud-box">
+                <div class="hud-label">MISSION_LOCK</div>
+                <div id="mission-display" class="hud-value">STANDBY</div>
+            </div>
+        </aside>
+
+        <main id="scene-wrapper">
+            <!-- PATCH v8.1: Parâmetros inválidos de WebGL removidos do schema do renderer e adicionado whitelist no raycaster -->
+            <a-scene
+                id="main-scene"
+                embedded
+                vr-mode-ui="enabled: false"
+                renderer="antialias: false; colorManagement: true; alpha: false;"
+                raycaster="objects: [ghost-window], .raycastable"
+            >
+                <a-sky color="#000408"></a-sky>
+
+                <a-entity
+                    id="window-alpha"
+                    ghost-window="label: ALPHA_NEXUS; layer: focus"
+                    position="-2 1.6 -4"
+                    class="raycastable"
+                ></a-entity>
+
+                <a-entity
+                    id="window-beta"
+                    ghost-window="label: BETA_NEXUS; layer: context"
+                    position="0 1.6 -4.5"
+                    class="raycastable"
+                ></a-entity>
+
+                <a-entity
+                    id="window-gamma"
+                    ghost-window="label: GAMMA_NEXUS; layer: sovereign"
+                    position="2 1.6 -4"
+                    class="raycastable"
+                ></a-entity>
+
+                <a-entity camera look-controls cursor="rayOrigin: mouse"></a-entity>
+            </a-scene>
+        </main>
+
+        <aside id="hud-right" class="layer-context">
+            <div class="hud-box" style="flex-grow: 1;">
+                <div class="hud-label">AI_NEXUS_OUTPUT</div>
+                <div id="nexus-display" class="terminal-window">INICIALIZANDO SOBERANIA...</div>
+            </div>
+            <div class="hud-box terminal-container">
+                <div class="hud-label">CORE_TERMINAL</div>
+                <div id="terminal-log"></div>
+                <input
+                    type="text"
+                    class="cmd-input"
+                    placeholder="SENTINEL_CMD >"
+                    spellcheck="false"
+                >
+            </div>
+        </aside>
+
+        <footer id="bottombar" class="overlay-sovereign">
+            <div id="boot-status">KERNEL_INIT_PENDING</div>
+            <div class="sys-signature">OMCXXIII | SOVEREIGN CORE</div>
+        </footer>
+
+    </div><!-- #nexus-os -->
+
+    <!-- ORDEM DE CARGA: Engine → Jarvis → Debug (pós-DOM) -->
+    <script src="./js_sentinel_engine-xr.js"></script>
+    <script src="./js_sentinel_jarvis-voice.js"></script>
+    <script src="./sentinel-debug-hud.js"></script>
+
+    <script>
+        window.SentinelBootKernel = {
+            async init() {
+                console.log('[BOOT] Sentinel Nexus v8.0 Boot Sequence Initiated...');
+
+                if (typeof SentinelProtocols !== 'undefined') {
+                    SentinelProtocols.init();
+                }
+
+                this.startRuntimeLoop();
+
+                window.SentinelBus?.emit('boot:complete', {
+                    ts:    Date.now(),
+                    mode: window.SENTINEL_GRAPHICS_FALLBACK ? 'OVERRIDE_2D' : 'SOVEREIGN'
+                });
+
+                document.body.classList.add('runtime-active');
+
+                const bootStatus = document.getElementById('boot-status');
+                if (bootStatus) {
+                    if (window.SENTINEL_GRAPHICS_FALLBACK) {
+                        bootStatus.innerHTML   = 'SYSTEM_ONLINE // OVERRIDE_2D_ACTIVE (LOW_LATENCY)';
+                        bootStatus.style.color = '#D4AF37'; // Ouro/Aviso para modo Fallback
+                    } else {
+                        bootStatus.innerHTML   = 'SYSTEM_ONLINE // SOVEREIGN_MODE_ACTIVE';
+                        bootStatus.style.color = 'var(--green-flow)';
+                    }
+                }
+            },
+
+            startRuntimeLoop() {
+                const tick = () => {
+                    if (window.TelemetryKernel) window.TelemetryKernel.update();
+                    requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            window.SentinelBootKernel.init();
+        });
+    </script> 
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23000408' width='100' height='100'/><text x='50' y='60' font-size='80' fill='%23D4AF37' font-family='monospace' text-anchor='middle' dominant-baseline='central'>S</text></svg>" />
+    <meta name="theme-color" content="#000408" />
+</body>
+</html>

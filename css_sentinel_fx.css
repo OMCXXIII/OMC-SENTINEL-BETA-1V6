@@ -1,0 +1,372 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   OMC VR-OS | CSS_SENTINEL_FX v9.0 — NEUROADAPTIVE VISUAL EFFECTS RUNTIME
+   Papel: Infraestrutura Perceptiva Adaptativa e Governança de Carga Neurovisual
+   Domínio: IMERSÃO / SALIÊNCIA / ESTABILIDADE XR / FLUXO DE PRESSÃO GPU
+   
+   DIRETRIZ DE EXECUÇÃO:
+   - Preserva os efeitos e animações originais (Pulvinar, Gamma Sync, AeroGlass).
+   - Injeta governança por hardware para evitar saturação, flicker e estresse térmico.
+   - Migração implícita estruturada para pipelines WebGPU em browsers compatíveis.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   1. FX CORE RUNTIME (Governança Global de FX)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+:root {
+    /* Multiplicadores dinâmicos controlados pelo Kernel */
+    --fx-intensity:           1.0;  /* Escala geral de opacidade/força dos efeitos */
+    --fx-density:             1.0;  /* Quantidade de ruído/partículas simultâneas */
+    --fx-quality:             1.0;  /* 0.0 (Crítico) a 1.0 (Imersão Total) */
+    --fx-motion-scale:        1.0;  /* Atenuador cinemático para prevenção de cinetose */
+    --fx-immersion-scale:     1.0;  /* Nível de acoplamento espacial */
+
+    /* [PRESERVADO v6.6] TOKENS DE BLINDAGEM SENSORIAL ORIGINAL */
+    --pulvinar-inner:         transparent 14%;
+    --pulvinar-mid:           rgba(0,0,0,0.18) 34%;
+    --pulvinar-outer:         rgba(0,0,0,1) 90%;
+    --pulvinar-opacity:       0.96;
+    --pulvinar-blur:          blur(18px);
+
+    --gamma-frequency:        0.025s;
+    --gamma-opacity:          0.035;
+    --gamma-scale:            1.015;
+    --gamma-brightness:       1.06;
+    --gamma-energy:           rgba(0,255,65,0.12);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   2. NEUROADAPTIVE FX (Adaptação ao Córtex do Operador)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-neuroadaptive {
+    will-change: filter, opacity;
+    transition: filter calc(0.4s / var(--fx-intensity)) ease-in-out;
+}
+.fx-cognitive {
+    filter: saturate(var(--fx-intensity)) contrast(calc(0.9 + (0.2 * var(--fx-intensity))));
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   3. ATTENTION FX (Direcionamento Balístico Controlado)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-attention-primary {
+    filter: brightness(1.2) drop-shadow(0 0 calc(8px * var(--fx-intensity)) var(--cyan));
+    opacity: 1.0;
+}
+.fx-attention-secondary {
+    filter: brightness(0.8) saturate(0.5);
+    opacity: calc(0.5 + (0.2 * var(--fx-intensity)));
+}
+.fx-attention-passive {
+    filter: grayscale(0.6) brightness(0.5);
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   4. FOCUS FX (Isolamento Perceptivo Foveal)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-focus-lock {
+    outline: 1px solid rgba(0, 212, 255, var(--fx-intensity));
+    background: rgba(0, 12, 18, calc(0.4 * var(--fx-intensity)));
+}
+.fx-focus-amplified {
+    filter: contrast(1.25) sharpness(1.5); /* Simulação de acuidade aumentada */
+    transform: scale(1.02);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   5. SALIENCE FX (Vitória contra Competição Cognitiva)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-salient {
+    box-shadow: 0 0 calc(15px * var(--fx-intensity)) rgba(0, 255, 65, calc(0.5 * var(--fx-intensity)));
+}
+.fx-salience-boost {
+    animation: flashBoost calc(0.3s * var(--fx-motion-scale)) ease-out;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   6. IMMERSION FX (Sustentação de Presença e Profundidade)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-immersive {
+    backdrop-filter: blur(calc(8px * var(--fx-immersion-scale)));
+}
+.fx-atmospheric {
+    background: radial-gradient(circle, transparent 30%, rgba(0,4,8,calc(0.7 * var(--fx-immersion-scale))));
+}
+.fx-depth {
+    transform: translateZ(calc(10px * var(--fx-immersion-scale)));
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   7. XR COMFORT FX (Proteção Vestibular Espacial)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-xr-safe {
+    transform-style: flat !important; /* Desativa paralaxe agressiva em caso de estresse */
+    text-shadow: none !important;
+}
+.fx-xr-comfort {
+    animation-duration: 0s !important; /* Congela oscilações frenéticas de HUD */
+    filter: brightness(0.9) contrast(1.0) !important;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   8. GPU-AWARE FX & 9. ADAPTIVE QUALITY SYSTEM (Orçamento de Frame)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-gpu-light  { transform: translateZ(0); }
+.fx-gpu-medium { transform: translate3d(0,0,1px); will-change: transform; }
+.fx-gpu-heavy  { contain: strict; }
+
+.fx-quality-low .fx-scanner,
+.fx-quality-low .fx-volumetric-light,
+.fx-quality-low [class*="fx-bloom"] {
+    animation: none !important;
+    backdrop-filter: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+}
+.fx-quality-medium { opacity: 0.75; }
+.fx-quality-high   { opacity: 1.0; }
+.fx-quality-xr     { transform: translateZ(20px); backface-visibility: hidden; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   10. BLOOM SYSTEM & 11. GLOW SYSTEM (Luminância sem Washout)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-bloom-soft   { filter: drop-shadow(0 0 4px rgba(0,212,255,calc(0.3 * var(--fx-quality)))); }
+.fx-bloom-medium { filter: drop-shadow(0 0 8px rgba(0,212,255,calc(0.6 * var(--fx-quality)))); }
+.fx-bloom-strong { filter: drop-shadow(0 0 16px rgba(0,212,255,var(--fx-quality))); }
+
+.fx-glow-runtime { text-shadow: 0 0 calc(5px * var(--fx-intensity)) var(--green-flow); }
+.fx-glow-focus   { text-shadow: 0 0 calc(10px * var(--fx-intensity)) var(--cyan); }
+.fx-glow-alert   { text-shadow: 0 0 calc(12px * var(--fx-intensity)) #ff4b00; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   12. ATMOSPHERE FX & 13. VOLUMETRIC SIMULATION (Simulação Leve)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-atmosphere {
+    background: linear-gradient(180deg, rgba(0,12,18,0) 0%, rgba(0,4,8,0.5) 100%);
+}
+.fx-fog-light {
+    opacity: calc(0.15 * var(--fx-immersion-scale));
+}
+.fx-ambient-depth {
+    box-shadow: inset 0 0 40px rgba(0,0,0,calc(0.8 * var(--fx-immersion-scale)));
+}
+
+.fx-volumetric-light {
+    background: linear-gradient(45deg, rgba(0,255,65,0.03) 0%, transparent 70%);
+    pointer-events: none;
+}
+.fx-volumetric-depth {
+    mask-image: linear-gradient(to bottom, black, transparent);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   14. SCANNER FX (Comunicação de Atividade de Runtime)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-scanner {
+    position: relative;
+    overflow: hidden;
+}
+.fx-scanner::after {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+    background: linear-gradient(to right, transparent, var(--green-flow), transparent);
+    opacity: calc(0.4 * var(--fx-quality));
+    animation: scanLine calc(2.5s / var(--fx-motion-scale)) infinite linear;
+}
+.fx-scanline {
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 3px, 3px 100%;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   15. MOTION FX & 16. TEMPORAL FX (Cinemática Perceptiva)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-motion-focus   { transition: transform calc(0.2s / var(--fx-motion-scale)) cubic-bezier(0.16, 1, 0.3, 1); }
+.fx-motion-context { transition: transform calc(0.5s / var(--fx-motion-scale)) ease-out; }
+.fx-motion-alert   { animation: motionAlertPulse calc(1s / var(--fx-motion-scale)) infinite linear; }
+
+.fx-persistent { transition-duration: 1.2s; }
+.fx-temporal   { transition-duration: 0.05s; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   17. ALERT FX & 18. EMERGENCY FX (Vencendo o Ruído Mental)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-alert-warning   { border-color: #ffd400 !important; animation: warningGlow 1.5s infinite alternate; }
+.fx-alert-critical  { border-color: #ff4b00 !important; animation: criticalGlow 0.8s infinite alternate; }
+.fx-alert-emergency { border-color: #ff0055 !important; animation: emergencyStrobe 0.4s infinite; }
+
+.fx-emergency-lock {
+    background: rgba(8, 0, 2, 0.95) !important;
+    backdrop-filter: saturate(2) blur(20px) !important;
+}
+.fx-emergency-pulse {
+    animation: emergencyPulse 2s infinite ease-in-out;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   19. RECOVERY FX (Resfriamento e Baixa Estimulação)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-recovery {
+    filter: grayscale(0.9) brightness(0.6) !important;
+}
+.fx-low-stimulation * {
+    animation: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    border-color: rgba(0, 212, 255, 0.2) !important;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   20. SEMANTIC FX & 21. CONTEXT FX (Significado Visual)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-semantic-relevant { opacity: 1.0; filter: drop-shadow(0 0 6px var(--green-flow)); }
+.fx-semantic-linked   { border-bottom: 1px dashed var(--cyan); }
+
+.fx-contextual { opacity: calc(0.6 * var(--fx-intensity)); }
+.fx-context-depth { transform: translateZ(-20px); }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   22. MISSION FX & 23. PERIPHERAL FX (Foco Tático Secundário)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-mission-primary { border-left: 4px solid var(--green-flow); padding-left: 8px; }
+.fx-mission-objective { font-weight: bold; text-shadow: 0 0 8px rgba(0, 255, 65, 0.5); }
+
+.fx-peripheral-muted { opacity: 0.25; filter: blur(2px) grayscale(0.5); }
+.fx-peripheral-passive { opacity: 0.15; pointer-events: none; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   24. ENVIRONMENTAL FX & 25. AUDIO-REACTIVE FX
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-environment { mix-blend-mode: color-dodge; }
+.fx-environment-reactive { transition: transform 0.1s linear, opacity 0.1s linear; }
+
+.fx-audio-reactive { will-change: transform, filter; }
+.fx-audio-pulse    { transform: scale(calc(1.0 + (0.05 * var(--fx-intensity)))); }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   26. COGNITIVE PULSE FX (Pulsação Orgânica de Runtime)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-cognitive-pulse {
+    animation: runtimePulse 8s infinite ease-in-out;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   27. SHADER OVERLAY BRIDGE & 28. WEBGPU TRANSITION LAYER
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-shader-overlay {
+    mix-blend-mode: plus-lighter;
+    content-visibility: auto;
+}
+.fx-webgpu-ready {
+    transform: translate3d(0,0,0); /* Exige composição em sandbox isolado de hardware */
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   29. PERFORMANCE DEGRADATION RULES (Failsafes Automáticos)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-degraded {
+    --fx-intensity: 0.2;
+    --fx-quality: 0.0;
+    --fx-motion-scale: 0.0;
+}
+.fx-minimal {
+    backdrop-filter: none !important;
+    filter: none !important;
+}
+.fx-safe {
+    image-rendering: crisp-edges;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   30. FX SAFETY SYSTEM (Prevenção Absoluta de Fadiga)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-safe-motion    { animation-duration: 5s !important; }
+.fx-safe-contrast  { filter: contrast(0.95) brightness(0.85); }
+.fx-safe-brightness { max-content: 90vh; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   31. FUTURE NEURAL FX
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.fx-neural-resonance { opacity: calc(0.9 * var(--fx-intensity)); }
+.fx-predictive-focus { border-right: 2px dotted var(--cyan); }
+
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   [PRESERVADO v6.6] INFRAESTRUTURA COMPLEMENTAR DE SENSORIAL LOCK
+   Mantém compatibilidade total com o motor legível original do SENTINEL
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.glass-panel, .glass-card, .cyber-glass {
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    background: rgba(0, 12, 18, 0.45);
+    border: 1px solid rgba(0, 212, 255, 0.15);
+}
+
+.gamma-sync-layer {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: var(--gamma-energy);
+    opacity: var(--gamma-opacity);
+    pointer-events: none;
+    z-index: 9999;
+    mix-blend-mode: screen;
+}
+
+.low-power-mode body::after {
+    backdrop-filter: var(--pulvinar-blur);
+    opacity: 0.75;
+}
+
+@media (max-width: 768px) {
+    body::after { opacity: 0.82; backdrop-filter: blur(10px); }
+    .glass-panel, .glass-card, .cyber-glass {
+        backdrop-filter: blur(10px) saturate(160%);
+        -webkit-backdrop-filter: blur(10px) saturate(160%);
+    }
+    .gamma-sync-layer { opacity: 0.02; }
+}
+
+.gamma-sync-layer, .neural-field, .neural-scan-overlay,
+.glass-panel, .glass-card, .cyber-glass, .panel, .hud-box {
+    transform: translate3d(0,0,0);
+    backface-visibility: hidden;
+    contain: layout paint style;
+    will-change: transform, opacity, filter;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ANIMAÇÕES DE SISTEMA (MIGRAÇÃO DE HARDWARE)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@keyframes scanLine {
+    0% { top: -10%; }
+    100% { top: 110%; }
+}
+@keyframes flashBoost {
+    0% { filter: brightness(2) contrast(1.4); }
+    100% { filter: brightness(1) contrast(1); }
+}
+@keyframes warningGlow {
+    from { box-shadow: 0 0 4px rgba(255,212,0,0.2); }
+    to { box-shadow: 0 0 12px rgba(255,212,0,0.6); }
+}
+@keyframes criticalGlow {
+    from { background: rgba(255,75,0,0.02); box-shadow: 0 0 4px rgba(255,75,0,0.3); }
+    to { background: rgba(255,75,0,0.12); box-shadow: 0 0 16px rgba(255,75,0,0.8); }
+}
+@keyframes emergencyStrobe {
+    0%, 100% { background: rgba(255,0,85,0.0); opacity: 0.8; }
+    50% { background: rgba(255,0,85,0.15); opacity: 1.0; }
+}
+@keyframes emergencyPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.015); filter: hue-rotate(-10deg); }
+    100% { transform: scale(1); }
+}
+@keyframes motionAlertPulse {
+    0% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(0, -3px, 0); }
+    100% { transform: translate3d(0, 0, 0); }
+}
+@keyframes runtimePulse {
+    0%, 100% { opacity: 0.9; }
+    50% { opacity: 0.6; }
+}
