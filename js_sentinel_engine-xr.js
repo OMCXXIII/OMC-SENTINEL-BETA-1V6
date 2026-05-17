@@ -34,7 +34,8 @@ class SentinelSpatialEngine {
       active: false,
       session: null,
       mode: '2D_STABLE',
-      supported: false
+      supported: false,
+      supportsImmersive: false
     };
 
     // 2. XR SESSION GOVERNANCE
@@ -178,14 +179,19 @@ class SentinelSpatialEngine {
 
     if (this.xr.supported && navigator.xr) {
       try {
-        const isSupported = await navigator.xr.isSessionSupported('immersive-vr');
-        if (isSupported) {
+        this.xr.supportsImmersive = await navigator.xr.isSessionSupported('immersive-vr');
+        if (this.xr.supportsImmersive) {
           this.xr.mode = 'XR_READY';
-          this.traceXR('Subsistema WebXR mapeado com suporte Imersivo.');
+          this.traceXR('Subsistema WebXR mapeado com suporte Imersivo (ativação manual requerida).', 'INFO');
+          this._createXRActivationButton();
+        } else {
+          this.traceXR('WebXR disponível mas "immersive-vr" não suportado neste dispositivo.', 'WARN');
         }
       } catch (e) {
         this.traceXR(`Falha na verificação de recursos WebXR: ${e.message}`, 'WARN');
       }
+    } else {
+      this.traceXR('WebXR indisponível. Sistema operando em modo 2D estável.', 'INFO');
     }
 
     this._bindCoreCommunication();
@@ -209,9 +215,52 @@ class SentinelSpatialEngine {
     }
   }
 
+  // ✅ CORREÇÃO: Requer ativação manual via gesto do usuário
+  _createXRActivationButton() {
+    if (document.getElementById('xr-activation-btn')) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'xr-activation-btn';
+    btn.textContent = '🥽 ATIVAR XR';
+    btn.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 12px 24px;
+      background: #00FF41;
+      color: #000408;
+      border: 2px solid #00D4FF;
+      border-radius: 4px;
+      font-family: monospace;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 10000;
+      transition: all 0.3s ease;
+    `;
+
+    btn.addEventListener('mouseover', () => {
+      btn.style.background = '#00D4FF';
+      btn.style.color = '#00FF41';
+    });
+
+    btn.addEventListener('mouseout', () => {
+      btn.style.background = '#00FF41';
+      btn.style.color = '#000408';
+    });
+
+    btn.addEventListener('click', async () => {
+      this.traceXR('Gesto de ativação XR detectado. Iniciando sessão imersiva...', 'INFO');
+      await this.startXRSession();
+      btn.style.display = 'none';
+    });
+
+    document.body.appendChild(btn);
+    this.traceXR('Botão de ativação XR criado e aguardando gesto do usuário.', 'INFO');
+  }
+
   async startXRSession() {
-    if (!this.xr.supported || !navigator.xr) {
-      this.traceXR('Abortando inicialização: WebXR não suportado no hardware nativo.', 'ERROR');
+    if (!this.xr.supportsImmersive || !navigator.xr) {
+      this.traceXR('Abortando inicialização: WebXR não suportado ou immersive-vr indisponível.', 'ERROR');
       this.degradeXR('HARDWARE_MISSING');
       return false;
     }
@@ -242,6 +291,7 @@ class SentinelSpatialEngine {
       
       window.SentinelBus?.emit('xr:activated', { sessionID: `XR_${Date.now()}` });
       this.rememberSpatialState();
+      this.traceXR('✓ Sessão XR imersiva iniciada com sucesso.', 'INFO');
     });
   }
 
@@ -254,6 +304,11 @@ class SentinelSpatialEngine {
     this.xr.mode = '2D_STABLE';
     this.session.immersive = false;
     window.SentinelBus?.emit('xr:deactivated', { ts: Date.now() });
+    this.traceXR('Sessão XR encerrada. Retornando ao modo 2D.', 'INFO');
+    
+    // Re-mostra o botão de ativação
+    const btn = document.getElementById('xr-activation-btn');
+    if (btn) btn.style.display = 'block';
   }
 
   // ==========================================================================
@@ -573,9 +628,10 @@ class SentinelSpatialEngine {
 
   _bindCoreCommunication() {
     if (window.SentinelBus) {
+      // ✅ CORREÇÃO: NÃO inicializa XR automaticamente
+      // Espera por ativação manual via botão
       window.SentinelBus.once('boot:complete', () => {
-        this.traceXR('Sinal boot:complete interceptado via Bus. Elevando presença espacial.');
-        this.startXRSession();
+        this.traceXR('Boot concluído. XR aguardando ativação manual do usuário.', 'INFO');
       });
 
       // Hook de escuta nativa para reajustes térmicos delegados pelo Renderer principal
