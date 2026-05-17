@@ -1,573 +1,231 @@
-/**
- * ═══════════════════════════════════════════════════════════════════════════
- * SENTINEL ORCHESTRATOR v9.0
- * Maestro Central do Runtime Operacional
- * 
- * RESPONSABILIDADES:
- * ✓ Carregar módulos em sequência correta (Fases)
- * ✓ Resolver dependências automaticamente
- * ✓ Lifecycle coordination (boot → run → suspend → shutdown)
- * ✓ Error handling e recovery gracioso
- * ✓ Rastreamento de estado operacional
- * ✓ Invocação dinâmica de módulos
- * ═══════════════════════════════════════════════════════════════════════════
- */
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OMC VR-OS | SENTINEL NEXUS v8.0 SOVEREIGN CORE</title>
+    <link rel="stylesheet" href="css_sentinel_tokens.css" />
+    <link rel="stylesheet" href="css_sentinel_core.css" />
+    <link rel="stylesheet" href="css_sentinel_fx.css" />
+    <link rel="stylesheet" href="css_sentinel_hud.css" />
 
-class SentinelOrchestrator {
-  constructor() {
-    this.version = '9.0-ORCHESTRATOR';
-    this.modules = new Map();
-    this.phases = [];
-    this.currentPhase = null;
-    this.isBootComplete = false;
-    this.isRunning = false;
-    this.bootTimeline = [];
-    this.lastError = null;
-    this.moduleOrder = [];
-    
-    // Sistema de monitoramento
-    this.stats = {
-      modulesLoaded: 0,
-      modulesInitialized: 0,
-      modulesFailed: 0,
-      bootStartTime: null,
-      bootEndTime: null,
-      bootDuration: null
-    };
-  }
-
-  /**
-   * DEFINIÇÃO DAS FASES DE BOOT
-   * Sequência correta: dependências são garantidas por ordem
-   */
-  defineBootPhases() {
-    return [
-      {
-        phase: 'FOUNDATION',
-        description: 'Fundações: Bus e fallback gráfico',
-        critical: true,
-        modules: [
-          { name: 'graphics-fallback', type: 'utility', essential: true },
-          { name: 'bus', type: 'core', essential: true }
-        ]
-      },
-
-      {
-        phase: 'KERNEL_FOUNDATION',
-        description: 'Núcleo base: Estado, Core e State Machine',
-        critical: true,
-        modules: [
-          { name: 'core', type: 'kernel', essential: true, depends: ['bus'] },
-          { name: 'state-machine', type: 'kernel', essential: true, depends: ['bus', 'core'] },
-          { name: 'kernel', type: 'kernel', essential: true, depends: ['bus', 'core', 'state-machine'] }
-        ]
-      },
-
-      {
-        phase: 'RUNTIME_CONTROL',
-        description: 'Controle de execução: Scheduler e Memory',
-        critical: true,
-        modules: [
-          { name: 'scheduler', type: 'kernel', essential: true, depends: ['kernel', 'state-machine'] },
-          { name: 'memory', type: 'kernel', essential: false, depends: ['kernel', 'core'] }
-        ]
-      },
-
-      {
-        phase: 'PROTOCOLS',
-        description: 'Protocolos e comportamentos do sistema',
-        critical: false,
-        modules: [
-          { name: 'protocols', type: 'core', essential: true, depends: ['bus', 'kernel'] }
-        ]
-      },
-
-      {
-        phase: 'PERFORMANCE',
-        description: 'Monitoramento de performance e recursos',
-        critical: false,
-        modules: [
-          { name: 'performance', type: 'engine', essential: true, depends: ['kernel', 'scheduler'] },
-          { name: 'renderer', type: 'engine', essential: true, depends: ['kernel', 'performance'] }
-        ]
-      },
-
-      {
-        phase: 'COGNITION',
-        description: 'Sistema cognitivo: Atenção e Neurografia',
-        critical: false,
-        modules: [
-          { name: 'attention', type: 'cognition', essential: true, depends: ['kernel', 'performance'] },
-          { name: 'neurograph', type: 'cognition', essential: false, depends: ['kernel', 'attention', 'memory'] }
-        ]
-      },
-
-      {
-        phase: 'ENGINE_GRAPHICS',
-        description: 'Motor gráfico XR e renderização',
-        critical: false,
-        modules: [
-          { name: 'engine-xr', type: 'engine', essential: true, depends: ['kernel', 'renderer', 'performance'] },
-          { name: 'audio-engine', type: 'engine', essential: false, depends: ['kernel', 'attention'] }
-        ]
-      },
-
-      {
-        phase: 'INTERFACE',
-        description: 'Interface operacional e debug',
-        critical: false,
-        modules: [
-          { name: 'debug-hud', type: 'interface', essential: false, depends: ['kernel', 'performance'] }
-        ]
-      },
-
-      {
-        phase: 'FINAL_SYNC',
-        description: 'Sincronização final e ready',
-        critical: true,
-        modules: [
-          { name: 'boot-kernel', type: 'kernel', essential: true, depends: ['kernel', 'scheduler', 'engine-xr'] }
-        ]
-      }
-    ];
-  }
-
-  /**
-   * MAPEAMENTO DE MÓDULOS GLOBAIS
-   * Cada módulo deve ser registrado aqui após carregar
-   */
-  getModuleRegistry() {
-    return {
-      // FOUNDATION
-      'graphics-fallback': { global: 'SENTINEL_GRAPHICS_FALLBACK', type: 'config' },
-      'bus': { global: 'SentinelBus', type: 'core' },
-
-      // KERNEL FOUNDATION
-      'core': { global: 'SentinelCore', type: 'kernel' },
-      'state-machine': { global: 'SentinelStateMachine', type: 'kernel' },
-      'kernel': { global: 'SentinelKernel', type: 'kernel' },
-
-      // RUNTIME CONTROL
-      'scheduler': { global: 'SentinelScheduler', type: 'kernel' },
-      'memory': { global: 'SentinelMemory', type: 'kernel' },
-
-      // PROTOCOLS
-      'protocols': { global: 'SentinelProtocols', type: 'core' },
-
-      // PERFORMANCE
-      'performance': { global: 'SentinelPerformance', type: 'engine' },
-      'renderer': { global: 'SentinelRenderer', type: 'engine' },
-
-      // COGNITION
-      'attention': { global: 'SentinelAttention', type: 'cognition' },
-      'neurograph': { global: 'SentinelNeurograph', type: 'cognition' },
-
-      // ENGINE GRAPHICS
-      'engine-xr': { global: 'SentinelEngine', type: 'engine' },
-      'audio-engine': { global: 'SentinelAudio', type: 'engine' },
-
-      // INTERFACE
-      'debug-hud': { global: 'SentinelDebugHUD', type: 'interface' },
-
-      // BOOT
-      'boot-kernel': { global: 'SentinelBootKernel', type: 'kernel' }
-    };
-  }
-
-  /**
-   * RESOLVER DE DEPENDÊNCIAS
-   * Valida se todas as dependências de um módulo estão carregadas
-   */
-  resolveDependencies(moduleName, moduleConfig) {
-    if (!moduleConfig.depends || moduleConfig.depends.length === 0) {
-      return { resolved: true, missing: [] };
-    }
-
-    const missing = [];
-    for (const dep of moduleConfig.depends) {
-      if (!this.modules.has(dep) && !window[this.getModuleRegistry()[dep]?.global]) {
-        missing.push(dep);
-      }
-    }
-
-    return {
-      resolved: missing.length === 0,
-      missing
-    };
-  }
-
-  /**
-   * LOAD MODULE
-   * Carrega e registra um módulo no sistema
-   */
-  async loadModule(moduleName, moduleConfig) {
-    // Verifica se já foi carregado
-    if (this.modules.has(moduleName)) {
-      this.log(`[SKIP] ${moduleName} já foi carregado`, 'SKIP');
-      return true;
-    }
-
-    // Valida dependências
-    const depCheck = this.resolveDependencies(moduleName, moduleConfig);
-    if (!depCheck.resolved) {
-      this.log(`[DEPENDENCY_ERROR] ${moduleName} requer: ${depCheck.missing.join(', ')}`, 'ERROR');
-      return false;
-    }
-
-    try {
-      // Obtém a referência global do módulo
-      const registry = this.getModuleRegistry()[moduleName];
-      if (!registry) {
-        this.log(`[REGISTRY_ERROR] ${moduleName} não está no registro`, 'ERROR');
-        return false;
-      }
-
-      const moduleInstance = window[registry.global];
-      if (!moduleInstance) {
-        this.log(`[LOAD_ERROR] ${moduleName} não foi carregado globalmente (${registry.global})`, 'ERROR');
-        return false;
-      }
-
-      // Registra módulo
-      this.modules.set(moduleName, {
-        name: moduleName,
-        instance: moduleInstance,
-        type: moduleConfig.type,
-        initialized: false,
-        loadTime: Date.now()
-      });
-
-      this.stats.modulesLoaded++;
-      this.log(`[LOADED] ${moduleName}`, 'SUCCESS');
-      return true;
-
-    } catch (error) {
-      this.log(`[EXCEPTION] ${moduleName}: ${error.message}`, 'ERROR');
-      this.stats.modulesFailed++;
-      this.lastError = error;
-      return false;
-    }
-  }
-
-  /**
-   * INITIALIZE MODULE
-   * Inicializa um módulo (chama init() ou boot())
-   */
-  async initializeModule(moduleName) {
-    const mod = this.modules.get(moduleName);
-    if (!mod) {
-      this.log(`[INIT_ERROR] ${moduleName} não foi carregado`, 'ERROR');
-      return false;
-    }
-
-    if (mod.initialized) {
-      this.log(`[SKIP_INIT] ${moduleName} já foi inicializado`, 'SKIP');
-      return true;
-    }
-
-    try {
-      const instance = mod.instance;
-
-      // Tenta chamar init()
-      if (typeof instance.init === 'function') {
-        await instance.init();
-        this.log(`[INIT] ${moduleName}.init()`, 'INFO');
-      }
-
-      // Tenta chamar boot()
-      if (typeof instance.boot === 'function') {
-        await instance.boot();
-        this.log(`[BOOT] ${moduleName}.boot()`, 'INFO');
-      }
-
-      mod.initialized = true;
-      this.stats.modulesInitialized++;
-
-      // Emite evento de inicialização
-      this.emit(`module:initialized`, { module: moduleName, ts: Date.now() });
-
-      return true;
-
-    } catch (error) {
-      this.log(`[INIT_EXCEPTION] ${moduleName}: ${error.message}`, 'ERROR');
-      this.stats.modulesFailed++;
-      this.lastError = error;
-      return false;
-    }
-  }
-
-  /**
-   * EXECUTE PHASE
-   * Executa uma fase completa (load + init)
-   */
-  async executePhase(phaseConfig) {
-    this.currentPhase = phaseConfig.phase;
-    const phaseName = phaseConfig.phase;
-    const phaseModules = phaseConfig.modules;
-
-    this.log(`╔════════════════════════════════════════════════════╗`, 'PHASE');
-    this.log(`║ FASE: ${phaseName.padEnd(45)} ║`, 'PHASE');
-    this.log(`║ ${phaseConfig.description.padEnd(49)} ║`, 'PHASE');
-    this.log(`╚════════════════════════════════════════════════════╝`, 'PHASE');
-
-    let phaseSuccess = 0;
-    let phaseFailed = 0;
-
-    // LOAD PHASE
-    this.log(`\n[LOAD] Carregando ${phaseModules.length} módulos...`, 'PHASE');
-    for (const moduleConfig of phaseModules) {
-      const loaded = await this.loadModule(moduleConfig.name, moduleConfig);
-      if (!loaded && moduleConfig.essential) {
-        phaseFailed++;
-        if (phaseConfig.critical) {
-          this.log(`[CRITICAL] Falha crítica em ${moduleConfig.name}. Abortando boot.`, 'ERROR');
-          return false;
+    <style>
+        /* CSS Crítico de Transição v8.0 */
+        :root {
+            --threat-level: 0;
+            --render-scale: 1.0;
+            --system-temperature: 32;
+            --ui-density: 1.0;
         }
-      } else if (loaded) {
-        phaseSuccess++;
-      }
-    }
-
-    // INIT PHASE
-    this.log(`\n[INIT] Inicializando ${phaseModules.length} módulos...`, 'PHASE');
-    for (const moduleConfig of phaseModules) {
-      if (this.modules.has(moduleConfig.name)) {
-        const initialized = await this.initializeModule(moduleConfig.name);
-        if (!initialized && moduleConfig.essential) {
-          phaseFailed++;
+        body {
+            background: #000408;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 1s var(--ease-out-expo);
         }
-      }
-    }
+        body.runtime-active { opacity: 1; }
 
-    // SYNC PHASE
-    this.log(`\n[SYNC] Sincronizando módulos da fase...`, 'PHASE');
-    await this.syncPhase(phaseConfig);
-
-    // EMIT EVENT
-    this.emit(`orchestrator:phase-complete`, {
-      phase: phaseName,
-      success: phaseSuccess,
-      failed: phaseFailed,
-      ts: Date.now()
-    });
-
-    this.log(`\n[PHASE_OK] ${phaseName} completa (${phaseSuccess} OK, ${phaseFailed} FAIL)\n`, 'SUCCESS');
-    return true;
-  }
-
-  /**
-   * SYNC PHASE
-   * Sincronização entre módulos da mesma fase
-   */
-  async syncPhase(phaseConfig) {
-    for (const moduleConfig of phaseConfig.modules) {
-      const mod = this.modules.get(moduleConfig.name);
-      if (mod && typeof mod.instance.onPhaseSync === 'function') {
-        try {
-          await mod.instance.onPhaseSync(phaseConfig.phase);
-        } catch (e) {
-          this.log(`[SYNC_ERROR] ${moduleConfig.name}: ${e.message}`, 'WARN');
+        /* Containers Atômicos */
+        #nexus-os {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: 50px 1fr 50px;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
         }
-      }
-    }
-  }
+    </style>
 
-  /**
-   * EXECUTE BOOT
-   * Executa sequência completa de boot
-   */
-  async executeBoot() {
-    if (this.isBootComplete) {
-      this.log('[BOOT_SKIP] Sistema já foi iniciado', 'WARN');
-      return true;
-    }
+    <!-- COMPATIBILIDADE FALLBACK: WebGL Polyfill para Hardware Antigo -->
+    <script>
+        window.SENTINEL_GRAPHICS_CONFIG = {
+            webgl: {
+                antialias: false,
+                alpha: false,
+                powerPreference: 'low-power',
+                premultipliedAlpha: false,
+                preserveDrawingBuffer: false,
+                failIfMajorPerformanceCaveat: false
+            },
+            canvas2d: {
+                enabled: true,
+                renderScale: 0.75
+            },
+            performance: {
+                maxFrameRate: 30,
+                enablePostProcessing: false,
+                shadowMap: false
+            }
+        };
+        
+        (function() {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl', window.SENTINEL_GRAPHICS_CONFIG.webgl) ||
+                       canvas.getContext('experimental-webgl', window.SENTINEL_GRAPHICS_CONFIG.webgl);
+            
+            if (!gl) {
+                console.warn('[SENTINEL] WebGL não disponível. Canvas 2D ativado.');
+                window.SENTINEL_GRAPHICS_FALLBACK = true;
+                window.SENTINEL_GRAPHICS_CONFIG.canvas2d.enabled = true;
+            } else {
+                console.log('[SENTINEL] WebGL disponível com parâmetros de compatibilidade.');
+                window.SENTINEL_GRAPHICS_FALLBACK = false;
+            }
+        })();
+    </script>
 
-    this.stats.bootStartTime = Date.now();
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
-    this.log(
-      '%c╔═══════════════════════════════════════════════════════════════╗\n║          SENTINEL VR-OS v9.0 — BOOT SEQUENCE INITIATED         ║\n╚═══════════════════════════════════════════════════════════════╝',
-      'color:#7F00FF;font-weight:bold;font-size:14px;font-family:monospace;'
-    );
+    <!-- ORDEM DE CARGA: Bus → Core → Protocols (pré-DOM) -->
+    <script src="./sentinel-graphics-fallback.js"></script>
+    <script src="./sentinel-bus.js"></script>
+    <script src="./sentinel-core.js"></script>
+    <script src="./js_sentinel_protocols.js"></script>
+</head>
+<body>
 
-    const phases = this.defineBootPhases();
-    
-    for (const phase of phases) {
-      const phaseSuccess = await this.executePhase(phase);
-      
-      if (!phaseSuccess && phase.critical) {
-        this.log('[BOOT_CRITICAL_FAILURE] Abortando boot', 'ERROR');
-        this.emit('orchestrator:boot-failed', {
-          lastPhase: phase.phase,
-          error: this.lastError,
-          ts: Date.now()
+    <div id="fx-pipeline">
+        <div class="gamma-sync-layer"></div>
+        <div class="neural-field"></div>
+        <div class="neural-scan-overlay"></div>
+    </div>
+
+    <div id="nexus-os">
+
+        <header id="topbar" class="overlay-system">
+            <div class="sys-id">SENTINEL NEXUS v8.0</div>
+            <div id="gamma-heartbeat"></div>
+            <div class="telemetry-compact">
+                FPS: <span id="fps-counter">--</span>
+                LATENCY: <span id="latency-value">--</span>
+            </div>
+        </header>
+
+        <aside id="hud-left" class="layer-context">
+            <div class="hud-box">
+                <div class="hud-label">CLOCK ATC</div>
+                <div id="clock-display" class="hud-value">00:00:00</div>
+            </div>
+            <div class="hud-box">
+                <div class="hud-label">MENTAL BATTERY</div>
+                <div id="mental-battery" class="hud-value">100%</div>
+                <div class="battery-track"><div id="battery-fill"></div></div>
+            </div>
+            <div class="hud-box">
+                <div class="hud-label">MISSION_LOCK</div>
+                <div id="mission-display" class="hud-value">STANDBY</div>
+            </div>
+        </aside>
+
+        <main id="scene-wrapper">
+            <!-- PATCH v8.1: Parâmetros inválidos de WebGL removidos do schema do renderer e adicionado whitelist no raycaster -->
+            <a-scene
+                id="main-scene"
+                embedded
+                vr-mode-ui="enabled: false"
+                renderer="antialias: false; colorManagement: true; alpha: false;"
+                raycaster="objects: [ghost-window], .raycastable"
+            >
+                <a-sky color="#000408"></a-sky>
+
+                <a-entity
+                    id="window-alpha"
+                    ghost-window="label: ALPHA_NEXUS; layer: focus"
+                    position="-2 1.6 -4"
+                    class="raycastable"
+                ></a-entity>
+
+                <a-entity
+                    id="window-beta"
+                    ghost-window="label: BETA_NEXUS; layer: context"
+                    position="0 1.6 -4.5"
+                    class="raycastable"
+                ></a-entity>
+
+                <a-entity
+                    id="window-gamma"
+                    ghost-window="label: GAMMA_NEXUS; layer: sovereign"
+                    position="2 1.6 -4"
+                    class="raycastable"
+                ></a-entity>
+
+                <a-entity camera look-controls cursor="rayOrigin: mouse"></a-entity>
+            </a-scene>
+        </main>
+
+        <aside id="hud-right" class="layer-context">
+            <div class="hud-box" style="flex-grow: 1;">
+                <div class="hud-label">AI_NEXUS_OUTPUT</div>
+                <div id="nexus-display" class="terminal-window">INICIALIZANDO SOBERANIA...</div>
+            </div>
+            <div class="hud-box terminal-container">
+                <div class="hud-label">CORE_TERMINAL</div>
+                <div id="terminal-log"></div>
+                <input
+                    type="text"
+                    class="cmd-input"
+                    placeholder="SENTINEL_CMD >"
+                    spellcheck="false"
+                >
+            </div>
+        </aside>
+
+        <footer id="bottombar" class="overlay-sovereign">
+            <div id="boot-status">KERNEL_INIT_PENDING</div>
+            <div class="sys-signature">OMCXXIII | SOVEREIGN CORE</div>
+        </footer>
+
+    </div><!-- #nexus-os -->
+
+    <!-- ORDEM DE CARGA: Engine → Jarvis → Debug (pós-DOM) -->
+    <script src="./js_sentinel_engine-xr.js"></script>
+    <script src="./js_sentinel_jarvis-voice.js"></script>
+    <script src="./sentinel-debug-hud.js"></script>
+
+    <script>
+        window.SentinelBootKernel = {
+            async init() {
+                console.log('[BOOT] Sentinel Nexus v8.0 Boot Sequence Initiated...');
+
+                if (typeof SentinelProtocols !== 'undefined') {
+                    SentinelProtocols.init();
+                }
+
+                this.startRuntimeLoop();
+
+                window.SentinelBus?.emit('boot:complete', {
+                    ts:    Date.now(),
+                    mode: window.SENTINEL_GRAPHICS_FALLBACK ? 'OVERRIDE_2D' : 'SOVEREIGN'
+                });
+
+                document.body.classList.add('runtime-active');
+
+                const bootStatus = document.getElementById('boot-status');
+                if (bootStatus) {
+                    if (window.SENTINEL_GRAPHICS_FALLBACK) {
+                        bootStatus.innerHTML   = 'SYSTEM_ONLINE // OVERRIDE_2D_ACTIVE (LOW_LATENCY)';
+                        bootStatus.style.color = '#D4AF37'; // Ouro/Aviso para modo Fallback
+                    } else {
+                        bootStatus.innerHTML   = 'SYSTEM_ONLINE // SOVEREIGN_MODE_ACTIVE';
+                        bootStatus.style.color = 'var(--green-flow)';
+                    }
+                }
+            },
+
+            startRuntimeLoop() {
+                const tick = () => {
+                    if (window.TelemetryKernel) window.TelemetryKernel.update();
+                    requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            window.SentinelBootKernel.init();
         });
-        return false;
-      }
-
-      // Pequena pausa entre fases para sincronização
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
-
-    this.isBootComplete = true;
-    this.isRunning = true;
-    this.stats.bootEndTime = Date.now();
-    this.stats.bootDuration = this.stats.bootEndTime - this.stats.bootStartTime;
-
-    // EMIT BOOT COMPLETE
-    this.emit('orchestrator:boot-complete', {
-      modulesLoaded: this.stats.modulesLoaded,
-      modulesInitialized: this.stats.modulesInitialized,
-      modulesFailed: this.stats.modulesFailed,
-      bootDuration: this.stats.bootDuration,
-      ts: Date.now()
-    });
-
-    this.log(
-      `%c✓ SENTINEL OPERATIONAL — Boot completo em ${this.stats.bootDuration}ms`,
-      'color:#00FF41;font-weight:bold;font-size:12px;font-family:monospace;'
-    );
-
-    return true;
-  }
-
-  /**
-   * INVOKE MODULE
-   * Chama um método de um módulo dinamicamente
-   */
-  invokeModule(moduleName, methodName, args = []) {
-    const mod = this.modules.get(moduleName);
-    if (!mod) {
-      this.log(`[INVOKE_ERROR] Módulo não encontrado: ${moduleName}`, 'ERROR');
-      return null;
-    }
-
-    const instance = mod.instance;
-    if (typeof instance[methodName] !== 'function') {
-      this.log(`[INVOKE_ERROR] Método não encontrado: ${moduleName}.${methodName}()`, 'ERROR');
-      return null;
-    }
-
-    try {
-      return instance[methodName](...args);
-    } catch (error) {
-      this.log(`[INVOKE_EXCEPTION] ${moduleName}.${methodName}(): ${error.message}`, 'ERROR');
-      return null;
-    }
-  }
-
-  /**
-   * GET MODULE
-   * Retorna referência a um módulo
-   */
-  getModule(moduleName) {
-    const mod = this.modules.get(moduleName);
-    return mod ? mod.instance : null;
-  }
-
-  /**
-   * LIST MODULES
-   * Lista todos os módulos carregados
-   */
-  listModules() {
-    const list = [];
-    for (const [name, mod] of this.modules.entries()) {
-      list.push({
-        name,
-        type: mod.type,
-        initialized: mod.initialized,
-        loadTime: new Date(mod.loadTime).toISOString()
-      });
-    }
-    return list;
-  }
-
-  /**
-   * HEALTH CHECK
-   * Verifica saúde do sistema
-   */
-  healthCheck() {
-    const health = {
-      bootComplete: this.isBootComplete,
-      isRunning: this.isRunning,
-      modulesLoaded: this.stats.modulesLoaded,
-      modulesInitialized: this.stats.modulesInitialized,
-      modulesFailed: this.stats.modulesFailed,
-      modules: this.listModules(),
-      lastError: this.lastError ? this.lastError.message : null
-    };
-
-    return health;
-  }
-
-  /**
-   * EVENT SYSTEM (compatível com SentinelBus)
-   */
-  emit(event, data = {}) {
-    if (window.SentinelBus && typeof window.SentinelBus.emit === 'function') {
-      window.SentinelBus.emit(`orchestrator:${event}`, data);
-    }
-  }
-
-  on(event, callback) {
-    if (window.SentinelBus && typeof window.SentinelBus.on === 'function') {
-      window.SentinelBus.on(`orchestrator:${event}`, callback);
-    }
-  }
-
-  /**
-   * LOGGING SYSTEM
-   */
-  log(message, level = 'INFO') {
-    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour12: false });
-    
-    const colors = {
-      'INFO': '#00D4FF',
-      'SUCCESS': '#00FF41',
-      'WARN': '#FFD500',
-      'ERROR': '#FF004C',
-      'PHASE': '#7F00FF',
-      'SKIP': '#888888'
-    };
-
-    const bgColors = {
-      'PHASE': '#7F00FF'
-    };
-
-    const style = `
-      color: ${colors[level] || '#00D4FF'};
-      font-family: 'Courier New', monospace;
-      font-weight: bold;
-      ${bgColors[level] ? `background: ${bgColors[level]}; padding: 2px 4px;` : ''}
-    `;
-
-    console.log(`%c[${timestamp}] [${level}]%c ${message}`, style, 'color: inherit;');
-  }
-
-  /**
-   * DIAGNOSTICS
-   * Retorna diagnóstico completo
-   */
-  diagnostics() {
-    return {
-      version: this.version,
-      bootComplete: this.isBootComplete,
-      isRunning: this.isRunning,
-      currentPhase: this.currentPhase,
-      stats: this.stats,
-      health: this.healthCheck(),
-      timestamp: Date.now()
-    };
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// INSTANCIAÇÃO GLOBAL E EXPORT
-// ═══════════════════════════════════════════════════════════════════════════
-
-const SentinelOrchestrator = new SentinelOrchestrator();
-window.SentinelOrchestrator = SentinelOrchestrator;
-
-console.log(
-  '%c✓ SENTINEL ORCHESTRATOR v9.0 LOADED — Ready for boot sequence',
-  'color:#00D4FF;font-weight:bold;font-family:monospace;'
-);
+    </script> 
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23000408' width='100' height='100'/><text x='50' y='60' font-size='80' fill='%23D4AF37' font-family='monospace' text-anchor='middle' dominant-baseline='central'>S</text></svg>" />
+    <meta name="theme-color" content="#000408" />
+</body>
+</html>
