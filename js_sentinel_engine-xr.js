@@ -243,6 +243,25 @@
     }
 
     /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       PATCH SUPRESSÃO DE INUNDAÇÃO DO LOG DO BARRAMENTO
+       Interceptador acoplado para evitar saturação e 
+       reduzir a latência de processamento de strings.
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    if (window.SentinelBus && typeof window.SentinelBus.emit === 'function') {
+        const originalEmit = window.SentinelBus.emit;
+        window.SentinelBus.emit = function (event, data) {
+            if (event !== 'ui:pulse' && event !== 'state:changed') {
+                return originalEmit.apply(this, arguments);
+            }
+            const listeners = this._listeners?.[event] || [];
+            for (let i = 0; i < listeners.length; i++) {
+                listeners[i](data);
+            }
+            return this;
+        };
+    }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        LOG DE INICIALIZAÇÃO DO MÓDULO
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
