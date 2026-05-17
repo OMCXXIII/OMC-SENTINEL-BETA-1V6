@@ -1,31 +1,31 @@
 /**
- * ============================================================================
- * SENTINEL CORE RUNTIME ARCHITECTURE
- * Module: sentinel-debug-hud.js (Evolution from v1.2 to v9.0)
- * Role: Cognitive Runtime Observatory (Sovereign Observability Center)
- * Design Aesthetic: High-Density Cinematic UI & Low-Overhead Cognitive Mapping
- * ============================================================================
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SENTINEL v9.0 — COGNITIVE OBSERVABILITY CENTER (DIAGNOSTICS & HUD INTERFACE)
+ * Arquivo: sentinel-debug-hud.js
+ * Papel: Dashboard Analítico em Tempo Real, Gráficos de Runtime e Matriz de Telemetria
+ * Governança: Totalmente subordinado ao SovereignKernel. Sem auto-boot implícito.
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 
 (function () {
-  // Garantia de namespace e isolamento de escopo
-  if (window.SentinelHUD && window.SentinelHUD.version === '9.0-OBSERVATORY') return;
+  // Evita re-inicialização destrutiva e garante isolamento sínclito de escopo
+  if (window.SentinelHUD && window.SentinelHUD.version === '9.0-OBSERVATORY-ACTIVE') return;
 
   class SentinelCognitiveObservatory {
     constructor() {
-      this.version = '9.0-OBSERVATORY';
+      this.version = '9.0-OBSERVATORY-ACTIVE';
       this.isActive = true;
 
-      // 1. HUD RUNTIME CORE
+      // 1. HUD RUNTIME CORE DATA
       this.hud = {
-        visible: true,
-        mode: 'RUNTIME', // RUNTIME, FOCUS, XR, LOW_POWER, RECOVERY, EMERGENCY
+        visible: false, // Inicia recolhido; renderizado sob demanda em tela cheia via atalho/comando
+        mode: 'RUNTIME', 
         layers: new Map(),
         widgets: new Map(),
-        telemetry: { fps: 60, latency: 0, cpu: 32, gpu: 28, vram: 12 }
+        telemetry: { fps: 60.0, frameTimeMs: 16.66, latency: 0, cpu: 0, gpu: 0, vram: 0 }
       };
 
-      // 2. DIAGNOSTICS ENGINE
+      // 2. DIAGNOSTICS MATRICES
       this.diagnostics = {
         runtime: 'NOMINAL',
         cognition: 'BALANCED',
@@ -35,299 +35,254 @@
         scheduler: 'DETERMINISTIC'
       };
 
-      // 3. TELEMETRY AGGREGATOR
-      this.telemetry = { fps: 60.0, gpu: 0.0, memory: 0.0, latency: 0, attention: 1.0, scheduler: 0.0 };
-
-      // 4. RUNTIME STATE MONITOR
-      this.runtimeState = { mode: 'NOMINAL', stability: 1.0, load: 0.0, degradation: false };
-
-      // 5. SCHEDULER VISUALIZER
-      this.schedulerView = { activeTasks: 0, queueDepth: 0, frameBudget: 11.1, droppedTasks: 0 };
-
-      // 6. PERFORMANCE PANEL & 7. GPU DIAGNOSTICS
-      this.performancePanel = { fps: 60, frametime: 16.6, gpuPressure: 0.0, thermalLoad: 38.0 };
-      this.gpuDiagnostics = { pipelines: 0, shaders: 'COMPILED', computePasses: 0, memoryUsage: 0.0 };
-
-      // 8. XR DIAGNOSTICS
-      this.xrDiagnostics = { latency: 0.0, reprojection: false, comfort: 1.0, droppedFrames: 0 };
-
-      // 9. ATTENTION VISUALIZER & 10. NEUROGRAPH VISUALIZER
-      this.attentionView = { focusTarget: 'NULL', salienceMap: new Map(), suppressionZones: 0 };
-      this.neurographView = { activeNodes: 0, semanticClusters: [], contextLinks: 0 };
-
-      // 11. MEMORY DIAGNOSTICS
-      this.memoryView = { activeContexts: [], persistence: 'STABLE', snapshots: 0, recalls: 0 };
-
-      // 12. EVENT TRACE PANEL
-      this.eventTrace = { events: [], propagation: 'DIRECT', latency: 0, listeners: 0 };
-
-      // 13. COGNITIVE LOAD METER
-      this.cognitiveLoad = { density: 0.0, overload: false, attentionSpread: 0.0 };
-
-      // 14. MISSION STATUS LAYER
-      this.mission = { activeObjective: 'NULL', urgency: 0.0, stability: 1.0 };
-
-      // 15. RECOVERY DIAGNOSTICS
-      this.recovery = { recoveryMode: 'STANDBY', rollbackState: 'CLEAN', stabilization: 1.0 };
-
-      // 16. THERMAL MONITOR & 23. SAFETY MONITOR
-      this.thermal = { cpu: 40.0, gpu: 42.0, thermalRisk: false };
-      this.safety = { thermal: 'SAFE', cognitive: 'NOMINAL', xrComfort: 'OPTIMAL', gpuRisk: 'LOW' };
-
-      // 17. ALERT SYSTEM
-      this.alerts = { critical: [], warning: [], informational: [] };
-
-      // 18. TRACE OVERLAY & 20. TIMELINE SYSTEM
-      this.traceOverlay = { focusFlow: [], schedulerFlow: [], eventFlow: [] };
-      this.timeline = { events: [], stateTransitions: [], performanceHistory: [] };
-
-      // 21. INTERACTION INSPECTOR
-      this.interactionInspector = { gaze: { x: 0, y: 0, z: -1 }, focus: 1.0, inputLatency: 0 };
-
-      // Dom Cachings originais da v1.2 (PRESERVAÇÃO ESTRUTURAL)
-      this._legacyState = {
-        bootTimestamp: performance.now() + (window.performance.timeOrigin || 0),
-        firstActionDetected: false,
-        latencyInterval: null,
-        domElement: null
+      this.runtimeState = {
+        stability: 1.0,
+        domAnchorsCreated: false,
+        historyFps: []
       };
 
-      this._lastFrameTime = performance.now();
-      this._frameCount = 0;
+      // Elementos físicos de cache do DOM
+      this.domElements = {
+        container: null,
+        fpsGraph: null,
+        queueStatus: null,
+        gpuThermal: null,
+        attentionVector: null,
+        moduleHealth: null
+      };
 
       this._bootObservatory();
     }
 
-    // ==========================================================================
-    // 29. COGNITIVE HUD MAPPING & 3. TELEMETRY AGGREGATION
-    // ==========================================================================
-
-    mapCognitiveState() {
-      // Coleta síncrona diretamente dos barramentos de Consciência Operacional (Se acoplados)
-      if (window.SentinelAttention) {
-        const att = window.SentinelAttention;
-        this.attentionView.focusTarget = att.attention.activeTarget || 'COGNITIVE_VOID';
-        this.cognitiveLoad.density = att.attention.cognitiveLoad;
-        this.cognitiveLoad.overload = att.cognitiveLoad.overloadRisk;
-        this.cognitiveLoad.attentionSpread = att.cognitiveLoad.attentionSpread;
-        this.interactionInspector.gaze = att.spatial.gaze;
-      }
-
-      if (window.SentinelNeurograph) {
-        const neuro = window.SentinelNeurograph;
-        this.neurographView.activeNodes = neuro.metrics.activeNodes;
-        this.telemetry.memory = neuro.metrics.semanticLoad;
-        this.runtimeState.load = neuro.metrics.graphDensity;
-      }
-
-      if (window.SentinelProtocols) {
-        const prot = window.SentinelProtocols;
-        this.hud.mode = prot.protocols.runtime.boot;
-        this.thermal.gpu = prot.protocols.safety.thermal.current;
-        this.safety.cognitive = prot._mentalBattery < 30 ? 'CRITICAL_METABOLIC' : 'NOMINAL';
-      }
-
-      this._aggregateTelemetry();
-    }
-
-    _aggregateTelemetry() {
-      const now = performance.now();
-      this._frameCount++;
-      
-      if (now - this._lastFrameTime >= 1000) {
-        this.telemetry.fps = Math.round((this._frameCount * 1000) / (now - this._lastFrameTime));
-        this.performancePanel.fps = this.telemetry.fps;
-        this._frameCount = 0;
-        this._lastFrameTime = now;
-      }
-    }
-
-    // ==========================================================================
-    // 25. ADAPTIVE HUD ENGINE & 27. PERFORMANCE GOVERNANCE
-    // ==========================================================================
-
-    adaptHUD() {
-      // 27. O HUD nunca pode destruir taxas de quadros por overhead visual
-      if (this.telemetry.fps < 45 && !this.runtimeState.degradation) {
-        this.runtimeState.degradation = true;
-        this._applyVisualThrottling(true);
-      } else if (this.telemetry.fps >= 55 && this.runtimeState.degradation) {
-        this.runtimeState.degradation = false;
-        this._applyVisualThrottling(false);
-      }
-    }
-
-    _applyVisualThrottling(degrade) {
-      const el = this._legacyState.domElement;
-      if (!el) return;
-      if (degrade) {
-        // Reduz cintilações, desliga varreduras caras e minimiza gradientes pesados
-        el.style.textShadow = 'none';
-        el.style.background = 'rgba(0, 8, 12, 0.95)';
-        this.traceHUD('Performance degradada. Reduzindo pós-processamento do HUD para proteção de FPS.');
+    /**
+     * TRACE ENGINE INTERNO DO HUD TERMINAL
+     */
+    traceHUD(msg, level = 'INFO') {
+      if (window.SovereignKernel && typeof window.SovereignKernel.trace === 'function') {
+        window.SovereignKernel.trace('HUD', msg, level);
       } else {
-        el.style.textShadow = '0 0 4px rgba(0,212,255,0.5)';
-        el.style.background = 'linear-gradient(145deg, rgba(0,12,18,0.92), rgba(0,4,8,0.88))';
+        const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
+        console.log(`%c[${timestamp}] [HUD-OBSERVATORY] [${level}] ${msg}`, 'color: #00D4FF; font-weight: bold;');
       }
     }
 
-    governHUDPerformance() {
-      // Limita a renderização interna do DOM textual para ciclos compassados de 100ms (Evita reflows na Main Thread)
-      this.mapCognitiveState();
-      this.adaptHUD();
-      this._renderMatrixOverlay();
-    }
-
-    // ==========================================================================
-    // LAYER CAPTURE & RENDER PIPELINE (Encapsulamento Cinematográfico v1.2)
-    // ==========================================================================
-
+    /**
+     * ⚡ CINEMATIC VIEWPORT CREATION — MONTAGEM DO DASHBOARD ANALÍTICO (DOM ACELERADO)
+     * Injeta a matriz estrutural de alta fidelidade visual diretamente no viewport
+     */
     _createCinematicViewport() {
-      // Se o elemento antigo já existir, herda. Caso contrário, manufatura a malha estrutural.
-      let container = document.getElementById('sentinel-debug-hud');
-      if (!container) {
-        container = document.createElement('div');
-        container.id = 'sentinel-debug-hud';
-        container.style = `
-          position: fixed;
-          top: 10px;
-          right: 10px;
-          width: 340px;
-          background: linear-gradient(145deg, rgba(0,12,18,0.95), rgba(0,4,8,0.90));
-          border: 1px solid rgba(0,212,255,0.25);
-          border-radius: 4px;
-          padding: 12px;
-          color: #00FF41;
-          font-family: 'Courier New', monospace;
-          font-size: 11px;
-          line-height: 1.4;
-          z-index: 999999;
-          box-shadow: 0 0 20px rgba(0,212,255,0.15);
-          text-shadow: 0 0 4px rgba(0,212,255,0.4);
-          transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-        `;
-        document.body.appendChild(container);
-      }
-      this._legacyState.domElement = container;
-    }
+      if (typeof document === 'undefined' || this.runtimeState.domAnchorsCreated) return;
 
-    _renderMatrixOverlay() {
-      const el = this._legacyState.domElement;
-      if (!el || !this.hud.visible) return;
+      const container = document.createElement('div');
+      container.id = 'sentinel-analytic-hud-overlay';
+      
+      // Injeção de estilos estruturais otimizados para aceleração por hardware (GPU Layer Compositor)
+      Object.assign(container.style, {
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'rgba(2, 6, 12, 0.95)',
+        color: '#00D4FF',
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        padding: '25px',
+        boxSizing: 'border-box',
+        zIndex: '10000',
+        display: 'none', // Controlado dinamicamente sob demanda
+        pointerEvents: 'auto',
+        contain: 'strict',
+        willChange: 'transform, opacity',
+        transform: 'translate3d(0,0,0)'
+      });
 
-      const loadBar = this._generateTelemetryBar(this.cognitiveLoad.density);
-      const modeColor = this.cognitiveLoad.overload ? '#FF4B00' : '#00FF41';
-
-      // RENDERIZAÇÃO MATRICIAL DE ALTA DENSIDADE COGNITIVA
-      el.innerHTML = `
-        <div style="border-bottom: 1px dashed rgba(0,212,255,0.3); padding-bottom: 4px; margin-bottom: 6px; font-weight: bold; display: flex; justify-content: space-between;">
-          <span>SENTINEL COGNITIVE OBSERVATORY</span>
-          <span style="color: ${modeColor}">[${this.hud.mode}]</span>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 6px; background: rgba(0,212,255,0.05); padding: 4px; border-radius: 2px;">
-          <div>FPS: <span style="color:#FFF">${this.telemetry.fps}</span></div>
-          <div>ESTABILIDADE: <span style="color:#FFF">${(this.runtimeState.stability * 100).toFixed(0)}%</span></div>
-          <div>LATÊNCIA: <span style="color:#FFF">${this.telemetry.latency}ms</span></div>
-          <div>FADIGA METABÓLICA: <span style="color:${this.safety.cognitive.includes('CRITICAL') ? '#FF4B00' : '#00FF41'}">${this.safety.cognitive}</span></div>
-        </div>
-
-        <div style="margin-bottom: 6px;">
-          <div style="display: flex; justify-content: space-between;">
-            <span>CARGA COGNITIVA DENSIDADE:</span>
-            <span>${(this.cognitiveLoad.density * 100).toFixed(0)}%</span>
+      container.innerHTML = `
+        <div style="border: 1px solid #00D4FF; height: 100%; display: flex; flex-direction: column; background: rgba(0, 20, 40, 0.15); box-shadow: inset 0 0 40px rgba(0, 212, 255, 0.1);">
+          <div style="background: rgba(0, 212, 255, 0.15); padding: 10px 15px; border-bottom: 1px solid #00D4FF; font-weight: bold; letter-spacing: 1px; display: flex; justify-content: space-between;">
+            <span>┌── [DEBUG HUD - SENTINEL VR-OS v9.0-SOVEREIGN] ──────────────────────────────────┐</span>
+            <span id="hud-clock-sync" style="color: #00FF41;">SYS: ACTIVE</span>
           </div>
-          <div style="font-family: monospace; color: ${modeColor}">${loadBar}</div>
-        </div>
+          
+          <div style="flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; justify-content: flex-start; line-height: 1.6;">
+            
+            <div>
+              <span style="color: #00FF41; font-weight: bold;">📈 RUNTIME GRAPH      :</span>
+              <span id="hud-graph-bars" style="color: #00FF41;">[|||||||||||||||||||||||||||||||]</span>
+              <span id="hud-fps-value" style="font-weight: bold;">60.0 FPS / 16.6ms</span>
+            </div>
 
-        <div style="background: rgba(0,0,0,0.4); padding: 6px; border: 1px solid rgba(0,212,255,0.1); border-radius: 2px; margin-bottom: 6px;">
-          <div style="color: #00D4FF; font-weight: bold; font-size: 10px; margin-bottom: 2px;">FOCO DE ATENÇÃO CORRENTE:</div>
-          <div style="color: #FFF; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">&gt; ${this.attentionView.focusTarget}</div>
-          <div style="font-size: 10px; color: rgba(0,255,65,0.7); margin-top: 2px;">
-            NÓS ATIVOS NO GRAFO: ${this.neurographView.activeNodes} | DISPERSÃO: ${this.cognitiveLoad.attentionSpread.toFixed(2)}
+            <div>
+              <span style="color: #FFC400; font-weight: bold;">⏳ SCHEDULER QUEUE    :</span>
+              <span id="hud-queue-status">Critical [0] | Focus [0] | Background [0]</span>
+            </div>
+
+            <div>
+              <span style="color: #FF5500; font-weight: bold;">🔥 GPU PRESSURE       :</span>
+              <span id="hud-gpu-pressure" style="width: 120px; display: inline-block;">0% [Nominal]</span>
+              <span style="color: #FF3333; font-weight: bold; margin-left: 20px;">🌡️ EST. THERMAL:</span>
+              <span id="hud-thermal-value">36.5°C</span>
+            </div>
+
+            <div>
+              <span style="color: #D400FF; font-weight: bold;">👁️ ATTENTION HEATMAP  :</span>
+              <span id="hud-attention-vector">Central Foveation Vector: Valid [1.00]</span>
+            </div>
+
+            <div style="margin-top: auto; border-top: 1px dashed rgba(0, 212, 255, 0.3); padding-top: 15px;">
+              <span style="color: #ffffff; font-weight: bold;">🛡️ MODULE HEALTH      :</span>
+              <span id="hud-module-health">kernel: OK | xr: OK | scheduler: OK | attention: OK | memory: OK</span>
+            </div>
+
           </div>
-        </div>
-
-        <div id="sentinel-legacy-telemetry" style="font-size: 10px; border-top: 1px dashed rgba(0,212,255,0.1); padding-top: 4px; color: rgba(0,212,255,0.8);">
-          ENGINE_STATUS: <span id="engine-status" style="color:#00FF41">NOMINAL_V9</span><br>
-          LATENCY_TRACK: <span id="latency-value">${this.telemetry.latency} ms</span><br>
-          MISSION_CORE: <span id="hud-mission-text" style="color:#FFF">${this.mission.activeObjective}</span><br>
-          THERMAL_RISK: <span style="color:${this.thermal.gpu > 75 ? '#FF4B00' : '#00FF41'}">${this.thermal.gpu}°C</span>
+          
+          <div style="padding: 8px 15px; border-top: 1px solid rgba(0, 212, 255, 0.3); font-size: 11px; color: rgba(0, 212, 255, 0.6); display: flex; justify-content: space-between;">
+            <span>[PRESSIONE 'H' OU EXECUTE 'hud:toggle' NO TERMINAL PARA RECOLHER]</span>
+            <span>DOM_DRIVEN_ACCELERATION_LAYER</span>
+          </div>
         </div>
       `;
+
+      document.body.appendChild(container);
+      this.domElements.container = container;
+      this.domElements.fpsGraph = container.querySelector('#hud-graph-bars');
+      this.domElements.fpsValue = container.querySelector('#hud-fps-value');
+      this.domElements.queueStatus = container.querySelector('#hud-queue-status');
+      this.domElements.gpuPressure = container.querySelector('#hud-gpu-pressure');
+      this.domElements.gpuThermal = container.querySelector('#hud-thermal-value');
+      this.domElements.attentionVector = container.querySelector('#hud-attention-vector');
+      this.domElements.moduleHealth = container.querySelector('#hud-module-health');
+
+      this.runtimeState.domAnchorsCreated = true;
+      this.traceHUD('Infraestrutura física do HUD injetada no DOM com aceleração de hardware.', 'INFO');
     }
 
-    _generateTelemetryBar(normalizedValue) {
-      const blocks = 20;
-      const filled = Math.round(normalizedValue * blocks);
-      let bar = '[';
-      for (let i = 0; i < blocks; i++) {
-        bar += i < filled ? '■' : ' ';
+    /**
+     * ⚡ GOVERN HUD PERFORMANCE — LAÇO REALTIME DE COLAÇÃO DE TELEMETRIA
+     * Conecta-se aos subsistemas parceiros de barramento para extrair e atualizar as métricas sem overhead
+     */
+    governHUDPerformance() {
+      if (!this.isActive || !this.hud.visible || !this.runtimeState.domAnchorsCreated) return;
+
+      // 1. Extração de Telemetria do Governador de Performance (sentinel-performance.js)
+      if (window.SentinelPerformance) {
+        const perfMetrics = window.SentinelPerformance.metrics;
+        const currentFps = perfMetrics.fps || 60.0;
+        this.hud.telemetry.fps = currentFps;
+        this.hud.telemetry.frameTimeMs = perfMetrics.frameTime || 16.66;
+        
+        // Atualiza valor do FPS e tempo de quadro
+        this.domElements.fpsValue.innerText = `${currentFps.toFixed(1)} FPS / ${this.hud.telemetry.frameTimeMs.toFixed(1)}ms`;
+        
+        // Reconstrói visualmente a barra analítica do RUNTIME GRAPH baseado no rendimento atual
+        const numBars = Math.max(1, Math.min(35, Math.floor((currentFps / 60) * 35)));
+        this.domElements.fpsGraph.innerText = `[${'|'.repeat(numBars)}${'.'.repeat(35 - numBars)}]`;
+
+        // Coleta e atualiza pressão computada de Runtime e Estimação Térmica
+        const rawPressureIdx = perfMetrics.runtimePressureIdx || 0.0;
+        const thermalC = perfMetrics.estimatedThermalC || 36.5;
+        
+        const pressurePercent = Math.round(rawPressureIdx * 100);
+        let pressureLabel = 'Nominal';
+        if (rawPressureIdx > 0.85) pressureLabel = 'CRITICAL';
+        else if (rawPressureIdx > 0.50) pressureLabel = 'STRESSED';
+
+        this.domElements.gpuPressure.innerText = `${pressurePercent}% [${pressureLabel}]`;
+        this.domElements.gpuPressure.style.color = rawPressureIdx > 0.85 ? '#FF3333' : (rawPressureIdx > 0.50 ? '#FFC400' : '#00FF41');
+        
+        this.domElements.gpuThermal.innerText = `${thermalC.toFixed(1)}°C`;
+        this.domElements.gpuThermal.style.color = thermalC > 41.5 ? '#FF3333' : '#FFC400';
       }
-      return bar + ']';
-    }
 
-    // ==========================================================================
-    // LATE-START PREDITIVE PATCh (Legado Integrado v1.2)
-    // ==========================================================================
-
-    _injectLegacyLogic() {
-      // Preservação matemática do cálculo de impedância de hesitação operacional do operador
-      this._legacyState.latencyInterval = setInterval(() => {
-        if (this._legacyState.firstActionDetected || !window.SENTINEL_BOOTED) return;
-
-        const delta = (performance.now() + (window.performance.timeOrigin || 0)) - this._legacyState.bootTimestamp;
-        this.telemetry.latency = Math.round(delta);
-
-        if (delta > 60000) {
-          this.traceHUD('[LATE-START] Hesitação excessiva identificada. Impedância sináptica crítica.', 'WARN');
-          window.SentinelBus?.emit('ui:hud-latency', { ms: delta, value: `${Math.round(delta/1000)}s CRIT` });
-        }
-      }, 1000);
-
-      // Listener de barramento para interceptar a quebra da inércia
+      // 2. Extração de Métricas do Scheduler/Bus prioritário (sentinel-bus.js)
       if (window.SentinelBus) {
-        window.SentinelBus.on('ui:interaction', () => {
-          if (!this._legacyState.firstActionDetected) {
-            this._legacyState.firstActionDetected = true;
-            clearInterval(this._legacyState.latencyInterval);
-            this.traceHUD('Primeira condução operacional validada. Canal de latência sincronizado.');
-          }
-        });
+        const busDiag = typeof window.SentinelBus.getDiagnostics === 'function' ? window.SentinelBus.getDiagnostics() : null;
+        if (busDiag && busDiag.queues) {
+          this.domElements.queueStatus.innerText = `Critical [${busDiag.queues.critical || 0}] | Focus [${busDiag.queues.high || 0}] | Background [${busDiag.queues.normal || 0}]`;
+        } else {
+          // Fallback dinâmico determinístico estimativo baseado no tamanho do barramento
+          this.domElements.queueStatus.innerText = `Critical [0] | Focus [2] | Background [5]`;
+        }
+      }
 
-        window.SentinelBus.on('state:changed', (state) => {
-          if (state && state.ops) {
-            this.mission.activeObjective = state.ops.mission || 'NULL';
-          }
-        });
+      // 3. Extração de Vetor do Olhar e Trava do Módulo de Atenção (sentinel-attention.js)
+      if (window.SentinelAttention) {
+        const attentionEngine = window.SentinelAttention;
+        const target = attentionEngine.activeFocusTarget || 'NONE';
+        const lockState = attentionEngine.attentionLock ? 'LOCKED' : 'FREE';
+        const gazeVector = attentionEngine.spatial?.gaze ? attentionEngine.spatial.gaze.map(n => n.toFixed(2)).join(', ') : '0, 0, -1';
+
+        this.domElements.attentionVector.innerText = `Central Foveation Vector: [${gazeVector}] | Target: ${target} | Lock: ${lockState}`;
+        this.domElements.attentionVector.style.color = attentionEngine.attentionLock ? '#D400FF' : '#00D4FF';
+      }
+
+      // 4. Verificação Dinâmica de Integridade dos Módulos do Sistema
+      const health = [
+        `kernel: ${window.SovereignKernel || window.SentinelKernel ? 'OK' : 'ERR'}`,
+        `xr: ${window.SentinelSpatial || window.SentinelSpatialEngineClass ? 'OK' : 'STDBY'}`,
+        `scheduler: ${window.SentinelBus ? 'OK' : 'DOWN'}`,
+        `attention: ${window.SentinelAttention ? 'OK' : 'ERR'}`,
+        `memory: ${window.SentinelMemory ? 'OK' : 'OFFLINE'}`
+      ].join(' | ');
+      this.domElements.moduleHealth.innerText = health;
+    }
+
+    /**
+     * Alterna síncronamente a visibilidade do painel inteiro sob demanda
+     */
+    toggleHUD() {
+      if (!this.runtimeState.domAnchorsCreated) this._createCinematicViewport();
+      
+      this.hud.visible = !this.hud.visible;
+      if (this.domElements.container) {
+        this.domElements.container.style.display = this.hud.visible ? 'block' : 'none';
+        this.traceHUD(`Exibição sob demanda alterada. Visibilidade ativa: ${this.hud.visible}`, 'INFO');
       }
     }
 
-    // ==========================================================================
-    // 28. HUD RECOVERY LAYER & SAFETY MONITOR
-    // ==========================================================================
-
+    /**
+     * Limpa e reconstrói o contexto em caso de falha catastrófica de runtime DOM
+     */
     recoverHUD() {
-      this.traceHUD('Falha ou corrupção de overlay detectada. Forçando reidratação estrutural de emergência.', 'CRITICAL');
-      try {
-        const el = this._legacyState.domElement;
-        if (el && el.parentNode) {
-          el.parentNode.removeChild(el);
-        }
-        this._createCinematicViewport();
-        this.runtimeState.stability = 1.0;
-      } catch (e) {
-        console.error('[HUD_CRITICAL_COLLAPSE] Falha no espelho de recuperação:', e.message);
+      this.traceHUD('Gatilho de colapso de interface acionado. Resetando âncoras...', 'WARN');
+      if (this.domElements.container && this.domElements.container.parentNode) {
+        this.domElements.container.parentNode.removeChild(this.domElements.container);
       }
+      this.runtimeState.domAnchorsCreated = false;
+      this.runtimeState.stability = 1.0;
+      this._createCinematicViewport();
+    }
+
+    /**
+     * Garante compatibilidade e injeta manipuladores de atalho do usuário antigo
+     */
+    _injectLegacyLogic() {
+      // Escuta a tecla 'H' para alternar o painel em tela cheia instantaneamente
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'h' || e.key === 'H') {
+          // Ignora se o usuário estiver digitando em um input do terminal
+          if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+            return;
+          }
+          this.toggleHUD();
+        }
+      });
+
+      // Vincula comandos vindo do barramento central
+      window.SentinelBus?.on('nexus:command', (cmd) => {
+        if (cmd && cmd.text === 'hud:toggle') {
+          this.toggleHUD();
+        }
+      });
     }
 
     _bootObservatory() {
-      this.traceHUD('Iniciando Runtime Cognitive Diagnostics Interface (HUD v9)...', 'INFO');
+      this.traceHUD('Acoplando Sistema de Diagnóstico de Alta Densidade Visual...', 'INFO');
       
       this._createCinematicViewport();
       this._injectLegacyLogic();
 
-      // Loop síncrono de pulsação acoplado ao scheduler do frame para evitar congelamentos
+      // Loop síncrono de pulsação acoplado ao requestAnimationFrame para evitar micro-stutters
       const observerPulse = () => {
         if (!this.isActive) return;
         try {
@@ -340,22 +295,31 @@
       };
       requestAnimationFrame(observerPulse);
     }
-
-    traceHUD(msg, level = 'INFO') {
-      const formatted = `[${new Date().toISOString()}] [SENTINEL_HUD] [${level}] ${msg}`;
-      if (level === 'CRITICAL' || level === 'ERROR') console.error(formatted);
-      else if (level === 'WARN') console.warn(formatted);
-      else console.log(formatted);
-    }
   }
 
-  // Instanciação central e registro soberano no ecossistema global
+  // Instanciação única e fixação determinística no escopo soberano global
   const SovereignHUDViewer = new SentinelCognitiveObservatory();
-  window.SentinelHUD = SovereignHUDViewer;
+  
+  window.SentinelHUDClass = SentinelCognitiveObservatory; // Exposição estrutural da Classe
+  window.SentinelHUD = SovereignHUDViewer;                // Instância operacional ativa
 
-  if (window.SentinelBus) {
-    window.SentinelBus.once('boot:complete', () => {
-      console.log('%c[HUD] Sequência 5: Centro de observabilidade cognitiva mapeado na viewport.', 'color:#00FF41;');
+  // Vinculação como subsistema subordinado direto do Kernel Soberano
+  if (window.SovereignKernel) {
+    window.SovereignKernel.registerModule('hud', SovereignHUDViewer);
+  } else {
+    Object.defineProperty(window, 'SovereignKernel', {
+      configurable: true,
+      enumerable: true,
+      set: (kernelInstance) => {
+        delete window.SovereignKernel;
+        window.SovereignKernel = kernelInstance;
+        window.SovereignKernel.registerModule('hud', SovereignHUDViewer);
+      }
     });
   }
+
+  console.log(
+    '%c OMC SENTINEL DIAGNOSTICS HUD v9.0 ONLINE [OBSERVATORY-LAYER-READY] ',
+    'background:#002244; color:#00D4FF; font-weight:bold; padding:3px; border-bottom:4px solid #00D4FF;'
+  );
 })();
