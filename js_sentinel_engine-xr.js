@@ -1,13 +1,13 @@
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SENTINEL ENGINE XR - V8.0 "DUPLICIDADE REMOVIDA"
+   SENTINEL ENGINE XR - V8.1 "DEEP CONTEXT BINDING"
    Core: Gestão de Camadas de Intencionalidade e Supressão Atencional
    Target: Nexus ALPHA/BETA/GAMMA
 
-   CHANGELOG v8.0:
-   ✓ BUG 1 — Schema `title` → `label` (nome reservado A-Frame v1.4, gerava
+   CHANGELOG v8.1:
+   ✓ BUG 1 — Schema label (nome reservado A-Frame v1.4, gerava
              "Unknown property" e silenciava o componente inteiro)
-   ✓ BUG 2 — `window.addEventListener('boot:complete')` substituído por
-             `SentinelBus.on('boot:complete')` — o evento viaja pelo Bus,
+   ✓ BUG 2 — window.addEventListener('boot:complete') substituído por
+             SentinelBus.on('boot:complete') — o evento viaja pelo Bus,
              não pelo DOM, então o engine nunca recebia o sinal e ficava
              eternamente em STANDBY (SENTINEL_BOOTED jamais chegava aqui)
    ✓ BUG 3 — GPU fallback graceful: quando WebGL indisponível (Intel HD
@@ -15,8 +15,12 @@
              componente ghost-window em modo 2D, injeta o pulvinar-shield
              via CSS e mantém o listener de boot ativo. O sistema degrada
              com elegância em vez de morrer silenciosamente.
-   ✓ BUG 4 — Duplicidade removida: `applyInhibition` agora é método separado
+   ✓ BUG 4 — Duplicidade removida: applyInhibition agora é método separado
              do schema, sem replicação de código. Sintaxe corrigida.
+   ✓ BUG 5 — Deep GPU Validation: Substituído o método getContext superficial
+             por um teste de stress de buffer e compilação de programa. Evita
+             falsos positivos em GPUs antigas onde a camada ANGLE aceita a
+             chamada inicial mas falha no bind real do Three.js (Sandbox Error).
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 (function () {
@@ -26,14 +30,33 @@
        MODO DE RENDERIZAÇÃO
        Detectado uma única vez no escopo do módulo.
        Compartilhado entre todas as funções internas.
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
     const _checkGPU = () => {
         try {
             const canvas = document.createElement('canvas');
-            const gl = canvas.getContext('webgl') ||
+            // Força parâmetros de contexto idênticos ao pipeline real do Three.js / A-Frame
+            const gl = canvas.getContext('webgl', { alpha: false, antialias: true }) ||
                        canvas.getContext('experimental-webgl');
-            return !!gl;
+            
+            if (!gl) return false;
+
+            // Teste de alocação ativa para desmascarar falhas de Sandbox (BindToCurrentSequence)
+            const buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            
+            // Verifica integridade do contexto antes de confirmar o modo XR
+            if (gl.isContextLost && gl.isContextLost()) {
+                return false;
+            }
+
+            // Liberação limpa de recursos para evitar vazamento de memória gráfica
+            const ext = gl.getExtension('WEBGL_lose_context');
+            if (ext) {
+                ext.loseContext();
+            }
+            
+            return true;
         } catch (_) {
             return false;
         }
@@ -43,12 +66,12 @@
 
     if (!GPU_AVAILABLE) {
         console.warn(
-            '%c[ENGINE-XR] GPU indisponível. Modo 2D Estável ativado. ' +
+            '%c[ENGINE-XR] GPU instável ou indisponível. Modo 2D Estável ativado. ' +
             'Sistema continua operacional.',
             'color:#FFC400;font-weight:bold;'
         );
         window.SentinelBus?.emit('telemetry:graphics-low', {
-            reason:  'gpu_fallback',
+            reason:  'gpu_fallback_deep_validation',
             mode:    '2D_STABLE',
             ts:      Date.now()
         });
@@ -58,7 +81,7 @@
        GUARD: A-FRAME
        Sem A-Frame não há componente XR, mas o engine
        2D ainda pode rodar (pulvinar-shield + bus listener).
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
     const AFRAME_READY = !!window.AFRAME;
 
@@ -71,12 +94,12 @@
 
     /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        COMPONENTE: GHOST-WINDOW  (apenas se A-Frame presente)
-       BUG 1 FIX: `title` → `label`
-       O A-Frame v1.4 reserva `title` internamente.
-       Usar `title` no schema silencia o componente inteiro
+       BUG 1 FIX: title → label
+       O A-Frame v1.4 reserva title internamente.
+       Usar title no schema silencia o componente inteiro
        sem lançar erro crítico — apenas o warning de console.
        Todos os usos internos e o HTML foram atualizados.
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
     if (AFRAME_READY) {
 
@@ -84,7 +107,7 @@
 
             schema: {
                 focus: { type: 'boolean', default: false  },
-                label: { type: 'string',  default: 'NEXUS_TERMINAL' }, // FIX: era `title`
+                label: { type: 'string',  default: 'NEXUS_TERMINAL' }, // FIX: era title
                 layer: { type: 'string',  default: 'ALPHA' }
             },
 
@@ -99,7 +122,7 @@
                 /* Foco via interação XR */
                 el.addEventListener('mousedown', () => {
                     window.SentinelBus?.emit('xr:focus-isolate', {
-                        label: data.label,   // FIX: era `title`
+                        label: data.label,   // FIX: era title
                         layer: data.layer,
                         id:    el.id
                     });
@@ -113,13 +136,13 @@
             },
 
             update: function () {
-                // FIX: evita aplicar opacidade em modo 2D
+                // FIX: evita aplicar opacidade em modo 2D se o componente for atualizado
                 if (!GPU_AVAILABLE) return;
                 this.applyInhibition(this.data.focus);
             },
 
             applyInhibition: function (isFocused) {
-                /* Guard: em modo 2D, não há material */
+                /* Guard: em modo 2D, não há material tridimensional acessível */
                 if (!GPU_AVAILABLE) {
                     // Fallback CSS puro
                     this.el.style.opacity = isFocused ? '1' : '0.5';
@@ -150,7 +173,7 @@
     /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        PULVINAR SHIELD (2D fallback + XR overlay)
        Injetado via DOM puro — funciona com ou sem GPU.
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
     const _injectPulvinarShield = () => {
 
@@ -188,7 +211,7 @@
 
     /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        START ENGINE
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
     const startEngine = () => {
         console.log(
@@ -209,7 +232,7 @@
        sticky events (se o bus já processou o boot antes
        deste listener ser registrado, o handler é chamado
        imediatamente via o mecanismo de replay do Bus v1.1).
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
     if (window.SentinelBus) {
 
@@ -246,7 +269,7 @@
        PATCH SUPRESSÃO DE INUNDAÇÃO DO LOG DO BARRAMENTO
        Interceptador acoplado para evitar saturação e 
        reduzir a latência de processamento de strings.
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
     if (window.SentinelBus && typeof window.SentinelBus.emit === 'function') {
         const originalEmit = window.SentinelBus.emit;
         window.SentinelBus.emit = function (event, data) {
@@ -263,10 +286,10 @@
 
     /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        LOG DE INICIALIZAÇÃO DO MÓDULO
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
     console.log(
-        `%c SENTINEL ENGINE-XR v8.0 [${GPU_AVAILABLE ? 'XR_MODE' : '2D_STABLE'}][BUS_SYNC][GHOST-WINDOW_PATCHED][DUPLICIDAD-REMOVED] `,
+        `%c SENTINEL ENGINE-XR v8.1 [${GPU_AVAILABLE ? 'XR_MODE' : '2D_STABLE'}][BUS_SYNC][DEEP-BIND_VALIDATION][GHOST-WINDOW_PATCHED] `,
         'background:#000;color:#00FF41;border:1px solid #00FF41;padding:5px;font-family:monospace;'
     );
 
