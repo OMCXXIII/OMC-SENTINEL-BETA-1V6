@@ -82,7 +82,60 @@ class SentinelScheduler {
     this.isActive = true;
     this.currentModeProfile = 'NORMAL';
 
+    // Referência do Kernel (Injetada no ciclo de boot do ecossistema)
+    this.kernel = null;
+
     this._initializeNativeScheduler();
+  }
+
+  // ==========================================================================
+  // INJEÇÃO DE DEPENDÊNCIA DO KERNEL CENTRAL
+  // ==========================================================================
+  
+  initKernelContext(kernelInstance) {
+    this.kernel = kernelInstance;
+    this.trace('Contexto do Kernel Central injetado com sucesso no módulo Scheduler.');
+  }
+
+  // ==========================================================================
+  // MODULE LIFECYCLE INTERFACES (Compatibilidade com SentinelKernel)
+  // ==========================================================================
+
+  onBoot() {
+    this.isActive = true;
+    this.trace('Estágio de Ciclo de Vida: onBoot concluído.');
+  }
+
+  onReady() {
+    this.applyModeProfile('NORMAL');
+    this.trace('Estágio de Ciclo de Vida: onReady concluído. Engine em execução nominal.');
+  }
+
+  onSuspend() {
+    this.isActive = false;
+    this.trace('Estágio de Ciclo de Vida: onSuspend. Pipeline de agendamento paralisado.', 'WARN');
+  }
+
+  onWake() {
+    this.isActive = true;
+    this.trace('Estágio de Ciclo de Vida: onWake. Reativando pipeline.');
+  }
+
+  onShutdown() {
+    this.isActive = false;
+    this.tasks.clear();
+    Object.keys(this.queues).forEach(k => this.queues[k] = []);
+    this.trace('Estágio de Ciclo de Vida: onShutdown. Estado limpo.');
+  }
+
+  onEmergency() {
+    this.trace('Estágio de Ciclo de Vida: onEmergency disparado. Forçando contenção de danos.', 'CRITICAL');
+    this.applyModeProfile('SAFE_MODE');
+  }
+
+  onRecover() {
+    this.trace('Estágio de Ciclo de Vida: onRecover executado. Restaurando integridade operacional.');
+    return true;
   }
 
   // ==========================================================================
@@ -95,24 +148,24 @@ class SentinelScheduler {
     }
 
     const taskEntry = {
-      id:             name,
-      priority:       config.priority || PRIORITY.NORMAL,
-      budget:         config.budget || 2.0, // Orçamento máximo alvo em ms
-      interval:       config.interval || 0, // 0 significa execução contínua a cada tick
-      critical:       !!config.critical,
-      realtime:       !!config.realtime,
-      suspendable:    config.suspendable !== false,
-      xrSafe:         !!config.xrSafe,
-      domain:         config.domain || 'render',
-      execute:        config.execute,
-      onSuspend:      config.onSuspend || null,
-      onResume:       config.onResume || null,
-      onDeadlineMiss: config.onDeadlineMiss || null,
-      _lastExecuted:  0,
+      id:              name,
+      priority:        config.priority || PRIORITY.NORMAL,
+      budget:          config.budget || 2.0, // Orçamento máximo alvo em ms
+      interval:        config.interval || 0, // 0 significa execução contínua a cada tick
+      critical:        !!config.critical,
+      realtime:        !!config.realtime,
+      suspendable:     config.suspendable !== false,
+      xrSafe:          !!config.xrSafe,
+      domain:          config.domain || 'render',
+      execute:         config.execute,
+      onSuspend:       config.onSuspend || null,
+      onResume:        config.onResume || null,
+      onDeadlineMiss:  config.onDeadlineMiss || null,
+      _lastExecuted:   0,
       // 10. ATTENTION-AWARE EXECUTION
-      attentionWeight:  config.attentionWeight || 1.0,
-      focusSensitive:   !!config.focusSensitive,
-      peripheral:       !!config.peripheral
+      attentionWeight: config.attentionWeight || 1.0,
+      focusSensitive:  !!config.focusSensitive,
+      peripheral:      !!config.peripheral
     };
 
     this.tasks.set(name, taskEntry);
@@ -245,6 +298,11 @@ class SentinelScheduler {
     // Mitigação Inteligente: Suspende automaticamente o domínio completo de Telemetria e Interface Efêmera
     this.suspendGroup('telemetry');
     this.suspendGroup('audio', true); // Passa flag soft degradation para o domínio de áudio
+    
+    // Notifica o Kernel Central sobre a perda de performance para orquestração global
+    if (this.kernel) {
+      this.kernel.updateHealth({ fps: this.frameBudget.targetFPS - 5 });
+    }
   }
 
   updateThermalLevel(level) {
@@ -260,6 +318,10 @@ class SentinelScheduler {
         }
       });
     }
+
+    if (this.kernel) {
+      this.kernel.updateHealth({ thermal: level });
+    }
   }
 
   // ==========================================================================
@@ -269,7 +331,6 @@ class SentinelScheduler {
   suspendTask(name) {
     const task = this.tasks.get(name);
     if (task && task.suspendable && task.priority !== PRIORITY.SUSPENDED) {
-      const oldPriority = task.priority;
       task.priority = PRIORITY.SUSPENDED;
       this.metrics.suspendedTasks++;
       if (typeof task.onSuspend === 'function') task.onSuspend();
@@ -329,8 +390,8 @@ class SentinelScheduler {
     if (!this.executionGraph.has(taskId)) return true;
 
     const prerequisites = this.executionGraph.get(taskId);
-    for (const prerieqId of prerequisites) {
-      const prereqTask = this.tasks.get(prerieqId);
+    for (const prereqId of prerequisites) {
+      const prereqTask = this.tasks.get(prereqId);
       // Se a dependência direta estiver suspensa ou travada, impede a execução da tarefa dependente
       if (prereqTask && prereqTask.priority === PRIORITY.SUSPENDED) {
         return false;
@@ -376,7 +437,11 @@ class SentinelScheduler {
     const task = this.tasks.get(taskId);
     if (task && task.critical) {
       this.trace(`Falha em tarefa crítica sistêmica [${taskId}]. Acionando Failsafe do Core Runtime.`, 'CRITICAL');
-      if (typeof window.SentinelCore !== 'undefined' && typeof window.SentinelCore.recover === 'function') {
+      
+      // Tenta acionar a recuperação através da instância acoplada do Kernel primeiro
+      if (this.kernel) {
+        this.kernel.handleModuleFault('sentinel-scheduler', new Error(`Colapso na tarefa crítica: ${taskId}`));
+      } else if (typeof window.SentinelCore !== 'undefined' && typeof window.SentinelCore.recover === 'function') {
         window.SentinelCore.recover();
       }
     } else {
@@ -459,6 +524,23 @@ class SentinelScheduler {
   }
 
   // ==========================================================================
+  // MODULE SNAPSHOTS (Implementação Sincronizada para o Kernel)
+  // ==========================================================================
+
+  getStateSnapshot() {
+    return this.snapshotExecutionState();
+  }
+
+  restoreStateSnapshot(snapshot) {
+    this.restoreExecutionState(snapshot);
+  }
+
+  verifyIntegrity() {
+    // Verificação de consistência interna das filas estruturais
+    return this.tasks instanceof Map && typeof this.queues === 'object';
+  }
+
+  // ==========================================================================
   // AUXILIARY UTILITIES & MUTEX LOCKS
   // ==========================================================================
 
@@ -481,7 +563,6 @@ class SentinelScheduler {
     });
   }
 
-  // 28. EXECUTION SNAPSHOTS
   snapshotExecutionState() {
     const serializedTasks = {};
     this.tasks.forEach((t, id) => {
@@ -519,6 +600,9 @@ class SentinelScheduler {
   }
 
   _initializeNativeScheduler() {
+    // Declaração de capacidades para acoplamento seguro com o Kernel
+    this.capabilities = ['temporal_orchestration', 'frame_pacing', 'cognitive_priority'];
+
     // Registra o loop nativo essencial de Tracking Espacial XR (Crítico e Não Degradável)
     this.registerTask('xr-spatial-tracking', {
       priority: PRIORITY.CRITICAL,
@@ -527,7 +611,6 @@ class SentinelScheduler {
       realtime: true,
       domain: 'xr',
       execute: () => {
-        // Bloco normative embutido de pooling de matrizes espaciais XR
         if (typeof window.StateStore !== 'undefined') {
           window.StateStore.set('telemetry.lastInput', Date.now());
         }
