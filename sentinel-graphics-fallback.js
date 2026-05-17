@@ -1,12 +1,7 @@
 /**
- * SENTINEL GRAPHICS FALLBACK v1.1 - PATCHED
- * * Objetivo: Substituir A-Frame/THREE.js WebGL por renderização Canvas 2D pura
- * quando WebGL não está disponível ou apresenta falhas estruturais de driver.
- * * Este sistema:
- * - Detecta falha de WebGL ANTES de A-Frame tentar (com teste rigoroso de pipeline)
- * - Substitui <a-scene> por <canvas> + renderização 2D
- * - Mantém Bus de eventos operacional
- * - Renderiza entidades como retângulos com labels
+ * SENTINEL GRAPHICS FALLBACK v1.2 - ANTI-SANDBOX ANGLE PATCH
+ * * Objetivo: Substituir A-Frame/THREE.js WebGL por renderização Canvas 2D pura.
+ * Versão 1.2: Corrige falsos-positivos causados por falhas de bind em Sandbox e ANGLE/D3D9.
  */
 
 window.SentinelGraphicsFallback = (() => {
@@ -22,7 +17,7 @@ window.SentinelGraphicsFallback = (() => {
 
     /**
      * Verifica se WebGL pode ser criado E operado com segurança.
-     * Realiza teste rigoroso de linkagem e execução para capturar falhas ocultas do ANGLE.
+     * Bloqueia emuladores ANGLE Direct3D9 instáveis para evitar falhas pós-handshake.
      */
     const canCreateWebGL = () => {
         try {
@@ -38,18 +33,28 @@ window.SentinelGraphicsFallback = (() => {
                         powerPreference: 'low-power',
                         failIfMajorPerformanceCaveat: false
                     });
-                    
                     if (gl) break;
-                } catch (e) {
-                    // Continua para próximo contexto
-                }
+                } catch (e) {}
             }
             
             if (!gl) return false;
 
-            // --- INÍCIO DO TESTE RIGOROSO DE PIPELINE ---
-            
-            // 1. Criar Shaders Mínimos (Vertex e Fragment Dummy)
+            // --- DETECÇÃO AGRESSIVA DE DRIVER COMPROMETIDO (PATCH 1.2) ---
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                const rendererStr = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '';
+                const vendorStr = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || '';
+                
+                // Se a GPU for Intel legada rodando em Direct3D9 (Mecanismo ANGLE), o THREE.js vai falhar no bind.
+                // Forçamos o Fallback imediatamente para evitar crash em sandbox.
+                if (rendererStr.includes('Direct3D9') || rendererStr.includes('Intel(R) HD Graphics') || vendorStr.includes('0x8086')) {
+                    if (!rendererStr.includes('Direct3D11') && !rendererStr.includes('Direct3D12')) {
+                        throw new Error('Hardware em lista negra de compatibilidade (ANGLE D3D9/Intel Legacy).');
+                    }
+                }
+            }
+
+            // --- TESTE DE PIPELINE ATIVO ---
             const vs = gl.createShader(gl.VERTEX_SHADER);
             gl.shaderSource(vs, 'void main() { gl_Position = vec4(0.0, 0.0, 0.0, 1.0); }');
             gl.compileShader(vs);
@@ -58,30 +63,26 @@ window.SentinelGraphicsFallback = (() => {
             gl.shaderSource(fs, 'void main() { gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0); }');
             gl.compileShader(fs);
 
-            // 2. Criar e Linkar o Programa Gráfico
             const program = gl.createProgram();
             gl.attachShader(program, vs);
             gl.attachShader(program, fs);
             gl.linkProgram(program);
 
-            // Se o driver/ANGLE falhar na linkagem interna da sequência, aborta aqui
             if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-                throw new Error('Falha crítica de linkagem (Bug de driver/ANGLE detectado).');
+                throw new Error('Falha de linkagem interna do Shader.');
             }
 
-            // 3. Forçar o Bind e Execução Ativa do Contexto
             gl.useProgram(program);
             gl.viewport(0, 0, 1, 1);
             gl.clearColor(0, 0, 0, 1);
             gl.clear(gl.COLOR_BUFFER_BIT);
 
-            // Se passou por todo o pipeline ativo, o contexto é real e seguro
             const ext = gl.getExtension('WEBGL_lose_context');
             if (ext) ext.loseContext();
             return true;
 
         } catch (e) {
-            console.error('%c[GRAPHICS-PATCH] WebGL reprovou no teste ativo de stress:', 'color:#FF4A4A; font-weight:bold;', e.message);
+            console.warn('%c[GRAPHICS-PATCH] WebGL rejeitado pelo validador de Sandbox/Driver:', 'color:#FF6B35; font-weight:bold;', e.message);
             return false;
         }
     };
@@ -90,12 +91,11 @@ window.SentinelGraphicsFallback = (() => {
      * Ativa fallback Canvas 2D
      */
     const activate = () => {
-        console.warn('%c[GRAPHICS-FALLBACK] Canvas 2D ativado. Sistema degradado mas funcional.', 
+        console.warn('%c[GRAPHICS-FALLBACK] Forçando Canvas 2D. Neutralizando falha de Bind do THREE.js.', 
                      'color:#FF6B35;font-weight:bold;');
         
         STATE.isActive = true;
         
-        // Injetar canvas na página
         const wrapper = document.getElementById('scene-wrapper');
         if (wrapper) {
             const canvas = document.createElement('canvas');
@@ -115,16 +115,12 @@ window.SentinelGraphicsFallback = (() => {
             STATE.canvas = canvas;
             STATE.ctx = canvas.getContext('2d', { alpha: false });
             
-            // Iniciar loop de renderização
             startRenderLoop();
-            
-            // Criar entidades mockadas
             createMockEntities();
             
-            // Emitir evento de fallback
             if (window.SentinelBus) {
                 window.SentinelBus.emit('graphics:fallback-activated', {
-                    reason: 'webgl_unavailable',
+                    reason: 'webgl_sandbox_bind_failed',
                     mode: 'canvas2d',
                     timestamp: Date.now()
                 });
@@ -137,33 +133,9 @@ window.SentinelGraphicsFallback = (() => {
      */
     const createMockEntities = () => {
         STATE.entities = [
-            {
-                id: 'window-alpha',
-                label: 'ALPHA_NEXUS',
-                x: 50,
-                y: 100,
-                width: 300,
-                height: 150,
-                color: '#00FF88'
-            },
-            {
-                id: 'window-beta',
-                label: 'BETA_NEXUS',
-                x: window.innerWidth / 2 - 150,
-                y: 100,
-                width: 300,
-                height: 150,
-                color: '#0088FF'
-            },
-            {
-                id: 'window-gamma',
-                label: 'GAMMA_NEXUS',
-                x: window.innerWidth - 350,
-                y: 100,
-                width: 300,
-                height: 150,
-                color: '#FF8800'
-            }
+            { id: 'window-alpha', label: 'ALPHA_NEXUS', x: 50, y: 100, width: 300, height: 150, color: '#00FF88' },
+            { id: 'window-beta', label: 'BETA_NEXUS', x: window.innerWidth / 2 - 150, y: 100, width: 300, height: 150, color: '#0088FF' },
+            { id: 'window-gamma', label: 'GAMMA_NEXUS', x: window.innerWidth - 350, y: 100, width: 300, height: 150, color: '#FF8800' }
         ];
     };
 
@@ -178,11 +150,10 @@ window.SentinelGraphicsFallback = (() => {
             const w = STATE.canvas.width;
             const h = STATE.canvas.height;
 
-            // Fundo
             ctx.fillStyle = STATE.backgroundColor;
             ctx.fillRect(0, 0, w, h);
 
-            // Grid de scanlines (efeito cyberpunk)
+            // Grid de scanlines
             ctx.strokeStyle = 'rgba(0, 255, 136, 0.03)';
             ctx.lineWidth = 1;
             for (let y = 0; y < h; y += 2) {
@@ -194,30 +165,25 @@ window.SentinelGraphicsFallback = (() => {
 
             // Renderizar entidades
             STATE.entities.forEach(entity => {
-                // Borda
                 ctx.strokeStyle = entity.color;
                 ctx.lineWidth = 2;
                 ctx.strokeRect(entity.x, entity.y, entity.width, entity.height);
 
-                // Preenchimento translúcido
                 ctx.fillStyle = entity.color + '15';
                 ctx.fillRect(entity.x, entity.y, entity.width, entity.height);
 
-                // Label
                 ctx.fillStyle = entity.color;
                 ctx.font = 'bold 12px monospace';
                 ctx.fillText(entity.label, entity.x + 10, entity.y + 25);
 
-                // Info de fallback
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
                 ctx.font = '10px monospace';
                 ctx.fillText('CANVAS 2D', entity.x + 10, entity.y + 45);
             });
 
-            // Info global
             ctx.fillStyle = 'rgba(0, 255, 136, 0.7)';
             ctx.font = 'bold 14px monospace';
-            ctx.fillText('GRAPHICS FALLBACK: Canvas 2D (Safe Mode)', 20, 30);
+            ctx.fillText('GRAPHICS FALLBACK: Canvas 2D (Safe Mode Actived)', 20, 30);
 
             STATE.animationFrameId = requestAnimationFrame(render);
         };
@@ -225,39 +191,27 @@ window.SentinelGraphicsFallback = (() => {
         render();
     };
 
-    /**
-     * Interface pública
-     */
     return {
         init() {
             console.log('[GRAPHICS] Iniciando verificação de compatibilidade...');
 
             if (!canCreateWebGL()) {
-                console.warn('[GRAPHICS] WebGL corrompido ou indisponível. Forçando fallback Canvas 2D.');
+                console.warn('[GRAPHICS] WebGL instável ou bloqueado na Sandbox. Forçando fallback Canvas 2D.');
                 activate();
-                return false; // WebGL indisponível / Bloqueado
+                return false;
             } else {
-                console.log('[GRAPHICS] WebGL passou em todos os testes ativos. Mantendo A-Frame.');
-                return true; // WebGL perfeitamente operacional
+                console.log('[GRAPHICS] WebGL perfeitamente operacional.');
+                return true;
             }
         },
-
-        isActive() {
-            return STATE.isActive;
-        },
-
-        getMode() {
-            return STATE.isActive ? 'canvas2d' : 'webgl';
-        }
+        isActive() { return STATE.isActive; },
+        getMode() { return STATE.isActive ? 'canvas2d' : 'webgl'; }
     };
 
 })();
 
-// Auto-iniciar antes de A-Frame carregar
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        window.SentinelGraphicsFallback.init();
-    });
+    document.addEventListener('DOMContentLoaded', () => { window.SentinelGraphicsFallback.init(); });
 } else {
     window.SentinelGraphicsFallback.init();
 }
