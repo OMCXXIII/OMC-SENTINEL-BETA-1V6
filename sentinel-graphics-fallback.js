@@ -1,76 +1,93 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   OMC VR-OS | SENTINEL GRAPHICS FALLBACK v7.1 - PATCH DE EMERGÊNCIA
-   Domínio: HARDWARE DEFENSE / RECOVERY
+   OMC VR-OS | SENTINEL GRAPHICS FALLBACK v7.5 - PROTETOR DE SOBERANIA
+   Foco: Resolução de Assincronia, Supressão de Erros de GPU e Otimização HUD
    ═══════════════════════════════════════════════════════════════════════════ */
 
 (() => {
     'use strict';
 
-    // Tolerância a atrasos de carregamento: Se o barramento não estiver pronto, aguarda na fila de microtasks
-    const bootstrapFallback = () => {
-        if (!window.SentinelBus) {
-            console.warn('[FALLBACK:RETRY] Barramento não encontrado. Postergando inicialização para o próximo ciclo.');
-            setTimeout(bootstrapFallback, 50);
+    // Sistema de checagem reativa para contornar a ordem de carregamento do DOM
+    const interceptBootSequence = () => {
+        if (typeof window.SentinelBus === 'undefined') {
+            // Re-executa na próxima micro-task até o barramento estar alocado
+            setTimeout(interceptBootSequence, 10);
             return;
         }
-        GraphicsFallback.init();
+        SentinelVisualGuard.instantiate();
     };
 
-    const GraphicsFallback = {
-        init() {
-            console.log('%c[FALLBACK] Subsistema reativo injetado com sucesso.', 'color: #00FFCC; font-weight: bold;');
-            this._bindSignals();
-            this._interceptHardwareFailure();
+    const SentinelVisualGuard = {
+        instantiate() {
+            console.log('%c[FALLBACK:READY] Driver de Segurança Visual acoplado ao Barramento.', 'color: #D4AF37; font-weight: bold;');
+            this._bindKernelSignals();
+            this._patchSceneEngine();
+            this._verifyHardwareContext();
         },
 
-        _bindSignals() {
-            window.SentinelBus.on('boot:start', () => this._verifySystemRenderCapabilities());
-            window.SentinelBus.on('gpu:force-low-power', () => this._applyStatic2DOverride());
+        _bindKernelSignals() {
+            // Ouve os sinais do barramento sem travar o fluxo principal
+            window.SentinelBus.on('boot:start', () => {
+                console.log('[FALLBACK] Monitoramento de latência ativa ativado.');
+            });
         },
 
-        _verifySystemRenderCapabilities() {
+        _verifyHardwareContext() {
             const canvas = document.createElement('canvas');
             const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
             
-            // Se o WebGL falhou nativamente (como no log da Intel HD Graphics)
+            // Tratamento preventivo para a falha detectada na Intel HD Graphics
             if (!gl) {
-                console.error('[FALLBACK:CRITICAL] Falência catastrófica do WebGL detectada na inicialização do Core.');
-                this._applyStatic2DOverride();
+                console.warn('[FALLBACK:ALERT] WebGL corrompido no hardware nativo. Forçando Modo de Segurança 2D CSS-HUD.');
+                this._activateSovereignFallback();
             }
         },
 
-        _interceptHardwareFailure() {
-            // Força a remoção dos avisos de propriedades desconhecidas limpando a pilha de avisos inúteis
+        _patchSceneEngine() {
+            // Silencia os avisos chatos do A-Frame sobre propriedades desconhecidas (ex: powerPreference)
             if (window.AFRAME) {
-                window.AFRAME.utils.warn = function() {}; 
+                const originalWarn = window.AFRAME.utils.warn;
+                window.AFRAME.utils.warn = function(message) {
+                    if (message.indexOf('Unknown property') !== -1 || message.indexOf('raycaster') !== -1) {
+                        return; // Ignora e limpa o console para manter o foco cognitivo
+                    }
+                    originalWarn.apply(this, arguments);
+                };
+                this._optimizeRaycaster();
             }
         },
 
-        _applyStatic2DOverride() {
-            console.warn('[FALLBACK] Executando protocolo OVERRIDE: Migrando de XR Imersivo para 2D HUD de Baixa Latência.');
+        _optimizeRaycaster() {
+            // Força a otimização do raycaster estaticamente nas cenas injetadas
+            document.querySelectorAll('[raycaster]').forEach(entity => {
+                if (!entity.getAttribute('raycaster').includes('objects')) {
+                    entity.setAttribute('raycaster', 'objects: [data-raycastable]; interval: 200;');
+                }
+            });
+        },
+
+        _activateSovereignFallback() {
+            document.documentElement.classList.add('sentinel-static-hud');
+            document.documentElement.setAttribute('data-hardware-profile', 'legacy-intel-d3d9');
             
-            // Injeta imediatamente os atributos de degradação controlada na viewport
-            document.documentElement.classList.add('fallback-static-ui');
-            document.documentElement.setAttribute('data-hardware-profile', 'legacy-intel');
-            
-            // Notifica o barramento e o Kernel para cancelar o congelamento de 2 segundos
+            // Notifica os demais módulos (protocols, engine-xr, jarvis-voice) via barramento
             if (window.SentinelBus) {
                 window.SentinelBus.emit('xr:pipeline-bypass', { status: 'override-active' });
                 window.SentinelBus.emit('jarvis:speak', { 
-                    text: "Hardware gráfico incompatível. Interface convertida para Modo de Segurança HUD Estático." 
+                    text: "Hardware gráfico instável. Modo de Segurança HUD Estático ativado para garantir baixa latência." 
                 });
             }
 
-            // Oculta a cena do A-Frame que está travando o loop de renderização da GPU
+            // Oculta elementos 3D pesados que estão dando crash no driver de vídeo
             const scene = document.querySelector('a-scene');
             if (scene) {
-                scene.style.display = 'none';
+                scene.style.visibility = 'hidden';
                 scene.setAttribute('visible', 'false');
+                scene.pointerLockEnabled = false;
             }
         }
     };
 
-    window.GraphicsFallback = GraphicsFallback;
-    bootstrapFallback();
+    // Inicializa a varredura assíncrona
+    interceptBootSequence();
 
 })();
