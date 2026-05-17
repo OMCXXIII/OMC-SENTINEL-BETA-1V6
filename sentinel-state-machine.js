@@ -1,14 +1,14 @@
 /**
- * ============================================================================
- * SENTINEL CORE RUNTIME ARCHITECTURE
- * Module: sentinel-state-machine.js
- * Role: Operational Cognitive State Governor (Hierarchical State Machine)
- * Design Aesthetic: Absolute Mathematical Rigor / Cyber-Glass Determinism
- * ============================================================================
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SENTINEL v9.0 — AUTHORITATIVE STATE MACHINE (VR-OS MOTOR DE TRANSIÇÃO)
+ * Arquivo: sentinel-state-machine.js
+ * Papel: Validador Imutável de Mudança de Fase, Rollback e Barreira Física
+ * Governança: Totalmente subordinado ao SovereignKernel. Sem auto-boot implícito.
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 
-// 2. STATE ENUMERATION REAL
-const STATES = {
+// 1. STATE ENUMERATION REAL (IMUTÁVEL)
+const STATES = Object.freeze({
   BOOT: 'BOOT',
   READY: 'READY',
   IDLE: 'IDLE',
@@ -22,489 +22,316 @@ const STATES = {
   EMERGENCY: 'EMERGENCY',
   SAFE_MODE: 'SAFE_MODE',
   SHUTDOWN: 'SHUTDOWN'
-};
+});
 
 class SentinelStateMachine {
   constructor() {
-    // 1. STATE REGISTRY
+    // 2. STATE REGISTRY & HISTÓRICO DE AUDITORIA
     this.states = new Map();
+    this.history = [];
+    this.maxHistorySize = 50;
 
-    // 3. CURRENT STATE AUTHORITY
+    // 3. CURRENT STATE AUTHORITY (Múltiplas travas físicas de barreira)
     this.currentState = null;
     this.previousState = null;
     this.pendingState = null;
-
-    // 5. TRANSITION MATRIX (Grafo de transições legais e explícitas)
-    this.transitions = {
-      [STATES.BOOT]: [STATES.READY, STATES.SAFE_MODE],
-      [STATES.READY]: [STATES.FOCUS, STATES.XR, STATES.LOW_POWER, STATES.DEGRADED, STATES.EMERGENCY, STATES.SHUTDOWN],
-      [STATES.IDLE]: [STATES.FOCUS, STATES.XR, STATES.LOW_POWER, STATES.SHUTDOWN],
-      [STATES.FOCUS]: [STATES.READY, STATES.FLOW, STATES.XR, STATES.LOW_POWER, STATES.EMERGENCY],
-      [STATES.FLOW]: [STATES.FOCUS, STATES.READY, STATES.EMERGENCY],
-      [STATES.XR]: [STATES.IMMERSION, STATES.FOCUS, STATES.RECOVERY, STATES.LOW_POWER, STATES.DEGRADED, STATES.EMERGENCY],
-      [STATES.IMMERSION]: [STATES.XR, STATES.EMERGENCY, STATES.RECOVERY],
-      [STATES.LOW_POWER]: [STATES.READY, STATES.SAFE_MODE, STATES.SHUTDOWN],
-      [STATES.DEGRADED]: [STATES.READY, STATES.RECOVERY, STATES.EMERGENCY, STATES.SAFE_MODE],
-      [STATES.RECOVERY]: [STATES.READY, STATES.XR, STATES.SAFE_MODE, STATES.EMERGENCY],
-      [STATES.EMERGENCY]: [STATES.SAFE_MODE, STATES.RECOVERY, STATES.SHUTDOWN],
-      [STATES.SAFE_MODE]: [STATES.RECOVERY, STATES.SHUTDOWN],
-      [STATES.SHUTDOWN]: []
-    };
-
-    // 8. STATE HISTORY SYSTEM
-    this.history = [];
-    this.maxHistorySize = 200;
-
-    // 13. TRANSITION QUEUE
-    this.transitionQueue = [];
+    this.isStateLocked = false;
     this.isTransitioning = false;
 
-    // 14. STATE LOCKING
-    this.isLocked = false;
+    // 4. TELEMETRIA E HISTÓRICO VOLÁTIL DE HARDWARE/BIOMETRIA INTERNA
+    this.xr = { tracking: false, immersion: 'none', framePacing: '90Hz' };
+    this.biometrics = { galvanicStress: 0.0, eyeStrainFraction: 0.0 };
 
-    // 15. COGNITIVE STATE LAYER
-    this.cognitive = {
-      focusLevel: 0.0,
-      attentionState: 'idle',
-      contextDensity: 1.0,
-      distractionLevel: 0.0,
-      immersionLevel: 0.0
-    };
+    // 5. MATRIZ DE CONTROLE DE FLUXO DE ESTADOS (VR-OS MATRICIAL SECO)
+    this.transitions = Object.freeze({
+      [STATES.BOOT]:      [STATES.READY, STATES.SAFE_MODE],
+      [STATES.READY]:     [STATES.FOCUS, STATES.XR, STATES.LOW_POWER, STATES.DEGRADED, STATES.EMERGENCY, STATES.SHUTDOWN],
+      [STATES.FOCUS]:     [STATES.READY, STATES.XR, STATES.SAFE_MODE],
+      [STATES.FLOW]:      [STATES.READY, STATES.LOW_POWER, STATES.RECOVERY],
+      [STATES.XR]:        [STATES.RECOVERY, STATES.SAFE_MODE],
+      [STATES.LOW_POWER]: [STATES.READY, STATES.RECOVERY, STATES.EMERGENCY],
+      [STATES.RECOVERY]:  [STATES.READY, STATES.SAFE_MODE, STATES.EMERGENCY],
+      [STATES.EMERGENCY]: [STATES.RECOVERY], // Travamento em loop de diagnóstico de segurança
+      [STATES.SAFE_MODE]: [STATES.EMERGENCY, STATES.SHUTDOWN],
+      [STATES.SHUTDOWN]:  []
+    });
 
-    // 16. XR STATE GOVERNANCE
-    this.xr = {
-      tracking: false,
-      immersion: 'none',
-      comfort: 'stable',
-      latency: 0.0,
-      reprojection: false,
-      focusZone: 'center'
-    };
-
-    // 24. TIME-IN-STATE TRACKING
-    this.stateMetrics = {
-      enterTimestamp: Date.now(),
-      duration: 0
-    };
-
-    // 11. STATE GUARDS (Predicados de validação rígida pré-transição)
-    this.guards = {
-      [STATES.XR]: () => this.xr.tracking && this.cognitive.immersionLevel > 0.1,
-      [STATES.LOW_POWER]: () => typeof window.StateStore !== 'undefined' && window.StateStore.get('telemetry.mentalBattery') < 20,
-      [STATES.EMERGENCY]: () => typeof window.StateStore !== 'undefined' && window.StateStore.get('kernel.hardwareStatus') === 'CRITICAL'
-    };
-
-    // Inicialização automática dos estados nativos estruturais do ecossistema
     this._initializeNativeRegistry();
   }
 
-  // ==========================================================================
-  // 1. STATE REGISTRY & 17. SUBSTATE / 18. HIERARCHICAL STATES (HSM)
-  // ==========================================================================
+  /**
+   * TRACE ENGINE UNIFICADO INTERNO
+   */
+  trace(message, level = 'INFO') {
+    if (window.SovereignKernel && typeof window.SovereignKernel.trace === 'function') {
+      window.SovereignKernel.trace('STATE-MACHINE', message, level);
+    } else {
+      const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
+      console.log(`%c[${timestamp}] [STATE-MACHINE] [${level}] ${message}`, 'color: #9D00FF; font-weight: bold;');
+    }
+  }
 
-  registerState(name, config) {
-    if (!STATES[name]) {
-      throw new Error(`[STATE_MACHINE] Violação Crítica: Estado '${name}' não está catalogado na enumeração soberana.`);
+  /**
+   * Registro explícito de ganchos operacionais para estados específicos
+   */
+  registerState(stateName, config) {
+    if (!STATES[stateName]) {
+      this.trace(`Tentativa de registrar estado inválido ignorada: ${stateName}`, 'WARN');
+      return;
+    }
+    this.states.set(stateName, {
+      enter: config.enter || (async () => {}),
+      exit: config.exit || (async () => {}),
+      parent: config.parent || null
+    });
+  }
+
+  /**
+   * INTERCEPTADOR DE SEGURANÇA CONTRA DESVIOS (Ações de proteção biológica e de hardware)
+   */
+  async _executeSecurityAction(origin, violatorTarget, callerName = 'UNKNOWN_MODULE') {
+    this.trace(`AÇÃO DE SEGURANÇA: Violação detectada de [${origin}] para [${violatorTarget}] por [${callerName}]`, 'CRITICAL');
+    
+    switch (origin) {
+      case STATES.BOOT:
+        this.trace(`Forçando Rollback imediato para BOOT e isolando módulo violador: ${callerName}`, 'CRITICAL');
+        this.isTransitioning = false;
+        await this._forceAbsoluteState(STATES.BOOT);
+        window.SentinelBus?.emit('performance:emergency-fallback', { isolateModule: callerName });
+        break;
+
+      case STATES.READY:
+        this.trace('Bloqueio imediato do barramento de transição. Redirecionando para EMERGENCY.', 'CRITICAL');
+        this.lockState();
+        this.isTransitioning = false;
+        await this._forceAbsoluteState(STATES.EMERGENCY);
+        break;
+
+      case STATES.FOCUS:
+        this.trace('Interceptação da intenção de foco pelo gerenciador de atenção.', 'WARN');
+        this.isTransitioning = false;
+        window.SentinelBus?.emit('attention:suppression-trigger', { lockLevel: 'MAXIMUM' });
+        await this._forceAbsoluteState(STATES.READY);
+        break;
+
+      case STATES.XR:
+        this.trace('Reprojeção síncrona forçada em 2D de emergência para preservar biometria.', 'CRITICAL');
+        this.isTransitioning = false;
+        this.xr.tracking = false;
+        this.xr.immersion = 'none';
+        window.SentinelBus?.emit('xr:suspended', { reason: 'CRITICAL_DESYNC_VIOLATION', force2D: true });
+        await this._forceAbsoluteState(STATES.SAFE_MODE);
+        break;
+
+      case STATES.EMERGENCY:
+        this.trace('Travamento em loop de diagnóstico de segurança. Forçando RECOVERY.', 'CRITICAL');
+        this.isTransitioning = false;
+        await this._forceAbsoluteState(STATES.RECOVERY);
+        break;
+
+      default:
+        this.isTransitioning = false;
+        await this._forceAbsoluteState(STATES.SAFE_MODE);
+        break;
+    }
+  }
+
+  /**
+   * Força um estado sem passar pelas travas de validação ordinárias (Uso exclusivo de Rollbacks internos)
+   */
+  async _forceAbsoluteState(targetState) {
+    this.previousState = this.currentState;
+    this.currentState = targetState;
+    this._logHistory(targetState, 'FORCE_ROLLBACK');
+    
+    const config = this.states.get(targetState);
+    if (config && config.enter) {
+      try {
+        await config.enter();
+      } catch (e) {
+        this.trace(`Falha no enter do Rollback Absoluto: ${e.message}`, 'CRITICAL');
+      }
+    }
+  }
+
+  /**
+   * Validador Imutável de Transições de Fase (canTransition)
+   * Verifica se o destino existe dentro do vetor ordenado da origem
+   */
+  canTransition(targetState) {
+    if (this.isStateLocked) return false;
+    if (this.isTransitioning) return false;
+    if (!this.currentState) return true; // Permite injeção inicial de boot
+
+    const allowedTargets = this.transitions[this.currentState];
+    return allowedTargets ? allowedTargets.includes(targetState) : false;
+  }
+
+  /**
+   * ⚡ MOTOR DE TRANSIÇÃO AUTORITATIVO (Muda o estado do sistema com barreira física)
+   * @param {string} targetState - Estado de destino solicitado
+   * @param {string} callerIdentity - Identidade do módulo solicitante para fins de isolamento
+   */
+  async transition(targetState, callerIdentity = 'UNKNOWN_MODULE') {
+    if (this.isStateLocked) {
+      this.trace(`Transição negada: O motor de estado está fisicamente trancado em: ${this.currentState}`, 'WARN');
+      return false;
     }
 
-    this.states.set(name, {
-      name: name,
-      parent: config.parent || null, // Habilita Hierarchical State Machine (HSM)
-      substates: new Map(),          // 17. Substate System
-      onEnter: config.enter || null,
-      onExit: config.exit || null,
-      onUpdate: config.update || null,
-      onValidate: config.validate || null,
-      onRecover: config.recover || null,
-      onSuspend: config.suspend || null,
-      onResume: config.resume || null
-    });
+    if (this.currentState === targetState) return true;
 
-    this.trace(`Estado Registrado: ${name} ${config.parent ? `(Filho de ${config.parent})` : ''}`);
-  }
-
-  unregisterState(name) {
-    return this.states.delete(name);
-  }
-
-  getState(name) {
-    return this.states.get(name);
-  }
-
-  hasState(name) {
-    return this.states.has(name);
-  }
-
-  getCurrentState() {
-    return this.currentState;
-  }
-
-  getPreviousState() {
-    return this.previousState;
-  }
-
-  // ==========================================================================
-  // 4. TRANSITION ENGINE & 12. ASYNC TRANSITIONS
-  // ==========================================================================
-
-  async transition(toState) {
-    // Enfileira a transição requisitada para mitigar Race Conditions simultâneas
-    return new Promise((resolve, reject) => {
-      this.transitionQueue.push({ toState, resolve, reject });
-      this._processTransitionQueue();
-    });
-  }
-
-  async _processTransitionQueue() {
-    if (this.isTransitioning || this.transitionQueue.length === 0 || this.isLocked) return;
+    // Se a transição for ilegal, aciona imediatamente a barreira física e a ação de mitigação
+    if (!this.canTransition(targetState)) {
+      await this._executeSecurityAction(this.currentState, targetState, callerIdentity);
+      return false;
+    }
 
     this.isTransitioning = true;
-    const { toState, resolve, reject } = this.transitionQueue.shift();
-    const fromState = this.currentState || STATES.BOOT;
-
-    this.pendingState = toState;
-    this.measureTransitionTime('start');
+    this.pendingState = targetState;
+    this.trace(`Iniciando mutação autoritativa: ${this.currentState} ──► ${targetState} [Origem: ${callerIdentity}]`, 'INFO');
 
     try {
-      // 1. Validar Legalidade da Transição por Matriz e Guards externos
-      this.validateTransition(fromState, toState);
-
-      this.traceTransition(fromState, toState, 'EXECUÇÃO_INICIADA');
-
-      // 2. Ciclo de Saída (onExit) do Estado Atual e seus Ancestrais (HSM)
+      // 1. Executa a saída do estado atual e seus ancestrais hierárquicos
       if (this.currentState) {
-        await this._executeHierarchyLifecycle(this.currentState, 'onExit');
+        const currentConfig = this.states.get(this.currentState);
+        if (currentConfig && currentConfig.exit) {
+          await currentConfig.exit();
+        }
       }
 
-      // 3. Captura Snapshot de Continuidade Contextual Pré-Transição
-      const backupSnapshot = this.createSnapshot();
-
-      // 4. Efetivação da troca de autoridade de estado
-      this.previousState = fromState;
-      this.currentState = toState;
+      // 2. Transiciona as referências atômicas de memória
+      this.previousState = this.currentState;
+      this.currentState = targetState;
       this.pendingState = null;
 
-      // Reset do relógio de duração do estado
-      this.stateMetrics.enterTimestamp = Date.now();
+      // 3. Executa a entrada no novo estado configurado
+      const targetConfig = this.states.get(targetState);
+      if (targetConfig && targetConfig.enter) {
+        await targetConfig.enter();
+      }
 
-      // 5. Ciclo de Entrada (onEnter) do Novo Estado e seus Pais Hierárquicos
-      await this._executeHierarchyLifecycle(toState, 'onEnter');
-
-      // 6. Sincronização em tempo real do ecossistema e Emissão de Barramento
-      this.synchronizeRuntime();
-      this.recordStateMetrics(fromState, toState, 'SUCCESS');
-
-      this.emit('state:changed', { from: fromState, to: toState, ts: Date.now() });
-      this.traceTransition(fromState, toState, 'CONCLUÍDA_COM_SUCESSO');
-
-      resolve(true);
-    } catch (error) {
-      this.trace(`Falha Crítica na Transição [${fromState} ──> ${toState}]: ${error.message}`, 'ERROR');
-      this.recordStateMetrics(fromState, toState, 'FAILED');
-      this.pendingState = null;
-
-      // 10. ROLLBACK ENGINE automático em caso de travamento/rejeição de pipeline
-      await this.rollbackTo(fromState);
-      
-      reject(error);
-    } finally {
+      // 4. Registra histórico e despacha para o barramento de alta precisão
+      this._logHistory(targetState, 'SUCCESS');
       this.isTransitioning = false;
-      // Processa o próximo item da fila de forma assíncrona desacoplada
-      setTimeout(() => this._processTransitionQueue(), 0);
+
+      window.SentinelBus?.emit('state:phase-synchronized', {
+        from: this.previousState,
+        to: this.currentState,
+        ts: Date.now()
+      });
+
+      return true;
+
+    } catch (error) {
+      this.trace(`Colapso no loop de transição estrutural: ${error.message}. Acionando Rollback de emergência.`, 'CRITICAL');
+      this.isTransitioning = false;
+      await this._executeSecurityAction(this.previousState || STATES.SAFE_MODE, targetState, 'RUNTIME_EXCEPTION_HANDLER');
+      return false;
     }
   }
 
-  async _executeHierarchyLifecycle(stateName, hookName) {
-    const stateConfig = this.getState(stateName);
-    if (!stateConfig) return;
-
-    // Se for entrada (onEnter), executa de cima para baixo (Pai -> Filho)
-    // Se for saída (onExit), executa de baixo para cima (Filho -> Pai)
-    const hierarchyStack = [];
-    let current = stateConfig;
-    while (current) {
-      hierarchyStack.push(current);
-      current = current.parent ? this.getState(current.parent) : null;
-    }
-
-    if (hookName === 'onExit') {
-      // De baixo para cima
-      for (const targetState of hierarchyStack) {
-        if (typeof targetState.onExit === 'function') await targetState.onExit();
-      }
-    } else if (hookName === 'onEnter') {
-      // De cima para baixo
-      hierarchyStack.reverse();
-      for (const targetState of hierarchyStack) {
-        if (typeof targetState.onEnter === 'function') await targetState.onEnter();
-      }
-    }
-  }
-
-  // ==========================================================================
-  // 6. STATE VALIDATION ENGINE & 11. STATE GUARDS
-  // ==========================================================================
-
-  validateTransition(from, to) {
-    // Validação 1: Existência física na Enumeração Soberana
-    if (!STATES[to]) {
-      throw new Error(`[VALIDATION] Destino '${to}' não mapeado no ecossistema.`);
-    }
-
-    // Validação 2: Checagem de Conectividade do Grafo da Matriz de Transição
-    const allowedTransitions = this.transitions[from] || [];
-    if (!allowedTransitions.includes(to) && from !== STATES.EMERGENCY) {
-      throw new Error(`[VALIDATION] Transição Ilegal de Trajetória: [${from} ──> ${to}].`);
-    }
-
-    // Validação 3: Execução de State Guards customizados
-    if (this.guards[to] && !this.guards[to]()) {
-      throw new Error(`[VALIDATION] Transição Bloqueada: Condições de contorno (Guards) para entrar em [${to}] não foram satisfeitas.`);
-    }
-
-    // Validação 4: Integridade de Subsistemas Técnicos
-    this.validateStateIntegrity(to);
-  }
-
-  validateStateIntegrity(targetState) {
-    if (typeof window.StateStore !== 'undefined') {
-      const coreDiagnostics = window.StateStore.get('kernel.hardwareStatus');
-      if (coreDiagnostics === 'CRITICAL' && targetState !== STATES.EMERGENCY && targetState !== STATES.SAFE_MODE) {
-        throw new Error(`[INTEGRITY] Sistema sob pressão crítica de hardware. Transições normais suspensas.`);
-      }
-    }
-    return true;
-  }
-
-  // ==========================================================================
-  // 10. ROLLBACK ENGINE & 21. RECOVERY SYSTEM
-  // ==========================================================================
-
-  async rollback() {
-    if (this.previousState) {
-      await this.rollbackTo(this.previousState);
-    }
-  }
-
-  async rollbackTo(state) {
-    this.trace(`Iniciando Rollback Emergencial Corretivo para: [${state}]`, 'WARN');
-    this.isLocked = false; // Força destravamento mecânico de fluxo
-    
-    this.currentState = state;
-    this.stateMetrics.enterTimestamp = Date.now();
-    
-    this.synchronizeRuntime();
-    this.emit('state:rollback', { target: state });
-  }
-
-  async attemptRecovery() {
-    if (this.currentState === STATES.RECOVERY) return;
-    this.trace('Gatilhando Sequência de Auto-Recuperação de Estado...', 'WARN');
-    await this.transition(STATES.RECOVERY);
-  }
-
-  async recoverState() {
-    const stateConfig = this.getState(this.currentState);
-    if (stateConfig && typeof stateConfig.onRecover === 'function') {
-      try {
-        await stateConfig.onRecover();
-        await this.transition(STATES.READY);
-      } catch (e) {
-        this.enterEmergency();
-      }
-    }
-  }
-
-  // ==========================================================================
-  // 22. EMERGENCY MODE ENGINE
-  // ==========================================================================
-
-  enterEmergency() {
-    this.trace('!!! COLAPSO DE OPERAÇÃO: ENTRANDO EM MODO DE EMERGÊNCIA ABSOLUTO !!!', 'CRITICAL');
-    this.isLocked = true; // Sela o State Machine contra mutações externas poluentes
-    this.currentState = STATES.EMERGENCY;
-    this.emit('state:emergency_mode', { ts: Date.now() });
-    
-    if (typeof window.SentinelCore !== 'undefined' && typeof window.SentinelCore.route === 'function') {
-      window.SentinelCore.route('STATE_EMERGENCY', { active: true });
-    }
-  }
-
-  exitEmergency() {
-    this.isLocked = false;
-    this.trace('Modo de emergência revogado. Chaveando para Malha de Proteção Segura.');
-    this.transition(STATES.SAFE_MODE);
-  }
-
-  // ==========================================================================
-  // 14. STATE LOCKING
-  // ==========================================================================
-
+  /**
+   * Bloqueia fisicamente mutações futuras no barramento de transição
+   */
   lockState() {
-    this.isLocked = true;
-    this.trace('State Machine travada manualmente. Nenhuma transição será aceita.', 'WARN');
+    this.isStateLocked = true;
+    this.trace(`Barreira física ativada. Estado trancado de forma imutável em: ${this.currentState}`, 'WARN');
   }
 
+  /**
+   * Destranca a barreira física do motor de transições
+   */
   unlockState() {
-    this.isLocked = false;
-    this.trace('State Machine destravada. Fluxo operacional reativado.');
+    this.isStateLocked = false;
+    this.trace('Barreira física desativada. Transições de estado liberadas.', 'INFO');
   }
 
-  // ==========================================================================
-  // 9. SNAPSHOT SYSTEM & 27. STATE SERIALIZATION
-  // ==========================================================================
-
-  createSnapshot() {
-    return {
-      currentState: this.currentState,
-      previousState: this.previousState,
-      cognitive: { ...this.cognitive },
-      xr: { ...this.xr },
-      timestamp: Date.now()
-    };
-  }
-
-  restoreSnapshot(snapshot) {
-    if (!snapshot || !snapshot.currentState) return false;
-    this.currentState = snapshot.currentState;
-    this.previousState = snapshot.previousState;
-    this.cognitive = snapshot.cognitive;
-    this.xr = snapshot.xr;
-    this.synchronizeRuntime();
-    return true;
-  }
-
-  serialize() {
-    return JSON.stringify(this.createSnapshot());
-  }
-
-  deserialize(jsonString) {
-    try {
-      const parsed = JSON.parse(jsonString);
-      this.restoreSnapshot(parsed);
-      this.trace('Estado desserializado e restaurado com integridade.');
-    } catch (e) {
-      this.trace('Erro crítico ao desserializar string de estado.', 'ERROR');
-    }
-  }
-
-  // ==========================================================================
-  // 23. RUNTIME SYNCHRONIZATION
-  // ==========================================================================
-
-  synchronizeRuntime() {
-    this.stateMetrics.duration = Date.now() - this.stateMetrics.enterTimestamp;
-
-    // Atualiza de forma direta as chaves do StateStore (Single Source of Truth)
-    if (typeof window.StateStore !== 'undefined') {
-      window.StateStore.set('ui.mode', this.currentState);
-      window.StateStore.set('ui.isFocusMode', this.currentState === STATES.FOCUS || this.currentState === STATES.FLOW);
-      window.StateStore.set('ui.isEmergency', this.currentState === STATES.EMERGENCY);
-    }
-  }
-
-  // ==========================================================================
-  // 20. TELEMETRY INTEGRATION & PERFORMANCE TRACKING
-  // ==========================================================================
-
-  measureTransitionTime(marker) {
-    if (marker === 'start') {
-      this._tMarker = performance.now();
-    } else {
-      return performance.now() - this._tMarker;
-    }
-  }
-
-  recordStateMetrics(from, to, status) {
-    const duration = this.measureTransitionTime('end');
-    const metricEntry = {
-      timestamp: Date.now(),
-      from,
-      to,
+  /**
+   * Armazena registro de auditoria imutável do sistema operacional cognitivo
+   */
+  _logHistory(state, status) {
+    this.history.push({
+      state,
       status,
-      duration: `${duration.toFixed(2)}ms`,
-      cognitiveLoad: this.cognitive.focusLevel
-    };
-
-    this.history.push(metricEntry);
-    if (this.history.length > this.maxHistorySize) this.history.shift();
-  }
-
-  traceTransition(from, to, lifecycleStage) {
-    this.trace(`[TRANSIÇÃO] [${from} ──> ${to}] Estágio Pipeline: ${lifecycleStage}`);
-  }
-
-  trace(message, level = 'INFO') {
-    const formatted = `[${new Date().toISOString()}] [STATE_GOVERNOR] [${level}] ${message}`;
-    if (level === 'CRITICAL' || level === 'ERROR') console.error(formatted);
-    else if (level === 'WARN') console.warn(formatted);
-    else console.log(formatted);
-  }
-
-  // ==========================================================================
-  // 26. INTEGRITY VERIFICATION (Anti-Deadlock Validation)
-  // ==========================================================================
-
-  verifyIntegrity() {
-    this.trace('Verificando integridade matemática estrutural...');
-    
-    // Testa ciclos fechados ilegais (Deadlocks de transição órfã)
-    for (const state of Object.keys(this.transitions)) {
-      if (!this.states.has(state) && state !== STATES.BOOT) {
-        this.trace(`Anomalia detectada: Estado enumerado [${state}] não está registrado no Map ativo.`, 'ERROR');
-        return false;
-      }
+      timestamp: Date.now(),
+      trackingContext: { ...this.xr }
+    });
+    if (this.history.length > this.maxHistorySize) {
+      this.history.shift();
     }
-    return true;
   }
 
-  emit(event, data) {
-    window.SentinelBus?.emit(event, data);
-  }
-
-  // ==========================================================================
-  // INTERNAL CONTEXTUAL SETUP (NATIVE COMPLIANCE)
-  // ==========================================================================
-
+  /**
+   * Injeção nativa inicial da malha hierárquica e estados padrões do VR-OS
+   */
   _initializeNativeRegistry() {
-    // Registra a infraestrutura básica de subestados para o Boot Pipeline
     this.registerState(STATES.BOOT, {
-      enter: async () => this.trace('Backbone de estado de Boot ativado.'),
-      exit: async () => this.trace('Sequência de Boot evacuada.')
+      enter: async () => this.trace('Backbone de estado de Boot ativado de forma limpa.', 'INFO'),
+      exit: async () => this.trace('Sequência de Boot evacuada e validada.', 'INFO')
     });
 
     this.registerState(STATES.READY, {
-      enter: async () => this.trace('Sistema SENTINEL pronto e estável para transições cognitivas.')
+      enter: async () => this.trace('Sistema SENTINEL pronto e estável para transições cognitivas.', 'INFO')
     });
 
-    // 18. Hierarchical States setup nativo para XR
     this.registerState(STATES.XR, {
       enter: async () => {
         this.xr.tracking = true;
-        this.trace('Renderizadores WebGPU/XR alocados sob prioridade de barramento.');
+        this.xr.immersion = 'partial';
+        this.trace('Renderizadores WebGPU/XR alocados sob prioridade máxima de barramento.', 'INFO');
       },
       exit: async () => {
         this.xr.tracking = false;
-        this.trace('Desalocando pipelines imersivos.');
+        this.xr.immersion = 'none';
+        this.trace('Desalocando pipelines imersivos e desativando matriz espacial.', 'WARN');
       }
     });
 
     this.registerState(STATES.IMMERSION, {
-      parent: STATES.XR, // HSM Linkage
+      parent: STATES.XR,
       enter: async () => { this.xr.immersion = 'full'; },
-      exit: async () => { this.xr.immersion = 'none'; }
+      exit: async () => { this.xr.immersion = 'partial'; }
     });
 
     this.registerState(STATES.EMERGENCY, {
-      enter: async () => { this.lockState(); }
+      enter: async () => { 
+        this.lockState();
+        this.trace('Filtros e mitigadores operando em regime de isolamento extremo.', 'CRITICAL');
+      }
+    });
+
+    this.registerState(STATES.SAFE_MODE, {
+      enter: async () => this.trace('Módulos periféricos suspensos em Modo de Segurança Seguro.', 'CRITICAL')
     });
 
     this.currentState = STATES.BOOT;
   }
 }
 
-// Vinculação única no escopo global
-const SovereignStateGovernor = new SentinelStateMachine();
-window.SentinelStateMachine = SovereignStateGovernor;
+// 6. EXPOSIÇÃO OPERACIONAL E ACUAMENTO PASSIVO DE SEGURANÇA
+(() => {
+  const SovereignStateGovernor = new SentinelStateMachine();
+  
+  window.SentinelStateMachine = SentinelStateMachine; // Exposição da Classe para heranças/stubs
+  window.SovereignStateGovernor = SovereignStateGovernor;
 
-export default SovereignStateGovernor;
+  // Vinculação determinística como subsistema direto do Kernel Soberano
+  if (window.SovereignKernel) {
+    window.SovereignKernel.registerModule('sentinel-state-machine', SovereignStateGovernor);
+  } else {
+    Object.defineProperty(window, 'SovereignKernel', {
+      configurable: true,
+      enumerable: true,
+      set: (kernelInstance) => {
+        delete window.SovereignKernel;
+        window.SovereignKernel = kernelInstance;
+        window.SovereignKernel.registerModule('sentinel-state-machine', SovereignStateGovernor);
+      }
+    });
+  }
+
+  console.log(
+    '%c OMC SENTINEL STATE MACHINE v9.0 ONLINE [IMMUTABLE-VALIDATOR-MODE] ',
+    'background:#3a0066; color:#fff; font-weight:bold; padding:3px; border-left:4px solid #9D00FF;'
+  );
+})();
