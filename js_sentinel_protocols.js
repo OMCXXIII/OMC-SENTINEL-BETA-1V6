@@ -416,5 +416,3 @@ if (window.SentinelBus) {
     console.log('%c[PROTOCOLS] Sequência 4: Governança cognitiva e controle de transições ativos.', 'color:#00FF41;');
   });
 }
-
-export default SovereignProtocolsEngine;
