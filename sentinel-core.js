@@ -1,24 +1,15 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   OMC VR-OS | SENTINEL CORE v7.0 — SOVEREIGN STATE AUTHORITY
+   OMC VR-OS | SENTINEL CORE v7.5 — SOVEREIGN STATE AUTHORITY & COMPOSITION
    Fusão CMA: StateStore + StateVault → Autoridade Única de Estado
-   Domínio: CORE / ABSOLUTE
+   Domínio: CORE / ABSOLUTE / COMPOSITION
+   
+   FUNÇÃO EVOLUÍDA: Runtime Nervous System (Composição, Sincronização e Coordenação)
+   NÃO COMPETE COM O KERNEL. O Kernel Governa, o Core Compõe e Coordena.
 
    ARQUITETURA DE MEMÓRIA:
    L1 → Runtime Memory    — objeto JS em memória, acesso < 1μs
    L2 → Persistent Mirror — localStorage por chave raiz única
    L3 → Recovery Layer    — hidratação atômica no boot
-
-   CHAVE RAIZ ÚNICA: SENTINEL_STATE_ROOT
-   MISSÃO LOCK KEY:  SENTINEL_MISSION_LOCK
-
-   CORREÇÕES v7.0:
-   ✓ Eliminação da race condition de boot (flag atômica _bootSealed)
-   ✓ Método .all() adicionado para compatibilidade com Debug-HUD
-   ✓ boot:complete emitido UMA ÚNICA VEZ após L3 recovery
-   ✓ Lógica impossível de SENTINEL_BOOTED removida
-   ✓ Alias window.StateVault mantido para compatibilidade retroativa
-   ✓ MissionLock nativo integrado ao Core
-   ✓ Autodiagnóstico PFC-BRUT preservado
 ═══════════════════════════════════════════════════════════════════════════ */
 
 const StateStore = (() => {
@@ -26,7 +17,6 @@ const StateStore = (() => {
     /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        CHAVES DE PERSISTÊNCIA — RAIZ ÚNICA
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
     const ROOT_KEY         = 'SENTINEL_STATE_ROOT';
     const MISSION_LOCK_KEY = 'SENTINEL_MISSION_LOCK';
 
@@ -34,10 +24,7 @@ const StateStore = (() => {
        MEMÓRIA INTERNA L1 — ESTADO UNIFICADO
        Fusão dos namespaces StateStore v6.6 + StateVault v1.1
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
     let _state = {
-
-        /* ── Kernel ─────────────────────────────────────── */
         kernel: {
             initialized:   false,
             bootAttempts:  0,
@@ -46,15 +33,11 @@ const StateStore = (() => {
             hardwareStatus: 'STABLE',
             version:       '7.0-SOVEREIGN'
         },
-
-        /* ── Sistema (ex-StateVault) ─────────────────────── */
         system: {
             booted:        false,
             initializedAt: null,
             version:       '7.0-SOVEREIGN'
         },
-
-        /* ── Interface ───────────────────────────────────── */
         ui: {
             isSleep:        false,
             isShadow:       false,
@@ -69,8 +52,6 @@ const StateStore = (() => {
             latency:        '0ms',
             overlay:        false
         },
-
-        /* ── Operacional ─────────────────────────────────── */
         ops: {
             profile:        'ALPHA',
             buffer:         '',
@@ -83,8 +64,6 @@ const StateStore = (() => {
             autoPilot:      false,
             executionState: 'STABLE'
         },
-
-        /* ── Telemetria ──────────────────────────────────── */
         telemetry: {
             startTime:      Date.now(),
             lastInput:      Date.now(),
@@ -99,15 +78,11 @@ const StateStore = (() => {
             idleTime:       0,
             activityLevel:  'stable'
         },
-
-        /* ── Missão (MissionLock nativo) ─────────────────── */
         mission: {
             active: null,
             lockedAt: null,
             history: []
         },
-
-        /* ── Diagnóstico ─────────────────────────────────── */
         diagnostics: {
             egoInterference:    false,
             bruteForceDetected: false,
@@ -117,38 +92,15 @@ const StateStore = (() => {
         }
     };
 
-    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       REGISTROS INTERNOS
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
     const _watchers  = Object.create(null);
     const _history   = [];
     const MAX_HISTORY = 500;
-
-    /* Flag atômica: impede emissão duplicada de boot:complete */
     let _bootSealed = false;
 
-    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       LOGGER INTERNO
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
     const _log = (type, message, payload = null) => {
-        const colors = {
-            info:    '#00D4FF',
-            success: '#00FF41',
-            warn:    '#FFD500',
-            error:   '#FF004C'
-        };
-        console.log(
-            `%c[CORE:${type.toUpperCase()}] ${message}`,
-            `color:${colors[type]};font-family:monospace;font-weight:bold;`,
-            payload || ''
-        );
+        const colors = { info: '#00D4FF', success: '#00FF41', warn: '#FFD500', error: '#FF004C' };
+        console.log(`%c[CORE:STORE:${type.toUpperCase()}] ${message}`, `color:${colors[type]};font-family:monospace;font-weight:bold;`, payload || '');
     };
-
-    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       UTILITÁRIOS DE PATH
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
     const _resolvePath = (obj, path, create = false) => {
         const keys = path.split('.');
@@ -181,60 +133,29 @@ const StateStore = (() => {
         return current;
     };
 
-    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       L2 — PERSISTÊNCIA POR RAIZ ÚNICA
-       Substitui SENTINEL_STATE_MIRROR + SENTINEL_MIRROR_*
-       Um único JSON atômico. Zero colisão de chaves.
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
     const _persistL2 = () => {
         try {
             const payload = JSON.stringify({ ts: Date.now(), state: _state });
             localStorage.setItem(ROOT_KEY, payload);
         } catch (e) {
             _log('error', 'Falha na persistência L2', e);
-            window.SentinelBus?.emit('system:error', {
-                module: 'StateStore',
-                layer:  'L2',
-                error:  e.message
-            });
+            window.SentinelBus?.emit('system:error', { module: 'StateStore', layer: 'L2', error: e.message });
         }
     };
 
-    /* Caminhos que disparam persistência L2 */
     const _shouldPersist = (path) =>
-        path.startsWith('ops')      ||
-        path.startsWith('mission')  ||
-        path.startsWith('system')   ||
-        path.startsWith('kernel')   ||
-        path.startsWith('telemetry');
-
-    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       L3 — RECOVERY ATÔMICO
-       Chamado UMA VEZ antes de qualquer emissão de boot.
-       Migra dados legados (SENTINEL_MIRROR_* e SENTINEL_STATE_MIRROR)
-       para a nova chave raiz na primeira execução.
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        path.startsWith('ops') || path.startsWith('mission') || path.startsWith('system') || path.startsWith('kernel') || path.startsWith('telemetry');
 
     const _recoverL3 = () => {
         let recovered = 0;
-
-        /* ── Tentativa 1: chave raiz unificada (v7.0) ─── */
         try {
             const raw = localStorage.getItem(ROOT_KEY);
             if (raw) {
                 const parsed = JSON.parse(raw);
                 if (parsed?.state) {
-                    /* Merge profundo — não sobrescreve chaves ausentes no backup */
                     const merge = (target, source) => {
                         for (const key of Object.keys(source)) {
-                            if (
-                                source[key] !== null &&
-                                typeof source[key] === 'object' &&
-                                !Array.isArray(source[key]) &&
-                                typeof target[key] === 'object' &&
-                                target[key] !== null
-                            ) {
+                            if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key]) && typeof target[key] === 'object' && target[key] !== null) {
                                 merge(target[key], source[key]);
                             } else {
                                 target[key] = source[key];
@@ -247,11 +168,8 @@ const StateStore = (() => {
                     _log('success', `L3 recovery: chave raiz restaurada (ts: ${parsed.ts})`);
                 }
             }
-        } catch (e) {
-            _log('warn', 'L3: falha ao ler chave raiz', e);
-        }
+        } catch (e) { _log('warn', 'L3: falha ao ler chave raiz', e); }
 
-        /* ── Tentativa 2: chave legada flat (v6.6) ─────── */
         if (!recovered) {
             try {
                 const legacyRaw = localStorage.getItem('SENTINEL_STATE_MIRROR');
@@ -262,62 +180,41 @@ const StateStore = (() => {
                         _state.kernel.recoveryMode = true;
                         recovered++;
                         _log('warn', 'L3 recovery: chave legada SENTINEL_STATE_MIRROR migrada.');
-                        /* Migra para nova chave e apaga legado */
                         _persistL2();
                         localStorage.removeItem('SENTINEL_STATE_MIRROR');
                     }
                 }
-            } catch (e) {
-                _log('warn', 'L3: falha ao ler chave legada', e);
-            }
+            } catch (e) { _log('warn', 'L3: falha ao ler chave legada', e); }
         }
 
-        /* ── Tentativa 3: chaves esparsas (SENTINEL_MIRROR_*) ─ */
         try {
-            const sparseKeys = Object.keys(localStorage)
-                .filter(k => k.startsWith('SENTINEL_MIRROR_'));
+            const sparseKeys = Object.keys(localStorage).filter(k => k.startsWith('SENTINEL_MIRROR_'));
             if (sparseKeys.length > 0) {
                 sparseKeys.forEach(k => {
                     const path = k.replace('SENTINEL_MIRROR_', '');
                     const entry = JSON.parse(localStorage.getItem(k) || '{}');
-                    if (entry?.value !== undefined) {
-                        _applySync(path, entry.value);
-                        recovered++;
-                    }
-                    localStorage.removeItem(k); /* limpa legado */
+                    if (entry?.value !== undefined) { _applySync(path, entry.value); recovered++; }
+                    localStorage.removeItem(k);
                 });
                 _persistL2();
                 _log('warn', `L3 recovery: ${sparseKeys.length} chaves esparsas migradas e consolidadas.`);
             }
-        } catch (e) {
-            _log('warn', 'L3: falha ao migrar chaves esparsas', e);
-        }
+        } catch (e) { _log('warn', 'L3: falha ao migrar chaves esparsas', e); }
 
-        /* ── Restaura MissionLock se existir ────────────── */
         try {
             const savedMission = localStorage.getItem(MISSION_LOCK_KEY);
             if (savedMission && !_state.mission.active) {
                 _state.mission.active = savedMission;
                 _log('info', `MissionLock restaurado: ${savedMission}`);
             }
-        } catch (e) {
-            _log('warn', 'L3: falha ao restaurar MissionLock', e);
-        }
+        } catch (e) { _log('warn', 'L3: falha ao restaurar MissionLock', e); }
 
         return recovered;
     };
 
-    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       WATCHERS E HISTÓRICO
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
     const _notifyWatchers = (path, value) => {
         if (!_watchers[path]) return;
-        _watchers[path].forEach(fn => {
-            try { fn(value); } catch (e) {
-                _log('error', `Watcher failure → ${path}`, e);
-            }
-        });
+        _watchers[path].forEach(fn => { try { fn(value); } catch (e) { _log('error', `Watcher failure → ${path}`, e); } });
     };
 
     const _pushHistory = (entry) => {
@@ -325,312 +222,577 @@ const StateStore = (() => {
         if (_history.length > MAX_HISTORY) _history.shift();
     };
 
-    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       EXECUTA L3 NO ESCOPO DO MÓDULO (pré-exposição global)
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
     const _recoveredCount = _recoverL3();
 
-    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       API PÚBLICA
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
     return {
-
         version: '7.0-SOVEREIGN',
-
-        /* ── get(path?) ────────────────────────────────────
-           Sem argumento → snapshot completo do estado L1.
-           Compatível com: StateStore.get('ops.profile')
-                           StateStore.get()  ← usado pelo HUD
-        ─────────────────────────────────────────────────── */
         get(path = null) {
             if (!path) return JSON.parse(JSON.stringify(_state));
             return _readSync(path);
         },
-
-        /* ── all() ─────────────────────────────────────────
-           Alias semântico de .get() sem argumento.
-           EXIGIDO pelo sentinel-debug-hud.js:
-           const state = window.StateStore?.all?.();
-        ─────────────────────────────────────────────────── */
-        all() {
-            return this.get();
-        },
-
-        /* ── set(path, value) ──────────────────────────────
-           Escreve L1, persiste L2 (se caminho crítico),
-           notifica watchers e emite state:changed via Bus.
-        ─────────────────────────────────────────────────── */
+        all() { return this.get(); },
         set(path, value) {
             const previous = this.get(path);
             _applySync(path, value);
-
-            /* ── L2: persistência seletiva ── */
             if (_shouldPersist(path)) _persistL2();
-
-            /* ── Flag global de boot ── */
             if (path === 'kernel.initialized' || path === 'system.booted') {
                 if (value === true) {
                     window.SENTINEL_BOOTED = true;
-                    _state.system.booted   = true;
+                    _state.system.booted = true;
                     _state.kernel.initialized = true;
                 }
             }
-
-            /* ── Histórico ── */
             _pushHistory({ path, previous, value, ts: Date.now() });
-
-            /* ── Watchers ── */
             _notifyWatchers(path, value);
-
-            /* ── Barramento (único canal de saída) ── */
-            window.SentinelBus?.emit('state:changed', {
-                path, value, previous, ts: Date.now()
-            });
-
-            /* ── Autodiagnóstico PFC-BRUT ── */
+            window.SentinelBus?.emit('state:changed', { path, value, previous, ts: Date.now() });
             if (path.includes('force') || path.includes('brut') || path.includes('override')) {
-                window.SentinelBus?.emit('diagnostic:pfc-brut', {
-                    path, value, severity: 'warning'
-                });
+                window.SentinelBus?.emit('diagnostic:pfc-brut', { path, value, severity: 'warning' });
             }
-
             return true;
         },
-
-        /* ── watch(path, fn) / unwatch(path, fn) ───────── */
         watch(path, fn) {
             if (!_watchers[path]) _watchers[path] = [];
             _watchers[path].push(fn);
         },
-
         unwatch(path, fn) {
             if (!_watchers[path]) return;
             _watchers[path] = _watchers[path].filter(cb => cb !== fn);
         },
-
-        /* ── snapshot() ────────────────────────────────────
-           Cópia profunda do estado L1 em determinado instante.
-        ─────────────────────────────────────────────────── */
-        snapshot() {
-            return JSON.parse(JSON.stringify(_state));
-        },
-
-        /* ── history() ─────────────────────────────────────
-           Retorna log de mutações (max 500 entradas).
-        ─────────────────────────────────────────────────── */
-        history() {
-            return [..._history];
-        },
-
-        /* ── clearMirror(path?) ─────────────────────────────
-           Remove a chave raiz L2. Aceita path para clareza
-           de API, mas a persistência é sempre atômica (root).
-        ─────────────────────────────────────────────────── */
+        snapshot() { return JSON.parse(JSON.stringify(_state)); },
+        history() { return [..._history]; },
         clearMirror(path = null) {
-            if (path) {
-                _log('info', `clearMirror chamado com path '${path}'. Limpando chave raiz.`);
-            }
+            if (path) _log('info', `clearMirror chamado com path '${path}'. Limpando chave raiz.`);
             localStorage.removeItem(ROOT_KEY);
             _log('warn', 'Mirror L2 removido.');
         },
-
-        /* ── recover() ─────────────────────────────────────
-           Re-executa L3 manualmente (uso em diagnóstico).
-        ─────────────────────────────────────────────────── */
         recover() {
             const n = _recoverL3();
             _log('success', `recover() manual: ${n} estado(s) restaurado(s).`);
             return n > 0;
         },
-
-        /* ── missionLock(mission?) ──────────────────────────
-           Sem argumento → retorna missão ativa.
-           Com string    → grava e persiste a missão.
-           Com null      → limpa a missão.
-        ─────────────────────────────────────────────────── */
         missionLock(mission) {
-            if (mission === undefined) {
-                return _state.mission.active;
-            }
-
+            if (mission === undefined) return _state.mission.active;
             if (mission === null) {
-                _state.mission.active   = null;
-                _state.mission.lockedAt = null;
+                _state.mission.active = null; _state.mission.lockedAt = null;
                 localStorage.removeItem(MISSION_LOCK_KEY);
                 window.SentinelBus?.emit('mission:cleared', { ts: Date.now() });
                 _log('warn', 'MissionLock liberado.');
                 return null;
             }
-
             if (typeof mission === 'string' && mission.trim().length >= 2) {
-                _state.mission.active   = mission;
-                _state.mission.lockedAt = Date.now();
+                _state.mission.active = mission; _state.mission.lockedAt = Date.now();
                 _state.mission.history.push({ mission, ts: Date.now() });
-
                 localStorage.setItem(MISSION_LOCK_KEY, mission);
                 _persistL2();
-
                 window.SentinelBus?.emit('mission:locked', { mission, ts: Date.now() });
                 window.SentinelBus?.emit('ui:nexus-update', { text: `MISSION_LOCK:\n${mission}` });
-                window.SentinelBus?.emit('state:changed', {
-                    path: 'mission.active', value: mission, previous: null, ts: Date.now()
-                });
-
+                window.SentinelBus?.emit('state:changed', { path: 'mission.active', value: mission, previous: null, ts: Date.now() });
                 _log('success', `MissionLock ativo: ${mission}`);
                 return mission;
             }
-
             _log('warn', 'missionLock: argumento inválido ignorado.');
             return _state.mission.active;
         },
-
-        /* ── diagnostics() ─────────────────────────────────
-           Relatório de integridade do módulo.
-        ─────────────────────────────────────────────────── */
         diagnostics() {
             return {
-                version:        this.version,
-                booted:         _state.system.booted,
-                recoveryMode:   _state.kernel.recoveryMode,
-                recoveredOnBoot: _recoveredCount,
-                mirrorKey:      ROOT_KEY,
-                mirrorPresent:  !!localStorage.getItem(ROOT_KEY),
-                watchers:       Object.keys(_watchers).length,
-                historyEntries: _history.length,
-                memorySize:     JSON.stringify(_state).length,
-                missionActive:  _state.mission.active,
-                bootSealed:     _bootSealed
+                version: this.version, booted: _state.system.booted, recoveryMode: _state.kernel.recoveryMode,
+                recoveredOnBoot: _recoveredCount, mirrorKey: ROOT_KEY, mirrorPresent: !!localStorage.getItem(ROOT_KEY),
+                watchers: Object.keys(_watchers).length, historyEntries: _history.length, memorySize: JSON.stringify(_state).length,
+                missionActive: _state.mission.active, bootSealed: _bootSealed
             };
         }
     };
-
 })();
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SENTINEL KERNEL v7.0
-   Responsabilidade: sequência de boot atômica e única.
-
-   CONTRATO:
-   — boot:complete é emitido UMA ÚNICA VEZ (_bootSealed).
-   — window.SENTINEL_BOOTED só passa para true via StateStore.set().
-   — Timeout de override permanece como failsafe de hardware (2s),
-     mas verifica _bootSealed antes de disparar para não duplicar.
+   SENTINEL KERNEL v7.0 (PRESERVADO INTEGRALMENTE)
 ═══════════════════════════════════════════════════════════════════════════ */
-
 const SentinelKernel = (() => {
-
-    const _log = (msg) =>
-        console.log(
-            `%c[KERNEL] ${msg}`,
-            'color:#7F00FF;font-weight:bold;font-family:monospace;'
-        );
-
-    /* Incrementa tentativas de boot no estado antes de qualquer emissão */
+    const _log = (msg) => console.log(`%c[KERNEL] ${msg}`, 'color:#7F00FF;font-weight:bold;font-family:monospace;');
     const _incrementBootAttempts = () => {
         const current = StateStore.get('kernel.bootAttempts') || 0;
         StateStore.set('kernel.bootAttempts', current + 1);
     };
-
-    /* Selo atômico: garante emissão única de boot:complete */
     let _bootSealed = false;
 
     const _sealBoot = (status = 'NOMINAL') => {
-        if (_bootSealed) {
-            _log(`boot:complete já emitido. Chamada extra ignorada (status: ${status}).`);
-            return false;
-        }
+        if (_bootSealed) { _log(`boot:complete já emitido. Chamada extra ignorada (status: ${status}).`); return false; }
         _bootSealed = true;
-
         StateStore.set('kernel.initialized', true);
-        StateStore.set('system.booted',      true);
+        StateStore.set('system.booted', true);
         StateStore.set('system.initializedAt', Date.now());
-
         window.SentinelBus?.emit('boot:complete', {
-            status,
-            ts:       Date.now(),
-            kernel:   'v7.0',
-            recovery: StateStore.get('kernel.recoveryMode') || false,
+            status, ts: Date.now(), kernel: 'v7.0', recovery: StateStore.get('kernel.recoveryMode') || false,
             recovered: StateStore.diagnostics?.()?.recoveredOnBoot ?? 0
         });
-
         _log(`Boot selado. Status: ${status}`);
         return true;
     };
 
     const init = () => {
         _log('Iniciando Soberania Operativa v7.0...');
-
-        /* Garante que a flag global começa em false nesta execução */
         window.SENTINEL_BOOTED = false;
-
         _incrementBootAttempts();
+        window.SentinelBus?.emit('boot:start', { ts: Date.now(), kernel: 'v7.0' });
 
-        window.SentinelBus?.emit('boot:start', {
-            ts:     Date.now(),
-            kernel: 'v7.0'
-        });
-
-        /* ── HEARTBEAT ──────────────────────────────────── */
         setInterval(() => {
             const cycles = (StateStore.get('telemetry.cycles') || 0) + 1;
-            StateStore.set('telemetry.cycles',         cycles);
-            StateStore.set('kernel.lastHeartbeat',     Date.now());
-
+            StateStore.set('telemetry.cycles', cycles);
+            StateStore.set('kernel.lastHeartbeat', Date.now());
             if (window.SENTINEL_BOOTED) {
-                window.SentinelBus?.emit('ui:pulse', {
-                    bpm: 72 + Math.floor(Math.random() * 5)
-                });
+                window.SentinelBus?.emit('ui:pulse', { bpm: 72 + Math.floor(Math.random() * 5) });
             }
         }, 1000);
 
-        /* ── VERIFICADOR DE INTEGRIDADE DE BOOT (failsafe) ─
-           Substitui a lógica impossível original:
-             if (!SENTINEL_BOOTED) { if (SENTINEL_BOOTED === true) { ... } }
-           Novo contrato: se após 2s o boot não foi selado,
-           o kernel assume controle via OVERRIDE e sela uma única vez.
-        ──────────────────────────────────────────────────── */
         setTimeout(() => {
             if (!_bootSealed) {
                 _log('Failsafe: hardware não respondeu em 2s. Ativando OVERRIDE...');
                 _sealBoot('OVERRIDE_ENABLED');
-               window.SENTINEL_BOOTED = true; //
+                window.SENTINEL_BOOTED = true;
             }
         }, 2000);
-
-        /* Expõe o seal para módulos externos que precisem confirmar boot */
         window._SentinelSealBoot = _sealBoot;
     };
-
     return { init, sealBoot: _sealBoot };
-
 })();
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   HANDSHAKE GLOBAL
-   Ordem: StateStore já executou L3 recovery no escopo do módulo.
-   Kernel.init() roda no load para garantir que o DOM e o Bus existam.
+   EXPANSÃO SOVEREIGN CORE v7.5 — RUNTIME NERVOUS SYSTEM
+   Foco: Composição, Sincronização, Gerenciamento de Pipeline e Grafo de Dependências.
 ═══════════════════════════════════════════════════════════════════════════ */
 
+class SentinelCoreComposition {
+    constructor() {
+        // 1. Runtime Composition System
+        this.modules = new Map();
+
+        // 2. Runtime Dependency Graph
+        this.dependencies = new Map();
+
+        // 3. Runtime Bootstrap Pipeline
+        this.BOOT_PHASES = ['PREINIT', 'KERNEL', 'SERVICES', 'RENDER', 'XR', 'COGNITION', 'HUD', 'READY'];
+        this.currentPhase = 'PREINIT';
+
+        // 5. Runtime Clock
+        this.clock = { delta: 0, elapsed: 0, frame: 0, fps: 60, _lastTime: Date.now() };
+
+        // 7. Runtime Layer Registry
+        this.layers = { kernel: [], runtime: [], cognition: [], render: [], interface: [], telemetry: [] };
+
+        // 9. Runtime Activation Matrix
+        this.activationMatrix = {
+            XR: ['renderer', 'xr', 'audio'],
+            LOW_POWER: ['scheduler'],
+            SAFE_MODE: ['kernel']
+        };
+
+        // 11. Runtime Middleware Pipeline
+        this.middleware = [];
+
+        // 12. Runtime Context Layer
+        this.context = { mission: null, focus: null, userState: null, cognitiveLoad: 0, xrZone: null };
+
+        // 13. Runtime Resource Broker
+        this.resources = { gpu: {}, cpu: {}, memory: {}, audio: {} };
+
+        // 15. Runtime Isolation Zones
+        this.zones = { critical: [], protected: [], isolated: [], background: [] };
+
+        // 23. Runtime Metrics Layer
+        this.metrics = { frameTime: [], fpsHistory: [], gpuHistory: [], xrHistory: [], schedulerHistory: [] };
+
+        // 24. Runtime Cognitive Bridge
+        this.cognition = { attention: {}, memory: {}, semanticState: {}, missionContext: {} };
+    }
+
+    // 1. Runtime Composition System
+    compose() {
+        this.trace('Iniciando composição do ecossistema SENTINEL...', 'INFO');
+        this.resolveDependencies();
+        this.syncRuntime();
+    }
+
+    mountModule(name, moduleInstance, layer = 'runtime', zone = 'protected') {
+        if (this.modules.has(name)) {
+            this.trace(`Módulo [${name}] já se encontra montado. Ignorando replicação.`, 'WARN');
+            return;
+        }
+        this.modules.set(name, moduleInstance);
+        if (this.layers[layer]) this.layers[layer].push(name);
+        if (this.zones[zone]) this.zones[zone].push(name);
+        
+        this.trace(`Módulo [${name}] montado com sucesso na camada [${layer}] / zona [${zone}].`);
+        this.initializeModule(name);
+    }
+
+    unmountModule(name) {
+        if (!this.modules.has(name)) return false;
+        this.modules.delete(name);
+        Object.keys(this.layers).forEach(l => this.layers[l] = this.layers[l].filter(m => m !== name));
+        Object.keys(this.zones).forEach(z => this.zones[z] = this.zones[z].filter(m => m !== name));
+        this.trace(`Módulo [${name}] desmontado da malha de composição.`, 'WARN');
+        return true;
+    }
+
+    initializeModule(name) {
+        const module = this.modules.get(name);
+        if (module && typeof module.init === 'function') {
+            try {
+                module.init(this);
+            } catch (err) {
+                this.trace(`Erro ao inicializar módulo [${name}]: ${err.message}`, 'ERROR');
+            }
+        }
+    }
+
+    // 2. Runtime Dependency Graph
+    defineDependency(module, deps) {
+        if (!Array.isArray(deps)) deps = [deps];
+        this.dependencies.set(module, deps);
+    }
+
+    resolveDependencies() {
+        this.trace('Validando e construindo grafo relacional de dependências...');
+        for (const [module, deps] of this.dependencies.entries()) {
+            for (const dep of deps) {
+                if (!this.modules.has(dep)) {
+                    this.trace(`Aviso de topologia: O módulo [${module}] requer [${dep}], que ainda não foi montado.`, 'WARN');
+                }
+            }
+        }
+    }
+
+    // 3. Runtime Bootstrap Pipeline
+    async runBootPhase(phase) {
+        if (!this.BOOT_PHASES.includes(phase)) {
+            throw new Error(`[CORE] Fase de boot desconhecida: ${phase}`);
+        }
+        this.currentPhase = phase;
+        this.trace(`Avançando Pipeline Backbone ──> Fase: [${phase}]`);
+        this.executeMiddleware({ type: 'PHASE_CHANGE', phase });
+
+        // Executa ganchos de sincronia baseados na fase atual se os módulos possuírem receptores
+        for (const [name, module] of this.modules.entries()) {
+            if (module && typeof module.onPhaseChange === 'function') {
+                try { await module.onPhaseChange(phase); } catch (e) {
+                    this.trace(`Erro na fase [${phase}] do módulo [${name}]: ${e.message}`, 'ERROR');
+                }
+            }
+        }
+    }
+
+    // 4. Runtime Synchronization Layer
+    synchronize() {
+        this.syncRuntime();
+        this.syncModules();
+    }
+
+    syncRuntime() {
+        // Puxa snapshots limpos do StateStore para unificação contextual do Core
+        const stateSnapshot = StateStore.get();
+        this.context.mission = stateSnapshot.ops.mission;
+        this.context.focus = stateSnapshot.ui.isFocusMode ? 'MAX_FOCUS' : 'NORMAL';
+        this.context.cognitiveLoad = stateSnapshot.telemetry.pfcLoad;
+    }
+
+    syncModules() {
+        this.modules.forEach((module, name) => {
+            if (module && typeof module.onSync === 'function') {
+                try { module.onSync(this.context); } catch (e) {
+                    this.trace(`Erro de sincronia no módulo [${name}]: ${e.message}`, 'ERROR');
+                }
+            }
+        });
+    }
+
+    // 5. Runtime Clock
+    updateClock() {
+        const now = Date.now();
+        this.clock.delta = (now - this.clock._lastTime) / 1000;
+        this.clock._lastTime = now;
+        this.clock.elapsed += this.clock.delta;
+        this.clock.frame++;
+        
+        if (this.clock.frame % 30 === 0) {
+            this.clock.fps = Math.round(1 / this.clock.delta);
+        }
+    }
+
+    // 6. Runtime Tick Coordinator
+    tick() {
+        this.updateClock();
+        const delta = this.clock.delta;
+
+        // Executa encadeamento de loops técnicos sem executar lógicas profundas diretamente no core
+        this._executeTickOnModule('kernel', delta);
+        this._executeTickOnModule('scheduler', delta);
+        this._executeTickOnModule('renderer', delta);
+        this._executeTickOnModule('xr', delta);
+        this._executeTickOnModule('attention', delta);
+        this._executeTickOnModule('hud', delta);
+        this._executeTickOnModule('telemetry', delta);
+
+        this.traceFrame();
+    }
+
+    _executeTickOnModule(name, delta) {
+        const module = this.modules.get(name);
+        if (module && typeof module.tick === 'function') {
+            try { module.tick(delta); } catch (e) {
+                this.trace(`Erro no loop cíclico do módulo [${name}]: ${e.message}`, 'ERROR');
+            }
+        }
+    }
+
+    // 8. Runtime Capability Discovery
+    discoverCapabilities(name) {
+        const module = this.modules.get(name);
+        if (module && Array.isArray(module.capabilities)) {
+            return module.capabilities;
+        }
+        return [];
+    }
+
+    // 10. Runtime Routing Layer & Communication Network
+    route(event, payload = {}) {
+        this.routeMessage({ event, payload });
+    }
+
+    routeMessage(message) {
+        this.executeMiddleware(message);
+        window.SentinelBus?.emit(`core:route:${message.event}`, message.payload);
+    }
+
+    routeCommand(targetModule, command, args = []) {
+        const module = this.modules.get(targetModule);
+        if (module && typeof module.executeCommand === 'function') {
+            return module.executeCommand(command, args);
+        }
+        this.trace(`Falha ao rotear comando para [${targetModule}]: Método inacessível.`, 'WARN');
+        return null;
+    }
+
+    // 11. Runtime Middleware Pipeline
+    use(middlewareFn) {
+        if (typeof middlewareFn === 'function') {
+            this.middleware.push(middlewareFn);
+        }
+    }
+
+    executeMiddleware(context) {
+        for (const mw of this.middleware) {
+            try { mw(context, this); } catch (e) {
+                this.trace(`Erro na execução de middleware de pipeline: ${e.message}`, 'ERROR');
+            }
+        }
+    }
+
+    // 13. Runtime Resource Broker
+    allocateResource(clientName, hardwareType, specification = {}) {
+        if (!this.resources[hardwareType]) this.resources[hardwareType] = {};
+        this.resources[hardwareType][clientName] = specification;
+        this.trace(`Recurso [${hardwareType}] alocado para módulo [${clientName}].`);
+        this.rebalanceResources();
+    }
+
+    releaseResource(clientName, hardwareType) {
+        if (this.resources[hardwareType] && this.resources[hardwareType][clientName]) {
+            delete this.resources[hardwareType][clientName];
+            this.trace(`Recurso [${hardwareType}] liberado pelo módulo [${clientName}].`);
+            this.rebalanceResources();
+        }
+    }
+
+    rebalanceResources() {
+        // Lógica de reequilíbrio estrutural de carga distribuída (HUD vs FX vs XR)
+        this.executeMiddleware({ type: 'RESOURCE_REBALANCE', allocation: this.resources });
+    }
+
+    // 14. Runtime Hot Reload System
+    reloadModule(name, newInstance) {
+        this.trace(`Iniciando Hot Reload do módulo: [${name}]`, 'WARN');
+        this.unmountModule(name);
+        this.mountModule(name, newInstance);
+        this.trace(`Hot Swap concluído com sucesso para o módulo: [${name}]`);
+    }
+
+    hotSwapModule(name, newInstance) {
+        this.reloadModule(name, newInstance);
+    }
+
+    // 16. Runtime Health Coordinator
+    healthCheck() {
+        return this.monitorRuntime();
+    }
+
+    monitorRuntime() {
+        let systemStable = true;
+        const healthSummary = { modulesChecked: [], anomalies: 0 };
+
+        this.modules.forEach((module, name) => {
+            if (module && typeof module.healthCheck === 'function') {
+                try {
+                    const status = module.healthCheck();
+                    if (!status) { systemStable = false; healthSummary.anomalies++; }
+                } catch (e) { healthSummary.anomalies++; }
+            }
+            healthSummary.modulesChecked.push(name);
+        });
+
+        return { stable: systemStable, summary: healthSummary };
+    }
+
+    // 17. Runtime Recovery Coordinator
+    recover() {
+        this.trace('Coordenando restauração em malha de rede...', 'WARN');
+        this.modules.forEach((module, name) => {
+            if (module && typeof module.onRecover === 'function') {
+                try { module.onRecover(); } catch (e) { }
+            }
+        });
+    }
+
+    rollback() {
+        this.trace('Iniciando Rollback sistêmico coordenado.');
+    }
+
+    restore() {
+        this.trace('Restaurando integridade operacional.');
+    }
+
+    // 18. Runtime Trace Engine
+    trace(event, level = 'INFO') {
+        const logMsg = `[${new Date().toISOString()}] [CORE:BACKBONE] [${level}] ${event}`;
+        if (level === 'ERROR') console.error(logMsg);
+        else if (level === 'WARN') console.warn(logMsg);
+        else console.log(logMsg);
+    }
+
+    traceFrame() {
+        if (this.clock.frame % 300 === 0 && this.metrics.frameTime.length > 0) {
+            this.trace(`Metrificação de FrameTime Médio: ${this.metrics.frameTime.reduce((a,b)=>a+b, 0) / this.metrics.frameTime.length}ms`);
+        }
+    }
+
+    traceModule(name, message) {
+        this.trace(`[Módulo: ${name}] ${message}`);
+    }
+
+    // 19. Runtime Snapshot Manager
+    createSnapshot() {
+        const snapshot = {
+            timestamp: Date.now(),
+            clock: { ...this.clock },
+            context: { ...this.context },
+            moduleStates: {}
+        };
+
+        this.modules.forEach((module, name) => {
+            if (module && typeof module.saveState === 'function') {
+                snapshot.moduleStates[name] = module.saveState();
+            }
+        });
+        return snapshot;
+    }
+
+    restoreSnapshot(snapshot) {
+        if (!snapshot) return;
+        this.clock = snapshot.clock;
+        this.context = snapshot.context;
+        this.modules.forEach((module, name) => {
+            if (module && snapshot.moduleStates[name] && typeof module.loadState === 'function') {
+                module.loadState(snapshot.moduleStates[name]);
+            }
+        });
+        this.trace('Snapshot operacional restaurado no Backbone.');
+    }
+
+    persistSnapshot() {
+        try {
+            localStorage.setItem('SENTINEL_BACKBONE_SNAPSHOT', JSON.stringify(this.createSnapshot()));
+        } catch (e) { }
+    }
+
+    // 20. Runtime Attention Bridge
+    syncAttention(attentionMetrics) {
+        if (attentionMetrics) {
+            this.cognition.attention = attentionMetrics;
+            this.updateFocus();
+        }
+    }
+
+    updateFocus() {
+        if (this.cognition.attention?.load > 0.8) {
+            this.suppressDistractions();
+        }
+    }
+
+    suppressDistractions() {
+        // Reduz atividade e logs de canais de telemetria secundários
+        const hud = this.modules.get('hud');
+        if (hud && typeof hud.setDenseMode === 'function') hud.setDenseMode(false);
+    }
+
+    // 21. Runtime State Reflection
+    reflectRuntimeState() {
+        return {
+            currentPhase: this.currentPhase,
+            activeModulesCount: this.modules.size,
+            clock: this.clock,
+            layersAllocation: this.layers,
+            zonesAllocation: this.zones
+        };
+    }
+
+    // 22. Runtime Security Hooks
+    validateRuntime() {
+        return this.checkIntegrity();
+    }
+
+    verifyModules() {
+        return this.checkIntegrity();
+    }
+
+    checkIntegrity() {
+        let secure = true;
+        this.modules.forEach((module, name) => {
+            if (module && typeof module.verifyToken === 'function') {
+                if (!module.verifyToken()) secure = false;
+            }
+        });
+        return secure;
+    }
+}
+
+// Inicialização e acoplamento na janela global
+const SovereignCore = new SentinelCoreComposition();
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HANDSHAKE GLOBAL COMPLETADO E AMPLIADO
+═══════════════════════════════════════════════════════════════════════════ */
 window.addEventListener('load', () => {
-
-    /* ── Exposição global controlada ── */
     window.StateStore  = StateStore;
-    window.StateVault  = StateStore; /* alias retroativo — elimina dependência do estore */
+    window.StateVault  = StateStore; // Alias mantido
     window.SentinelKernel = SentinelKernel;
+    window.SentinelCore = SovereignCore; // Registro unificado do Backbone de composição
 
-    /* ── Handshake com o Bus ── */
     window.SentinelBus?.emit('boot:module-ready', {
         module:  'StateStore',
         version: StateStore.version,
         ts:      Date.now()
     });
 
-    /* ── Inicia sequência de boot ── */
+    // Acopla o Loop Central de Composição ao requestAnimationFrame nativo da janela
+    if (window.SENTINEL_BOOTED || true) {
+        const coreLoop = () => {
+            SovereignCore.tick();
+            requestAnimationFrame(coreLoop);
+        };
+        requestAnimationFrame(coreLoop);
+    }
+
     SentinelKernel.init();
 
-    /* ── Log de missão restaurada (se existir) ── */
     const restoredMission = StateStore.missionLock();
     if (restoredMission) {
         window.SentinelBus?.emit('mission:restored', { mission: restoredMission });
@@ -638,30 +800,7 @@ window.addEventListener('load', () => {
     }
 });
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   LOG DE INICIALIZAÇÃO
-═══════════════════════════════════════════════════════════════════════════ */
-
 console.log(
-    '%c OMC SENTINEL CORE v7.0 ONLINE [SOVEREIGN-STATE][L1/L2/L3][ENE-READY] ',
-    'background:#000;color:#00FF41;border:1px solid #00FF41;padding:5px;font-family:monospace;'
+    '%c OMC SENTINEL CORE & COMPOSITION BACKBONE v7.5 ONLINE [NERVOUS-SYSTEM-READY] ',
+    'background:#000;color:#00D4FF;border:1px solid #00D4FF;padding:5px;font-family:monospace;'
 );
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   TABELA DE COMPATIBILIDADE — MÓDULOS DEPENDENTES
-
-   sentinel-bus.js          → sem alteração necessária
-   sentinel-debug-hud.js    → StateStore.all() agora existe ✓
-   js_sentinel_protocols.js → sem alteração necessária
-   js_sentinel_engine-xr.js → window.SENTINEL_BOOTED via StateStore ✓
-   js_sentinel_jarvis-voice.js →
-       MissionLockEngine.lock(m) pode chamar StateStore.missionLock(m)
-       localStorage direto ainda funciona (chave SENTINEL_MISSION_LOCK mantida)
-   index.html →
-       Remover: window.SENTINEL_BOOTED = true  (não mais necessário)
-       Manter:  SentinelBus.emit('boot:complete') → agora bloqueado por _bootSealed
-
-   ARQUIVO A DELETAR: sentinel-state-estore.js
-   REFERÊNCIAS A REMOVER DE index.html:
-       <script src="sentinel-state-estore.js">
-═══════════════════════════════════════════════════════════════════════════ */
