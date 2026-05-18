@@ -2,11 +2,8 @@
    OMC VR-OS | CSS_SENTINEL_HUD v9.0 — OPERATIONAL COGNITIVE HUD INFRASTRUCTURE
    Papel: Runtime Perceptivo Operacional e Governança de Carga Atencional
    Domínio: PRESENÇA OPERATIVA / DENSIDADE CONTEXTUAL / PROTEÇÃO CINESTÉSICA XR
-   
-   DIRETRIZ DE ARQUITETURA:
-   - Acoplamento determinístico sobre as camadas v1.0 / v6.6 (Biometria e Clocks).
-   - Conversão de seletores passivos em módulos responsivos a barramentos de hardware.
-   - Aplicação de regras estritas anti-overload e isolamento de contenção de pintura.
+   Diretriz Estrita: Banimento total de Flexbox/Grid em camadas de telemetria.
+   Estratégia: Coordenadas fixas absolutas acopladas diretamente à GPU.
 ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -18,411 +15,138 @@
     --hud-density:           1.0;  /* Nível de detalhamento escalar (0.0 a 1.0) */
     --hud-focus-strength:    1.0;  /* Multiplicador de drop-shadow e acuidade foveal */
     --hud-motion-scale:      1.0;  /* Fator de velocidade para mitigar fadiga/jitter */
-    --hud-immersion-level:   1.0;  /* Escala de profundidade e projeção estereoscópica */
+    --hud-immersion-depth:   1.0;  /* Deslocamento z-index espacial imersivo */
 
-    /* [PRESERVADO LEGACY v6.6] TOKENS DE TELEMETRIA BIOLÓGICA ORIGINAIS */
+    /* Tokens de Telemetria Biológica Reativos */
     --battery-critical:      #ff3e3e;
     --battery-warning:       #ffc400;
     --battery-optimal:       #00ff88;
+
     --latency-safe:          #00ff88;
     --latency-medium:        #ffc400;
     --latency-danger:        #ff4b00;
 
-    --clock-sync-glow:       0 0 12px rgba(0,255,136,0.18), 0 0 35px rgba(0,212,255,0.12);
-    --hud-warning-glow:      0 0 14px rgba(255,196,0,0.28), 0 0 40px rgba(255,75,0,0.16);
-    --hud-critical-glow:     0 0 18px rgba(255,62,62,0.35), 0 0 50px rgba(255,0,0,0.2);
+    --font-display:          'Times New Roman', serif;
+
+    /* Assinaturas de Brilho Estáticas de Baixo Overhead */
+    --clock-sync-glow:       0 0 12px rgba(0,255,136,0.18);
+    --hud-warning-glow:      0 0 14px rgba(255,196,0,0.28);
+    --hud-critical-glow:     0 0 18px rgba(255,62,62,0.4);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   2. HUD SPATIAL SYSTEM (Geografia Cognitiva Real)
+   2. MATRIX GEOMETRY LAYER (Isolamento de Layout Estrito)
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-zone-primary {
+
+/* Banimento Geral de Flexbox/Grid para Elementos de Telemetria em Fluxo Realtime */
+#sentinel-analytic-hud-overlay,
+#sentinel-analytic-hud-overlay *,
+.hud-telemetry-container,
+.hud-widget-wrapper,
+.biometric-sensor-layer,
+.telemetry-node {
+    display: block !important; /* Força comportamento de caixa pura e estática */
+    box-sizing: border-box;
+}
+
+/* Forçamento de Camada de Composição por Hardware Independente */
+#sentinel-analytic-hud-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 10000;
+    contain: strict; /* Isola tamanho, layout, pintura e estilo completamente do resto do DOM */
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    will-change: transform, opacity;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   3. ARRANJO COORDENADO DO DASHBOARD (Posicionamento Fixo/Absoluto)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Header Superior do HUD */
+#sentinel-analytic-hud-overlay div[style*="justify-content"] {
+    display: block !important; /* Desativa o flex inserido programaticamente */
     position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%) translateZ(calc(40px * var(--hud-immersion-level)));
-    width: 40vw; height: 40vh;
-    z-index: 300;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 40px;
+    padding: 10px 15px;
+    background: rgba(0, 212, 255, 0.15);
+    border-bottom: 1px solid #00D4FF;
 }
-.hud-zone-context {
+
+#hud-clock-sync {
     position: absolute;
-    top: 10%; left: 5%;
-    width: 90vw; height: 80vh;
-    pointer-events: none;
-    z-index: 200;
-}
-.hud-zone-passive {
-    position: absolute;
-    bottom: 4%; right: 4%;
-    z-index: 100;
-}
-.hud-zone-alert {
-    position: fixed;
-    top: 15%; left: 50%;
-    transform: translateX(-50%) translateZ(calc(60px * var(--hud-immersion-level)));
-    z-index: 500;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   3. HUD LAYER HIERARCHY (Camadas de Prioridade Operacional)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-layer-base {
-    z-index: 10;
-    opacity: calc(0.3 * var(--hud-opacity));
-}
-.hud-layer-runtime {
-    z-index: 100;
-    opacity: var(--hud-opacity);
-}
-.hud-layer-focus {
-    z-index: 1000;
-    transform: scale(calc(1.0 + (0.02 * var(--hud-focus-strength))));
-}
-.hud-layer-emergency {
-    z-index: 9999 !important;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   4. HUD ATTENTION SYSTEM & 5. HUD FOCUS MODULES
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-attention-primary {
-    filter: brightness(1.2) drop-shadow(0 0 calc(10px * var(--hud-focus-strength)) var(--cyan));
-}
-.hud-attention-secondary {
-    opacity: calc(0.6 * var(--hud-density));
-    filter: saturate(0.5);
-}
-.hud-attention-suppressed {
-    opacity: 0.1 !important;
-    filter: blur(4px) grayscale(1) !important;
-    pointer-events: none;
-}
-
-.hud-focus-module {
-    border: 1px solid rgba(0, 212, 255, var(--hud-focus-strength));
-    background: rgba(0, 4, 8, calc(0.6 * var(--hud-focus-strength)));
-}
-.hud-focus-lock {
-    animation: lockFocusPulse calc(2s / var(--hud-motion-scale)) infinite alternate;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   6. MISSION HUD (Eixo Central de Operação)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-mission-primary {
-    border-left: 3px solid var(--green-flow);
-    padding-left: 12px;
-    margin-bottom: 8px;
-}
-.hud-objective {
+    right: 15px;
+    top: 10px;
     font-weight: bold;
-    letter-spacing: 0.15em;
-    color: #fff;
-    text-shadow: 0 0 calc(8px * var(--hud-focus-strength)) var(--green-flow);
-}
-.hud-mission-context {
-    font-size: 11px;
-    color: rgba(0, 212, 255, 0.7);
+    color: var(--battery-optimal);
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   7. RUNTIME TELEMETRY HUD (Sinalização de Estado do Kernel)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-runtime {
-    font-family: monospace;
-    text-transform: uppercase;
-}
-.hud-runtime-events {
-    border-bottom: 1px dashed rgba(0, 212, 255, 0.25);
-    height: calc(120px * var(--hud-density));
+/* Painel de Conteúdo Interno de Alta Densidade */
+#sentinel-analytic-hud-overlay div[style*="flex: 1"] {
+    display: block !important;
+    position: absolute;
+    top: 40px;
+    bottom: 35px;
+    left: 0;
+    width: 100%;
+    padding: 25px;
     overflow: hidden;
 }
-.hud-runtime-state::before {
-    content: '[MODE_ACTIVE]: ';
-    color: var(--green-flow);
-}
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   8. PERFORMANCE HUD (Consciência em Tempo Real)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-fps::after     { content: ' FPS'; font-size: 9px; }
-.hud-gpu::after     { content: ' GPU_LOAD'; font-size: 9px; }
-.hud-memory::after  { content: ' MEM_POOL'; font-size: 9px; }
-.hud-thermal::after { content: ' THERMAL_SYS'; font-size: 9px; }
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   9. XR HUD SYSTEM (Estabilidade Visual Estereoscópica)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-xr-safe {
-    backface-visibility: hidden;
-    transform-style: flat;
-}
-.hud-xr-depth {
-    transform: translateZ(calc(-150px * var(--hud-immersion-level)));
-}
-.hud-xr-anchor {
+/* Alocação em Coordenadas Fixas de Linhas para Evitar Empurramento Macio (Push) */
+#sentinel-analytic-hud-overlay div[style*="flex: 1"] > div {
     position: absolute;
-    transform: translate3d(0, 0, 0);
-    will-change: transform;
+    left: 25px;
+    right: 25px;
+    height: 30px;
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   10. COGNITIVE DENSITY CONTROL (Mitigação de Overload)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-density-low .hud-zone-context {
-    display: none !important; /* Desativa visão computacional complexa periférica */
-}
-.hud-density-low [class*="hud-layer-base"] {
-    opacity: 0 !important;
-}
-.hud-density-medium {
-    transform: scale(0.95);
-}
-.hud-density-high {
-    transform: scale(1.0);
-}
+/* Mapeamento Matemático de Altura de Linhas (Garantia de Espaçamento sem Reflow) */
+#sentinel-analytic-hud-overlay div[style*="flex: 1"] > div:nth-child(1) { top: 25px; }  /* RUNTIME GRAPH */
+#sentinel-analytic-hud-overlay div[style*="flex: 1"] > div:nth-child(2) { top: 65px; }  /* SCHEDULER QUEUE */
+#sentinel-analytic-hud-overlay div[style*="flex: 1"] > div:nth-child(3) { top: 105px; } /* GPU PRESSURE */
+#sentinel-analytic-hud-overlay div[style*="flex: 1"] > div:nth-child(4) { top: 145px; } /* ATTENTION HEATMAP */
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   11. SEMANTIC HUD LAYER & 12. NEUROADAPTIVE HUD
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-semantic-primary {
-    border: 1px solid var(--green-flow) !important;
-}
-.hud-semantic-context {
-    border: 1px solid rgba(0, 212, 255, 0.15) !important;
-}
-
-.hud-neuroadaptive {
-    will-change: transform, filter, opacity;
-}
-.hud-cognitive-mode {
-    transition: all calc(0.3s / var(--hud-motion-scale)) ease-in-out;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   13. ALERT HUD SYSTEM & 14. EMERGENCY HUD LAYER
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-alert-warning {
-    color: var(--battery-warning);
-    box-shadow: var(--hud-warning-glow);
-    border: 1px solid var(--battery-warning);
-}
-.hud-alert-critical {
-    color: var(--battery-critical);
-    box-shadow: var(--hud-critical-glow);
-    border: 1px solid var(--battery-critical);
-    animation: metabolicStress calc(0.5s / var(--hud-motion-scale)) infinite alternate;
-}
-.hud-alert-emergency {
-    color: #ff0055;
-    background: rgba(15, 0, 5, 0.95);
-    border: 2px solid #ff0055;
-}
-
-.hud-emergency-lock {
-    position: fixed !important;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    background: #020001 !important;
-    z-index: 99999 !important;
-}
-.hud-emergency-overlay {
-    transform: translateZ(100px) scale(1.05);
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   15. RECOVERY HUD MODE (Minimização Sensorial de Crise)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-recovery {
-    --hud-opacity: 0.3 !important;
-    --hud-density: 0.0 !important;
-    --hud-focus-strength: 0.0 !important;
-    --hud-motion-scale: 0.0 !important;
-}
-.hud-low-stimulation * {
-    animation: none !important;
-    text-shadow: none !important;
-    box-shadow: none !important;
-    filter: grayscale(1) brightness(0.5) !important;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   16. PERIPHERAL HUD SYSTEM & 17. CONTEXT HUD LAYER
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-peripheral {
+/* Bloco de Integridade de Saúde (Module Health Layer) Ancorado Abaixo */
+#sentinel-analytic-hud-overlay div[style*="margin-top: auto"] {
     position: absolute;
-    width: 100%; height: 100%;
-    pointer-events: none;
-}
-.hud-peripheral-muted {
-    opacity: calc(0.15 * var(--hud-density));
-    filter: blur(2px);
-}
-
-.hud-context {
-    display: flex;
-    gap: 8px;
-}
-.hud-context-cluster {
-    opacity: calc(0.7 * var(--hud-density));
+    bottom: 25px;
+    left: 25px;
+    right: 25px;
+    height: 40px;
+    border-top: 1px dashed rgba(0, 212, 255, 0.3);
+    padding-top: 15px;
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   18. IMMERSION HUD & 19. MOTION GOVERNANCE
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-immersive {
-    backdrop-filter: blur(calc(12px * var(--hud-immersion-level)));
-}
-.hud-atmospheric {
-    background: radial-gradient(circle, transparent 40%, rgba(0,4,8, calc(0.8 * var(--hud-immersion-level))));
-}
-
-.hud-motion-focus {
-    transition: transform calc(0.15s / var(--hud-motion-scale)) cubic-bezier(0.2, 1, 0.2, 1);
-}
-.hud-motion-passive {
-    animation-duration: calc(10s * var(--hud-motion-scale)) !important;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   20. TEMPORAL PERSISTENCE & 21. DYNAMIC LAYOUT ADAPTATION
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-persistent {
-    contain: layout paint size;
-}
-.hud-memory {
-    transition: opacity 1.5s ease-in-out;
-}
-
-.hud-layout-adaptive {
-    display: flex;
-    flex-direction: column;
-}
-.hud-layout-focus {
-    justify-content: center;
-    align-items: center;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   22. GPU-AWARE HUD & 23. MINIMAL HUD MODES
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-gpu-light {
-    transform: none !important;
-    filter: none !important;
-}
-.hud-gpu-heavy {
-    will-change: transform, opacity;
-    contain: strict;
-}
-
-.hud-minimal .hud-zone-context,
-.hud-minimal .hud-zone-passive {
-    display: none !important;
-}
-.hud-focus-only .hud-zone-primary {
+/* Footer de Comandos do HUD */
+#sentinel-analytic-hud-overlay div[style*="border-top: 1px solid rgba(0, 212, 255, 0.3)"] {
     display: block !important;
-    width: 100vw; height: 100vh;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 35px;
+    padding: 8px 15px;
+    background: rgba(2, 6, 12, 0.9);
+    border-top: 1px solid rgba(0, 212, 255, 0.3);
 }
-.hud-immersive-minimal {
-    background: transparent !important;
-    border: none !important;
+
+#sentinel-analytic-hud-overlay div[style*="border-top: 1px solid rgba(0, 212, 255, 0.3)"] span:nth-child(2) {
+    position: absolute;
+    right: 15px;
+    top: 8px;
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   24. FOCUS LOCK HUD & 25. SCHEDULER VISUALIZATION
+   4. ESTADOS DE FALHA E COMPORTAMENTOS RETROCOMPATÍVEIS
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-scheduler {
-    border-top: 2px solid var(--cyan);
-    font-size: 10px;
-}
-.hud-task-queue {
-    display: flex;
-    flex-direction: row;
-    gap: 2px;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   26. RUNTIME DIAGNOSTICS LAYER & 27. AUDIO REACTIVE
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-diagnostics {
-    border: 1px double rgba(0,255,65,0.4);
-    background: #000408;
-}
-.hud-runtime-health {
-    box-shadow: inset 0 0 15px rgba(0,255,65,0.1);
-}
-
-.hud-audio-reactive {
-    will-change: transform;
-}
-.hud-audio-pulse {
-    transform: scale(calc(1.0 + (0.04 * var(--hud-focus-strength))));
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   28. WEBGPU HUD BRIDGE / 29. PREDICTIVE / 30. AUTONOMOUS
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.hud-webgpu-ready { content-visibility: auto; }
-.hud-predictive   { opacity: calc(0.8 * var(--hud-density)); }
-.hud-preemptive-alert { border-right: 3px double var(--battery-warning); }
-.hud-autonomous   { will-change: auto; }
-
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   [PRESERVADO LEGACY v6.6] SELETORES ESTRUTURAIS HUD
-   Compatibilidade total com telemetrias e patches anteriores
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-#topbar-telemetry {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 24px;
-    background: linear-gradient(to bottom, rgba(0,4,8,0.95), transparent);
-    border-bottom: 1px solid rgba(0, 212, 255, 0.08);
-}
-
-.biometric-group {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.biometric-node {
-    font-family: var(--font-display, monospace);
-    font-size: 11px;
-    letter-spacing: var(--tracking-wide, 0.1em);
-}
-
-.biometric-label {
-    color: rgba(0, 212, 255, 0.45);
-}
-
-.biometric-value {
-    font-weight: bold;
-    transition: color 0.2s ease;
-}
-
-/* Status variants */
-.biometric-value.optimal { color: var(--battery-optimal); }
-.biometric-value.warning { color: var(--battery-warning); }
-.biometric-value.critical {
-    color: var(--battery-critical);
-    animation: metabolicStress 0.4s infinite alternate;
-}
-
-.latency-display .biometric-value.safe { color: var(--latency-safe); }
-.latency-display .biometric-value.medium { color: var(--latency-medium); }
-.latency-display .biometric-value.danger {
-    color: var(--latency-danger);
-    text-shadow: 0 0 8px rgba(255,75,0,0.4);
-}
-
-/* Clock Display Component */
-.clock-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: crosshair;
-}
-
 #clock-display {
     font-family: var(--font-display, monospace);
     font-size: 13px;
@@ -438,38 +162,45 @@
     animation: clockFailure 0.6s infinite ease-in-out;
 }
 
-/* Patch States styles */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   5. ANIMAÇÕES DE DRIVER E COMPOSIÇÃO DE HARDWARE (MIGRADAS PARA GPU)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@keyframes lockFocusPulse {
+    from { transform: scale3d(1, 1, 1); opacity: 0.8; }
+    to { transform: scale3d(1.03, 1.03, 1); opacity: 1; }
+}
+
+@keyframes metabolicStress {
+    0% { opacity: 0.8; transform: translate3d(0,0,0); }
+    100% { opacity: 1; transform: translate3d(0,-2px,0); }
+}
+
+@keyframes clockFailure {
+    0% { opacity: 1; transform: scale3d(1, 1, 1); }
+    25% { opacity: 0.2; transform: scale3d(0.95, 0.95, 1); }
+    50% { opacity: 1; transform: scale3d(1.05, 1.05, 1); }
+    100% { opacity: 1; transform: scale3d(1, 1, 1); }
+}
+
+@keyframes telemetryNoise {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(0, 4px, 0); }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   6. PATCH STATES (Legados v6.6 Mantidos)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .predef-all-patch .cmd-input,
 .predef-all-patch .terminal-window {
-    border-color: rgba(255,196,0,0.35);
-    box-shadow: 0 0 25px rgba(255,196,0,0.08);
+    border-color: rgba(255, 196, 0, 0.35);
+    box-shadow: 0 0 25px rgba(255, 196, 0, 0.08);
 }
 
 .predef-all-patch .cmd-input::placeholder {
-    color: rgba(255,196,0,0.35);
+    color: rgba(255, 196, 0, 0.35);
 }
 
 .predef-all-patch .sys-id {
     color: #ffc400 !important;
-    text-shadow: 0 0 10px rgba(255,196,0,0.4) !important;
-}
-
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   ANIMAÇÕES DE DRIVER E COMPOSIÇÃO DE HARDWARE
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-@keyframes lockFocusPulse {
-    from { box-shadow: inset 0 0 8px rgba(0,212,255,0.2); }
-    to { box-shadow: inset 0 0 20px rgba(0,212,255,0.5); }
-}
-@keyframes metabolicStress {
-    from { filter: brightness(1) saturate(1); }
-    to { filter: brightness(1.25) saturate(1.4); }
-}
-@keyframes clockFailure {
-    0% { opacity: 1; transform: scale(1); }
-    25% { opacity: 0.2; transform: scale(0.8); }
-    50% { opacity: 1; transform: scale(1.4); }
-    75% { opacity: 0.35; transform: scale(0.9); }
-    100% { opacity: 1; transform: scale(1); }
+    text-shadow: 0 0 10px rgba(255, 196, 0, 0.4) !important;
 }
