@@ -1,506 +1,316 @@
 /**
- * ============================================================================
- * SENTINEL CORE RUNTIME ARCHITECTURE
- * Module: sentinel-audio-engine.js
- * Role: Cognitive Spatial Audio Infrastructure (Sovereign Presence Engine)
- * Design Aesthetic: Procedural Acoustic Synthesis & Mathematical Attenuation Hierarchy
- * ============================================================================
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SENTINEL v9.0 — COGNITIVE SPATIAL AUDIO INFRASTRUCTURE (PRESENÇA OPERACIONAL)
+ * Arquivo: sentinel-audio-engine.js
+ * Papel: Síntese de Áudio Procedural, Espacialização 3D e Modulação de Foco
+ * Governança: Totalmente subordinado ao SovereignKernel. Sem auto-boot implícito.
+ * Integrando: Spatial Audio, Alert Tones, Focus Tones, Gamma Sync, Ambience e Routing.
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 
-// 27. MULTI-CHANNEL GOVERNANCE CHANNELS
-const AUDIO_CHANNELS = {
-  ALERTS:    'ALERTS',    // Canal soberano: Exceções críticas, pânico de hardware, alertas biométricos
-  AMBIENCE:  'AMBIENCE',  // Ambiência espacializada e ruídos de fundo reativos
-  COGNITION: 'COGNITION', // Tons de foco foveal, pulsos gama e indução de ressonância
-  MISSION:   'MISSION',   // Sinais táticos de objetivos, telemetria audível de progresso
-  XR:        'XR'         // Matrizes tridimensionais, nós de interface física e transformações espaciais
-};
-
-// 15. AUDIO ZONES GEOGRAPHY
-const AUDIO_ZONES = {
-  PRIMARY:   'PRIMARY',   // Campo foveal focado (+/- 15 graus à frente do olhar)
-  SECONDARY: 'SECONDARY', // Periferia acústica imediata
-  IMMERSIVE: 'IMMERSIVE', // Campo omnidirecional de preenchimento atmosférico
-  SUPPRESSED: 'SUPPRESSED' // Regiões silenciadas ou atenuadas por saturação semântica
-};
-
 class SentinelAudioEngine {
-  constructor() {
-    this.version = '9.0-COGNITIVE-AUDIO';
-    this.isActive = true;
-    this.currentProfile = 'NORMAL';
+    constructor() {
+        this.version = "9.0-OPERATIONAL-PRESENCE";
+        this.isActive = false;
 
-    // 1. AUDIO RUNTIME CORE
-    this.audio = {
-      context: null,
-      buses: new Map(),       // Canal ID -> AudioNode (Gain/DynamicsCompressor)
-      channels: new Map(),    // Nome -> Objeto de Controle de Canal
-      emitters: new Map(),    // ID -> PannerNode espacializado
-      activeMix: 'NOMINAL'
-    };
+        // Infraestrutura nativa do ecossistema WebAudio
+        this.audioCtx = null;
+        this.masterGain = null;
 
-    // 2. SPATIAL AUDIO ENGINE STATE
-    this.spatial = { position: { x: 0, y: 0, z: 0 }, direction: { x: 0, y: 0, z: -1 }, distance: 0.0, occlusion: false, attenuation: 1.0 };
+        // F) EVENT AUDIO ROUTING: Nós de ganho dedicados por canal de prioridade estrutural
+        this.channels = {
+            ALERTS:    { gainNode: null, weight: 1.0 }, // Exceções críticas e pânico térmico
+            COGNITION: { gainNode: null, weight: 0.7 }, // Tons de foco e Gamma Sync
+            MISSION:   { gainNode: null, weight: 0.5 }, // Notificações táticas de progresso
+            AMBIENCE:  { gainNode: null, weight: 0.2 }  // Ruídos procedurais de atmosfera e fundo
+        };
 
-    // 3. COGNITIVE AUDIO LAYER
-    this.cognitive = { salience: 1.0, focus: 0.5, suppression: 0.0, immersion: 0.8 };
+        // A) SPATIAL AUDIO: Coordenadas da cabeça (ouvinte) e nós panners ativos
+        this.listenerCoords = { x: 0, y: 0, z: 0, forwardX: 0, forwardY: 0, forwardZ: -1 };
+        this.activeSpatialPanners = new Map();
 
-    // 4. ATTENTION AUDIO SYSTEM
-    this.attention = { focusTone: null, lockCue: true, transitionCue: true, saliencePing: true };
+        // D) GAMMA SYNC AUDIO: Armazenamento do oscilador de ressonância contínuo
+        this.gammaSyncNode = null;
 
-    // 5. ALERT AUDIO SYSTEM
-    this.alerts = { critical: [], warning: [], passive: [], emergency: false };
-
-    // 6. MISSION AUDIO LAYER
-    this.mission = { operationalState: 'IDLE', objectiveSignals: true, missionTransitions: true };
-
-    // 7. XR PRESENCE ENGINE & 28. XR COMFORT AUDIO SYSTEM
-    this.xr = { immersion: 1.0, comfort: 1.0, stabilization: true, spatialPresence: 'STABLE' };
-    this.xrComfort = { stabilization: true, lowFatigue: true, smoothTransitions: true };
-
-    // 8. ENVIRONMENTAL AUDIO SYSTEM
-    this.environment = { ambience: null, atmosphere: 0.5, environmentalReactivity: true };
-
-    // 9. PROCEDURAL SOUND ENGINE & 11. FOCUS TONE ENGINE
-    this.procedural = { synthesis: true, modulation: true, reactiveGeneration: true };
-    this.focusTones = { lock: false, sustain: null, release: false };
-
-    // 10. NEUROACOUSTIC SYNCHRONIZATION & 12. GAMMA SYNC SYSTEM
-    this.neuroSync = { rhythm: 1.0, pulse: 0.0, cognitiveResonance: 0.5 };
-    this.gammaSync = { pulseRate: 40.0, immersionSync: true, alertResonance: false }; // 40Hz Gama Padrão
-
-    // 13. DYNAMIC MIXING ENGINE
-    this.mixing = { priorities: new Map(), adaptiveGain: true, contextualCompression: true };
-
-    // 14. SPATIAL PRIORITY SYSTEM
-    this.spatialPriority = { focusRegion: AUDIO_ZONES.IMMERSIVE, peripheralAudio: 1.0, suppressionZones: new Set() };
-
-    // 17. AUDIO TELEMETRY METRICS
-    this.metrics = { activeChannels: 0, audioLoad: 0.0, immersionDepth: 1.0, focusCoherence: 1.0 };
-
-    // 18. AUDIO PERFORMANCE MANAGER
-    this.performance = { cpuCost: 'LOW', spatialCost: 'HRTF_HIGH', synthesisLoad: 0.0 };
-
-    // 20. SEMANTIC AUDIO MAPPING & 21. MEMORY AUDIO LINKING
-    this.semanticAudio = { contextMapping: new Map(), missionMapping: new Map(), emotionalWeight: 1.0 };
-    this.audioMemory = { contextualRecall: [], missionAssociation: [], focusPersistence: 0.85 };
-
-    // 23. AUDIO SAFETY LAYER
-    this.safety = { volumeProtection: true, fatigueProtection: true, overloadProtection: true, maxGainAllowed: 1.2 };
-
-    this._lastPulseTime = performance.now();
-    this._initAudioEngine();
-  }
-
-  // ==========================================================================
-  // AudioContext Bootstrap & Pipeline Construction
-  // ==========================================================================
-
-  _initAudioEngine() {
-    this.traceAudio('Invocando infraestrutura acústica modular...', 'INFO');
-    
-    // Lazy binding acoplado a interações do usuário para contornar políticas de segurança do navegador
-    this.bindBusEvents();
-
-    // Loop de equilíbrio contínuo e modulação procedural
-    const audioPulse = () => {
-      if (!this.isActive) return;
-      this.maintainAudioEquilibrium();
-      requestAnimationFrame(audioPulse);
-    };
-    requestAnimationFrame(audioPulse);
-  }
-
-  _unlockAudioContext() {
-    if (this.audio.context) return;
-
-    try {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      this.audio.context = new AudioContextClass();
-      
-      // Construção do Compressor Geral de Segurança do Master Bus (23. Safety Layer)
-      const masterCompressor = this.audio.context.createDynamicsCompressor();
-      masterCompressor.threshold.setValueAtTime(-24, this.audio.context.currentTime);
-      masterCompressor.knee.setValueAtTime(12, this.audio.context.currentTime);
-      masterCompressor.ratio.setValueAtTime(4, this.audio.context.currentTime);
-      masterCompressor.attack.setValueAtTime(0.003, this.audio.context.currentTime);
-      masterCompressor.release.setValueAtTime(0.25, this.audio.context.currentTime);
-      masterCompressor.connect(this.audio.context.destination);
-
-      // Inicialização soberana das trilhas de governança multicanal (27. Governance)
-      Object.keys(AUDIO_CHANNELS).forEach((channelKey) => {
-        const channelGain = this.audio.context.createGain();
-        channelGain.gain.setValueAtTime(0.7, this.audio.context.contextTime || 0);
-        channelGain.connect(masterCompressor);
-
-        this.audio.buses.set(AUDIO_CHANNELS[channelKey], channelGain);
-      });
-
-      this._startProceduralAtmosphere();
-      this.traceAudio('AudioContext estabelecido. Pipeline e limitadores de segurança armados.');
-    } catch (error) {
-      this.traceAudio(`Falha crônica ao instanciar barramento de áudio: ${error.message}`, 'CRITICAL');
+        this.bus = null;
     }
-  }
 
-  // ==========================================================================
-  // 2. SPATIAL AUDIO ENGINE & 15. AUDIO ZONES
-  // ==========================================================================
+    // ═══════════════════════════════════════════════════════════════════════
+    // INICIALIZAÇÃO RETARDADA E CONFIGURAÇÃO DE ROTAS (EVENT AUDIO ROUTING)
+    // ═══════════════════════════════════════════════════════════════════════
+    initializeAudioContext() {
+        if (this.isActive) return;
 
-  createSpatialEmitter(id, x = 0, y = 0, z = 0, channel = AUDIO_CHANNELS.XR) {
-    if (!this.audio.context) return null;
+        try {
+            // Instancia o contexto de áudio em conformidade com as restrições de segurança de hardware
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            this.audioCtx = new AudioContextClass();
+            
+            // Cria o nó mestre de atenuação de saída
+            this.masterGain = this.audioCtx.createGain();
+            this.masterGain.gain.setValueAtTime(0.8, this.audioCtx.currentTime);
+            this.masterGain.connect(this.audioCtx.destination);
 
-    let panner = null;
-    this.safeAudioCall(() => {
-      panner = this.audio.context.createPanner();
-      // Configuração rígida de simulação tridimensional realista por HRTF
-      panner.panningModel = 'HRTF';
-      panner.distanceModel = 'inverse';
-      panner.refDistance = 1.0;
-      panner.maxDistance = 10000;
-      panner.rolloffFactor = 1.5;
-      panner.coneInnerAngle = 360;
+            // F) EVENT AUDIO ROUTING: Montagem física da malha de roteamento por sub-canais
+            Object.keys(this.channels).forEach(channelKey => {
+                const gNode = this.audioCtx.createGain();
+                gNode.gain.setValueAtTime(this.channels[channelKey].weight, this.audioCtx.currentTime);
+                gNode.connect(this.masterGain);
+                this.channels[channelKey].gainNode = gNode;
+            });
 
-      panner.positionX.setValueAtTime(x, this.audio.context.currentTime);
-      panner.positionY.setValueAtTime(y, this.audio.context.currentTime);
-      panner.positionZ.setValueAtTime(z, this.audio.context.currentTime);
+            this.isActive = true;
+            this._trace('LIFECYCLE', 'WebAudio API Context ativado. Rotas de canais estabelecidas de forma segura.');
 
-      const bus = this.audio.buses.get(channel);
-      if (bus) panner.connect(bus);
+            // Inicializa geradores contínuos em segundo plano
+            this._startEnvironmentalAmbience();
+            this._startGammaSyncOscillator();
 
-      this.audio.emitters.set(id, panner);
-    });
-
-    return panner;
-  }
-
-  updateSpatialListener(x, y, z, orientX, orientY, orientZ) {
-    if (!this.audio.context) return;
-    
-    const listener = this.audio.context.listener;
-    const now = this.audio.context.currentTime;
-
-    // Atualiza vetores espaciais do operador em tempo real vindos do Engine WebXR
-    this.spatial.position = { x, y, z };
-    this.spatial.direction = { x: orientX, y: orientY, z: orientZ };
-
-    if (typeof listener.positionX !== 'undefined') {
-      listener.positionX.setValueAtTime(x, now);
-      listener.positionY.setValueAtTime(y, now);
-      listener.positionZ.setValueAtTime(z, now);
-      listener.forwardX.setValueAtTime(orientX, now);
-      listener.forwardY.setValueAtTime(orientY, now);
-      listener.forwardZ.setValueAtTime(orientZ, now);
-    } else {
-      // Método de compatibilidade fallback para navegadores legados
-      listener.setOrientation(orientX, orientY, orientZ, 0, 1, 0);
+        } catch (err) {
+            this._trace('LIFECYCLE', `Falha severa ao instanciar barramento de áudio: ${err.message}`, 'CRITICAL');
+        }
     }
-  }
 
-  // ==========================================================================
-  // 9. PROCEDURAL SOUND ENGINE & 11. FOCUS TONE ENGINE
-  // ==========================================================================
+    // ═══════════════════════════════════════════════════════════════════════
+    // A) SPATIAL AUDIO INTERFACE (ATUALIZAÇÃO DE COORDENADAS)
+    // ═══════════════════════════════════════════════════════════════════════
+    updateListenerOrientation(x, y, z, fx, fy, fz) {
+        if (!this.isActive || !this.audioCtx) return;
 
-  _startProceduralAtmosphere() {
-    if (!this.procedural.synthesis || !this.audio.context) return;
+        this.listenerCoords = { x, y, z, forwardX: fx, forwardY: fy, forwardZ: fz };
+        const listener = this.audioCtx.listener;
 
-    // Síntese de Hum Atmosférico de Baixa Frequência (Estabilidade e Preservação XR)
-    const osc = this.audio.context.createOscillator();
-    const filter = this.audio.context.createBiquadFilter();
-    const gain = this.audio.context.createGain();
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(60.0, this.audio.context.currentTime); // 60Hz Base Ground Hum
-
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(120.0, this.audio.context.currentTime);
-
-    gain.gain.setValueAtTime(0.12, this.audio.context.currentTime);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    
-    const ambienceBus = this.audio.buses.get(AUDIO_CHANNELS.AMBIENCE);
-    if (ambienceBus) gain.connect(ambienceBus);
-
-    osc.start();
-    this.environment.ambience = { osc, gain };
-  }
-
-  triggerFocusTone(state = 'START') {
-    if (!this.audio.context) return;
-
-    this.safeAudioCall(() => {
-      const now = this.audio.context.currentTime;
-
-      if (state === 'START' || state === 'LOCK') {
-        if (this.focusTones.sustain) return; // Já em execução
-
-        // 11. Focus Tone Engine: Síntese Binaural de Ondas Senoidais casadas para indução atencional
-        const oscL = this.audio.context.createOscillator();
-        const oscR = this.audio.context.createOscillator();
-        const pannerL = this.audio.context.createStereoPanner ? this.audio.context.createStereoPanner() : null;
-        const pannerR = this.audio.context.createStereoPanner ? this.audio.context.createStereoPanner() : null;
-        const gain = this.audio.context.createGain();
-
-        // Janela de Ressonância Gama de 40Hz (12. Gamma Sync System)
-        oscL.frequency.setValueAtTime(200.0, now);
-        oscR.frequency.setValueAtTime(200.0 + this.gammaSync.pulseRate, now);
-
-        gain.gain.setValueAtTime(0.0, now);
-        // Rampagem suave para evitar transientes e estalos acústicos (28. XR Comfort Audio)
-        gain.gain.linearRampToValueAtTime(0.25, now + 1.5);
-
-        if (pannerL && pannerR) {
-          pannerL.pan.setValueAtTime(-1, now);
-          pannerR.pan.setValueAtTime(1, now);
-          oscL.connect(pannerL).connect(gain);
-          oscR.connect(pannerR).connect(gain);
+        // Suporta sintaxe moderna e legada para orientação espacial WebXR
+        if (listener.positionX) {
+            listener.positionX.setValueAtTime(x, this.audioCtx.currentTime);
+            listener.positionY.setValueAtTime(y, this.audioCtx.currentTime);
+            listener.positionZ.setValueAtTime(z, this.audioCtx.currentTime);
+            listener.forwardX.setValueAtTime(fx, this.audioCtx.currentTime);
+            listener.forwardY.setValueAtTime(fy, this.audioCtx.currentTime);
+            listener.forwardZ.setValueAtTime(fz, this.audioCtx.currentTime);
         } else {
-          oscL.connect(gain);
-          oscR.connect(gain);
+            // Fallback para navegadores imersivos antigos
+            listener.setPosition(x, y, z);
+            listener.setOrientation(fx, fy, fz, 0, 1, 0);
+        }
+    }
+
+    createSpatialSource(sourceId, posX, posY, posZ) {
+        if (!this.isActive || !this.audioCtx) return null;
+
+        // Cria e parametriza um nó panner tridimensional físico
+        const panner = this.audioCtx.createPanner();
+        panner.panningModel = 'HRTF'; // Filtro de alta fidelidade binaural anatômica
+        panner.distanceModel = 'inverse';
+        panner.refDistance = 1.0;
+        panner.maxDistance = 100.0;
+        panner.rolloffFactor = 1.2;
+
+        if (panner.positionX) {
+            panner.positionX.setValueAtTime(posX, this.audioCtx.currentTime);
+            panner.positionY.setValueAtTime(posY, this.audioCtx.currentTime);
+            panner.positionZ.setValueAtTime(posZ, this.audioCtx.currentTime);
+        } else {
+            panner.setPosition(posX, posY, posZ);
         }
 
-        const cogniBus = this.audio.buses.get(AUDIO_CHANNELS.COGNITION);
-        if (cogniBus) gain.connect(cogniBus);
+        this.activeSpatialPanners.set(sourceId, panner);
+        return panner;
+    }
 
-        oscL.start(now);
-        oscR.start(now);
+    // ═══════════════════════════════════════════════════════════════════════
+    // B) ALERT TONES (SÍNTESE DE CRITICIDADE DE HARDWARE)
+    // ═══════════════════════════════════════════════════════════════════════
+    playAlertTone(type = 'WARNING') {
+        if (!this.isActive || !this.audioCtx) return;
 
-        this.focusTones.sustain = { oscL, oscR, gain };
-        this.traceAudio('Foco Topológico trancado. Onda Binaural Gama [40Hz] ativa no buffer de cognição.');
-      } else if (state === 'RELEASE') {
-        // Desengajamento controlado e amortecido do tom de foco
-        if (!this.focusTones.sustain) return;
-        const sustain = this.focusTones.sustain;
-        sustain.gain.gain.cancelScheduledValues(now);
-        sustain.gain.gain.setValueAtTime(sustain.gain.gain.value, now);
-        sustain.gain.gain.linearRampToValueAtTime(0.0, now + 0.8);
+        const now = this.audioCtx.currentTime;
+        const osc = this.audioCtx.createOscillator();
+        const gainNode = this.audioCtx.createGain();
+
+        osc.connect(gainNode);
+        gainNode.connect(this.channels.ALERTS.gainNode);
+
+        if (type === 'CRITICAL' || type === 'PANIC') {
+            // Sirene dupla dissonante entrelaçada senoidal/dente-de-serra
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.linearRampToValueAtTime(440, now + 0.25);
+            osc.frequency.linearRampToValueAtTime(880, now + 0.5);
+
+            gainNode.gain.setValueAtTime(0.0, now);
+            gainNode.gain.linearRampToValueAtTime(0.4, now + 0.05);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.50);
+            osc.start(now);
+            osc.stop(now + 0.50);
+        } else {
+            // Alerta padrão senoidal de interrupção curta (Beep de Atenção)
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1250, now);
+            
+            gainNode.gain.setValueAtTime(0.0, now);
+            gainNode.gain.linearRampToValueAtTime(0.2, now + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            osc.start(now);
+            osc.stop(now + 0.15);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // C) FOCUS TONES (INDUTORES DE FOCO COGNITIVO FOVEAL)
+    // ═══════════════════════════════════════════════════════════════════════
+    triggerFocusClick(salienceWeight = 1.0) {
+        if (!this.isActive || !this.audioCtx) return;
+
+        const now = this.audioCtx.currentTime;
+        const osc = this.audioCtx.createOscillator();
+        const gainNode = this.audioCtx.createGain();
+
+        osc.type = 'sine';
+        // Adapta dinamicamente a frequência com base no peso da relevância da entidade focada
+        const targetFreq = 440 + (salienceWeight * 220); 
+        osc.frequency.setValueAtTime(targetFreq, now);
+
+        osc.connect(gainNode);
+        gainNode.connect(this.channels.COGNITION.gainNode);
+
+        // Curva envolvente de transição extremamente suave para não gerar cliques mecânicos
+        gainNode.gain.setValueAtTime(0.0, now);
+        gainNode.gain.linearRampToValueAtTime(0.15 * salienceWeight, now + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+        osc.start(now);
+        osc.stop(now + 0.08);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // D) GAMMA SYNC AUDIO (BINAURAL DE ALTA INTENSIDADE COGNITIVA)
+    // ═══════════════════════════════════════════════════════════════════════
+    _startGammaSyncOscillator() {
+        if (!this.isActive || !this.audioCtx) return;
+
+        const now = this.audioCtx.currentTime;
+        this.gammaSyncNode = this.audioCtx.createOscillator();
+        const gainNode = this.audioCtx.createGain();
+
+        this.gammaSyncNode.type = 'sine';
+        // Frequência padrão fixa de sintonia cerebral focada: Ondas Gamma a 40Hz acopladas a uma portadora de 200Hz
+        this.gammaSyncNode.frequency.setValueAtTime(240, now); 
+
+        this.gammaSyncNode.connect(gainNode);
+        gainNode.connect(this.channels.COGNITION.gainNode);
+
+        // Mantém volume residual tático constante imperceptível de fundo
+        gainNode.gain.setValueAtTime(0.03, now);
+        this.gammaSyncNode.start(now);
+    }
+
+    adjustGammaSyncIntensity(focusScore) {
+        if (!this.isActive || !this.gammaSyncNode) return;
         
-        setTimeout(() => {
-          try {
-            sustain.oscL.stop();
-            sustain.oscR.stop();
-          } catch(e){}
-          this.focusTones.sustain = null;
-        }, 900);
-      }
-    });
-  }
-
-  // ==========================================================================
-  // 5. ALERT AUDIO SYSTEM & PRIORITIZATION
-  // ==========================================================================
-
-  playCriticalAlertPing() {
-    if (!this.audio.context) return;
-
-    this.safeAudioCall(() => {
-      const now = this.audio.context.currentTime;
-      const alertBus = this.audio.buses.get(AUDIO_CHANNELS.ALERTS);
-      if (!alertBus) return;
-
-      // Alerta Tonal Agressivo de Frequência Escalonada (5. Alert Audio System)
-      const osc = this.audio.context.createOscillator();
-      const gain = this.audio.context.createGain();
-
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(880.0, now); // Nota Lá penetrante
-      osc.frequency.setValueAtTime(1200.0, now + 0.08); // Salto exponencial de descontinuidade
-
-      gain.gain.setValueAtTime(0.0, now);
-      gain.gain.linearRampToValueAtTime(0.7, now + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-
-      osc.connect(gain).connect(alertBus);
-      osc.start(now);
-      osc.stop(now + 0.5);
-
-      // 13. Dynamic Mixing: Aplica "Ducking" temporário nos canais de ambiência para clareza
-      this._applyTemporaryDucking(AUDIO_CHANNELS.AMBIENCE, 0.15, 0.5);
-    });
-  }
-
-  _applyTemporaryDucking(channelName, targetVolume, durationSec) {
-    const bus = this.audio.buses.get(channelName);
-    if (!bus || !this.audio.context) return;
-
-    const now = this.audio.context.currentTime;
-    bus.gain.cancelScheduledValues(now);
-    bus.gain.setValueAtTime(bus.gain.value, now);
-    bus.gain.linearRampToValueAtTime(targetVolume, now + 0.05);
-    bus.gain.setValueAtTime(targetVolume, now + durationSec);
-    bus.gain.linearRampToValueAtTime(0.7, now + durationSec + 0.3); // Retorna ao ganho padrão
-  }
-
-  // ==========================================================================
-  // 16. ADAPTIVE AUDIO ENGINE & 29. COGNITIVE EQUILIBRIUM
-  // ==========================================================================
-
-  adaptAudio() {
-    if (!this.audio.context) return;
-
-    // Se o sistema reportar um cenário de Sobrecarga Cognitiva (Overload Visual/Mental), simplifica a malha de som
-    if (this.cognitive.focus > 0.8 || this.alerts.emergency) {
-      // Mascara e filtra frequências agudas da ambiência para descanso sensorial (23. Safety Layer)
-      const ambienceBus = this.audio.buses.get(AUDIO_CHANNELS.AMBIENCE);
-      if (ambienceBus) {
-        ambienceBus.gain.setValueAtTime(0.2, this.audio.context.currentTime); // Abafa som ambiente periférico
-      }
-      this.spatialPriority.focusRegion = AUDIO_ZONES.PRIMARY;
-    } else {
-      const ambienceBus = this.audio.buses.get(AUDIO_CHANNELS.AMBIENCE);
-      if (ambienceBus) {
-        ambienceBus.gain.setValueAtTime(0.6, this.audio.context.currentTime);
-      }
-      this.spatialPriority.focusRegion = AUDIO_ZONES.IMMERSIVE;
-    }
-  }
-
-  maintainAudioEquilibrium() {
-    const now = performance.now();
-    const deltaTime = (now - this._lastPulseTime) / 1000;
-    this._lastPulseTime = now;
-
-    // Acoplamento dinâmico com telemetria e focos de atenção reais do SENTINEL
-    if (window.SentinelAttention) {
-      this.cognitive.focus = window.SentinelAttention.attention.cognitiveLoad;
-      this.alerts.emergency = window.SentinelAttention.cognitiveLoad.overloadRisk;
+        const now = this.audioCtx.currentTime;
+        // Eleva sutilmente a frequência da portadora se o operador expandir a carga mental
+        const dynamicFreq = 240 + (focusScore * 40);
+        this.gammaSyncNode.frequency.setTargetAtTime(dynamicFreq, now, 0.1);
     }
 
-    this.adaptAudio();
-    this._calculateAudioTelemetry();
-  }
+    // ═══════════════════════════════════════════════════════════════════════
+    // E) ENVIRONMENTAL AMBIENCE (GERADOR PROCEDURAL DE RUÍDO ROSA)
+    // ═══════════════════════════════════════════════════════════════════════
+    _startEnvironmentalAmbience() {
+        if (!this.isActive || !this.audioCtx) return;
 
-  _calculateAudioTelemetry() {
-    this.metrics.activeChannels = Array.from(this.audio.emitters.values()).length;
-    this.metrics.audioLoad = this.focusTones.sustain ? 0.35 : 0.05;
-    
-    // Alimenta o barramento global de telemetria se disponível
-    if (window.StateStore) {
-      window.StateStore.set('telemetry.audioChannelsActive', this.metrics.activeChannels);
-    }
-  }
+        const bufferSize = 2 * this.audioCtx.sampleRate;
+        const noiseBuffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
 
-  applyAudioProfile(mode) {
-    this.currentProfile = mode;
-    this.traceAudio(`Perfil acústico alterado para: [${mode}]`);
-
-    if (mode === 'FOCUS') {
-      this.triggerFocusTone('START');
-    } else if (mode === 'XR') {
-      this.xr.immersion = 1.0;
-      this.procedural.synthesis = true;
-    } else if (mode === 'LOW_POWER') {
-      // 26. Desliga síntese pesada para poupar ciclos de processador
-      if (this.environment.ambience) {
-        try { this.environment.ambience.osc.stop(); } catch(e){}
-        this.environment.ambience = null;
-      }
-    }
-  }
-
-  // ==========================================================================
-  // 19. AUDIO EVENT BUS INTEGRATION
-  // ==========================================================================
-
-  bindBusEvents() {
-    const triggerUnlock = () => {
-      this._unlockAudioContext();
-      window.removeEventListener('click', triggerUnlock);
-      window.removeEventListener('keydown', triggerUnlock);
-    };
-
-    window.addEventListener('click', triggerUnlock);
-    window.addEventListener('keydown', triggerUnlock);
-
-    if (window.SentinelBus) {
-      // Reage a mudanças estruturais de foco no orquestrador de atenção
-      window.SentinelBus.on('attention:focus-shifted', (data) => {
-        if (data && data.target) {
-          this.triggerFocusTone('LOCK');
-          // Dispara um som sutil de trancamento de mira perceptual
-          this.playAttentionLockPing();
+        // Algoritmo matemático contínuo para geração de Ruído Rosa Procedural Puro
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+        for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            b0 = 0.99886 * b0 + white * 0.0555179;
+            b1 = 0.99332 * b1 + white * 0.0750759;
+            b2 = 0.96900 * b2 + white * 0.1538520;
+            b3 = 0.86650 * b3 + white * 0.3104856;
+            b4 = 0.55000 * b4 + white * 0.5329522;
+            b5 = -0.7616 * b5 - white * 0.0168980;
+            output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+            output[i] *= 0.11; // Compensação de ganho para normalização de amplitude
+            b6 = white * 0.115926;
         }
-      });
 
-      window.SentinelBus.on('system:nsdr-trigger', () => {
-        this.applyAudioProfile('LOW_POWER');
-      });
+        const noiseSource = this.audioCtx.createBufferSource();
+        noiseSource.buffer = noiseBuffer;
+        noiseSource.loop = true;
 
-      window.SentinelBus.on('boot:complete', () => {
-        this._unlockAudioContext();
-      });
+        const filter = this.audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(600, this.audioCtx.currentTime); // Abafa altas frequências mecânicas externas
+
+        noiseSource.connect(filter);
+        filter.connect(this.channels.AMBIENCE.gainNode);
+        
+        noiseSource.start(0);
+        this._trace('AMBIENCE', 'Gerador procedural de Ruído Rosa estabilizador injetado no canal atmosférico.');
     }
-  }
 
-  playAttentionLockPing() {
-    if (!this.audio.context) return;
-    this.safeAudioCall(() => {
-      const now = this.audio.context.currentTime;
-      const cogniBus = this.audio.buses.get(AUDIO_CHANNELS.COGNITION);
-      if (!cogniBus) return;
+    // ═══════════════════════════════════════════════════════════════════════
+    // INTERCEPTAÇÃO DO BARRAMENTO E DISTRIBUIÇÃO (EVENT AUDIO ROUTING)
+    // ═══════════════════════════════════════════════════════════════════════
+    _attachSignalBus(busInstance) {
+        this.bus = busInstance;
 
-      const osc = this.audio.context.createOscillator();
-      const gain = this.audio.context.createGain();
+        // Escuta gatilhos de interação do usuário para disparar cliques táteis com base no olhar
+        this.bus.on('xr:gaze_moved', (data) => {
+            // Inicializa de forma preguiçosa (Lazy) no primeiro input físico real para contornar travas do navegador
+            if (!this.isActive) {
+                this.initializeAudioContext();
+            }
 
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440.0, now);
-      osc.frequency.exponentialRampToValueAtTime(880.0, now + 0.1);
+            if (data && data.target) {
+                const weight = data.urgency !== undefined ? data.urgency : 0.5;
+                this.triggerFocusClick(weight);
+            }
+        });
 
-      gain.gain.setValueAtTime(0.0, now);
-      gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        // Intercepta violações de segurança e pânico do Firewall para emitir alertas sonoros imediatos
+        this.bus.on('firewall:contract_violation', (violation) => {
+            this.playAlertTone('CRITICAL');
+        });
 
-      osc.connect(gain).connect(cogniBus);
-      osc.start(now);
-      osc.stop(now + 0.2);
-    });
-  }
+        this.bus.on('kernel:force_emergency_panic', () => {
+            this.playAlertTone('CRITICAL');
+            // Atenua severamente os sub-canais de som secundários em estado de colapso de hardware
+            if (this.isActive) {
+                const now = this.audioCtx.currentTime;
+                this.channels.AMBIENCE.gainNode.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                this.channels.MISSION.gainNode.gain.linearRampToValueAtTime(0.0, now + 0.1);
+            }
+        });
 
-  // ==========================================================================
-  // 22. IMMERSION STABILIZATION & SAFETY VERIFICATION
-  // ==========================================================================
-
-  stabilizeImmersion() {
-    // Tática neuroacústica ativa: Se houver perda de rastreamento ou travamento de renderizador,
-    // injeta ruído rosa ou hum de fase invertida estável para evitar tontura ou desorientação espacial do operador.
-    this.traceAudio('Injetando vetor acústico de estabilização vestibular.');
-    this.applyAudioProfile('XR');
-  }
-
-  snapshotAudio() {
-    return {
-      profile: this.currentProfile,
-      mix: this.audio.activeMix,
-      timestamp: Date.now()
-    };
-  }
-
-  restoreAudio(snapshot) {
-    if (!snapshot) return;
-    this.applyAudioProfile(snapshot.profile);
-    this.traceAudio('Instantâneo harmônico restaurado com sucesso.');
-  }
-
-  safeAudioCall(executionBlock) {
-    try {
-      executionBlock();
-    } catch (error) {
-      this.traceAudio(`Exceção interceptada no motor acústico: ${error.message}`, 'WARN');
+        // Atualiza a modulação neuroacústica conforme as leituras do AttentionManager mudarem
+        this.bus.on('attention:load-mutation', (data) => {
+            if (data && data.score) {
+                this.adjustGammaSyncIntensity(data.score);
+            }
+        });
     }
-  }
 
-  traceAudio(msg, level = 'INFO') {
-    const formatted = `[${new Date().toISOString()}] [SENTINEL_AUDIO] [${level}] ${msg}`;
-    if (level === 'CRITICAL' || level === 'ERROR') console.error(formatted);
-    else if (level === 'WARN') console.warn(formatted);
-    else console.log(formatted);
-  }
+    _trace(subsystem, message, level = 'INFO') {
+        const formatted = `[${new Date().toISOString()}] [AUDIO-ENGINE:${subsystem}] [${level}] ${message}`;
+        if (level === 'CRITICAL' || level === 'ERROR') console.error(formatted);
+        else if (level === 'WARN') console.warn(formatted);
+        else console.log(formatted);
+    }
 }
 
-// Instanciação e amarração imediata no ecossistema global do SENTINEL
+// Instanciação e exposição unificada em total conformidade com o ecossistema v9.0
 const SovereignAudioEngine = new SentinelAudioEngine();
 window.SentinelAudio = SovereignAudioEngine;
+
+// Acoplamento automático imediato caso o barramento sínclito já esteja instanciado na viewport
+if (window.SentinelBus) {
+    SovereignAudioEngine._attachSignalBus(window.SentinelBus);
+}
 
 export default SovereignAudioEngine;
