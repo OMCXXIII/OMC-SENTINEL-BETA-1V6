@@ -4,25 +4,24 @@
  * Arquivo: sentinel-kernel.js
  * Papel: Centro Absoluto de Governança, Arbitragem de Hardware e Ciclo de Vida
  * Padrão: ECMAScript Modules (ESM) Nativos com Isolamento de Escopo
+ * Fix: Implementação completa do Registry, Grafo de Dependências, Health Matrix,
+ * Ciclo de Vida Síncrono/Assíncrono e Motores de Recuperação Térmica/GPU.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 class SentinelKernel {
-    // 1. CONSTRUTOR CENTRADO NA COMPOSIÇÃO DE HARDWARE
     constructor() {
         this.version = "9.0-SOVEREIGN";
-        this.status = "SHUTDOWN";
-        this.scheduler = null;
+        this.activePhase = "SHUTDOWN"; // SHUTDOWN, BOOT, INIT, READY, SUSPENDED, SAFE_MODE
         
-        // Registro, Grafo de Dependências e Matriz de Saúde (Legados v9/IIFE Integrados)
+        // A) RUNTIME REGISTRY & D) MODULE HEALTH
         this._registry = new Map();
         this._moduleHealth = new Map();
         
-        this._dependencies = {
+        // B) DEPENDENCY GRAPH (Árvore Hierárquica Estrita de Resolução)
+        this.dependencies = {
             'sentinel-bus': [],
-            'sentinel-state-machine': ['sentinel-bus'],
-            'sentinel-scheduler':     ['sentinel-state-machine'],
-            'sentinel-core':          ['sentinel-scheduler'],
+            'sentinel-core':          ['sentinel-bus'],
             'sentinel-performance':   ['sentinel-core'],
             'sentinel-renderer':      ['sentinel-core'],
             'attention-manager':      ['sentinel-core'],
@@ -31,147 +30,309 @@ class SentinelKernel {
             'sentinel-hud':           ['engine-xr', 'attention-manager']
         };
 
-        // Travas Operacionais de Fase
+        // G) HARDWARE GOVERNANCE (Estruturas de Controle Metabólico)
+        this.hardwareGovernance = {
+            gpuBudgetMs: 11.11,        // Meta estrita para travar em 90Hz estáveis
+            currentGpuLoadMs: 0.0,
+            thermalState: 'NOMINAL',   // NOMINAL, ELEVATED, CRITICAL, THROTTLED
+            xrLatencyMs: 0.0,
+            schedulerPriority: 'DETERMINISTIC'
+        };
+
         this._bootLock = false;
-        this._phaseLock = false;
-        this._transitionLock = false;
-        this._activePhase = 'SHUTDOWN'; // BOOT, INIT, READY, RUNTIME, EMERGENCY
+        this.bus = null;
     }
 
-    // 2. BOOT PIPELINE — CONVERSÃO ASSÍNCRONA DE ARBITRAGEM
+    // ═══════════════════════════════════════════════════════════════════════
+    // A) INTERFACE PÚBLICA DO RUNTIME REGISTRY
+    // ═══════════════════════════════════════════════════════════════════════
+    registerModule(name, instance) {
+        if (!name || !instance) {
+            this.trace('REGISTRY', 'ERROR', 'Tentativa de registro inválida: Nome ou instância nulos.');
+            return false;
+        }
+        this._registry.set(name, instance);
+        this._moduleHealth.set(name, {
+            status: 'REGISTERED',
+            failureCount: 0,
+            lastHeartbeat: performance.now(),
+            recoveryAttempts: 0
+        });
+        this.trace('REGISTRY', 'INFO', `Módulo operacional catalogado com sucesso: [${name}]`);
+        return true;
+    }
+
+    getModule(name) {
+        return this._registry.get(name);
+    }
+
+    hasModule(name) {
+        return this._registry.has(name);
+    }
+
+    getModuleStatus(name) {
+        return this._moduleHealth.get(name) || null;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // C) ORQUESTRADOR DO CICLO DE VIDA (BOOT ORCHESTRATION)
+    // ═══════════════════════════════════════════════════════════════════════
     async boot() {
         if (this._bootLock) {
-            this._trace('BOOT', 'Ignorando chamada de boot duplicada. Kernel já inicializado ou travado.', 'WARN');
+            this.trace('BOOT', 'WARN', 'Ignorando chamada de inicialização duplicada. Kernel já em execução.');
             return false;
         }
         this._bootLock = true;
-        this.status = "INIT";
-        this._activePhase = 'BOOT';
-        
-        this._trace('KERNEL', '=== EXECUÇÃO SOBERANA ACIONADA: INICIANDO ENGINE SENTINEL v9.0 ===', 'INFO');
-        
-        try {
-            await this._transitionToPhase('BOOT');
-            await this._transitionToPhase('INIT');
-            
-            // Acoplamento seguro de barramento e escuta de gatilhos CMA
-            this._bindEvents();
-            
-            await this._transitionToPhase('READY');
-            this.status = "READY";
-            this._activePhase = 'READY';
+        this.trace('KERNEL', 'INFO', '=== INICIANDO HANDSHAKE DE TRANSIÇÃO DA ORDEM SOBERANA v9.0 ===');
 
-            this._trace('KERNEL', 'Módulo de Soberania Ativado com Sucesso em Modo ESM.', 'INFO');
-            this._trace('STATUS', 'Automação Sináptica Online. Força Bruta de Processamento Mitigada.', 'INFO');
-            
-            // Delega processos repetitivos para loops automatizados em segundo plano
-            this.startBasalGangliaAutomation();
-            
+        try {
+            // Fase 1: BOOT (Montagem e verificação estrutural primária)
+            await this.bootPhase('BOOT');
+            this.bus = window.SentinelBus || this.getModule('sentinel-bus');
+
+            // Fase 2: INIT (Injeção de dependências e links de hardware)
+            await this.bootPhase('INIT');
+            this._bindCoreEvents();
+
+            // Fase 3: READY (Abertura da Viewport e desbloqueio do loop de renderização)
+            await this.bootPhase('READY');
             return true;
         } catch (fatalError) {
-            this._trace('KERNEL', `Falha de inicialização crítica irremediável: ${fatalError.message}`, 'CRITICAL');
-            this._enterSafeMode(fatalError.message);
-            this.status = "EMERGENCY";
+            this.trace('KERNEL', 'CRITICAL', `Colapso crítico durante boot de sistemas: ${fatalError.message}`);
+            this.enterSafeMode(fatalError.message);
             return false;
         }
     }
 
-    // Método alternativo para compatibilidade retroativa com ganchos legados do index.html
-    init() {
-        this.boot();
+    async bootPhase(phase) {
+        this.activePhase = phase;
+        this.trace('LIFECYCLE', 'INFO', `Transicionado para fase macro de execução: [${phase}]`);
+
+        // Execução sínclita de gatilhos acoplados por hardware
+        switch(phase) {
+            case 'BOOT':  this.onBoot(); break;
+            case 'INIT':  await this._loadSequence(); break;
+            case 'READY': this.onReady(); break;
+        }
+
+        if (this.bus) {
+            this.bus.emit(`kernel:phase:${phase.toLowerCase()}`, { timestamp: performance.now() });
+        }
     }
 
-    // 3. AUTOMATION RUNTIME LAYER (Basal Ganglia Subsystem)
-    startBasalGangliaAutomation() {
-        this._trace('AUTOMATION', 'Movendo rotinas repetitivas de amostragem para background para poupar a CPU.', 'INFO');
+    async _loadSequence() {
+        this.trace('SCHEDULER', 'INFO', 'Iniciando varredura e resolução ordenada do Grafo de Dependências.');
         
-        // Agendador de tarefas automatizado que roda em segundo plano aliviando o Córtex UI Principal
-        setInterval(() => {
-            if (this.status !== "READY" && this.status !== "RUNTIME") return;
+        // Carrega sequencialmente garantindo que dependências precedam os módulos filhos
+        for (const moduleName of Object.keys(this.dependencies)) {
+            await this.loadModule(moduleName);
+        }
+    }
 
-            // Monitoramento passivo de foco, telemetria de hardware e latência de ação
-            this.updateHardwareTelemetry();
-            
-            // Dispara batimento cardíaco (Heartbeat) de integridade para o SentinelBus
-            if (window.SentinelBus) {
-                window.SentinelBus.emit('kernel:heartbeat', {
-                    status: this.status,
-                    phase: this._activePhase,
-                    ts: Date.now()
-                });
+    async loadModule(name) {
+        const health = this._moduleHealth.get(name);
+        if (!health) {
+            this.trace('SCHEDULER', 'WARN', `Aviso de resolução: [${name}] não possui pré-registro físico no Registry.`);
+            return;
+        }
+
+        // Verifica integridade das dependências declaradas antes de inicializar o nó
+        const deps = this.dependencies[name] || [];
+        for (const dep of deps) {
+            const depHealth = this._moduleHealth.get(dep);
+            if (!depHealth || depHealth.status !== 'INITIALIZED') {
+                this.trace('SCHEDULER', 'ERROR', `Bloqueio de Inicialização: [${name}] depende do nó falho ou ausente: [${dep}]`);
+                throw new Error(`Quebra de integridade de grafo para o módulo: ${name}`);
             }
-        }, 1000);
+        }
+
+        try {
+            const instance = this._registry.get(name);
+            // Executa inicialização base interna se exposta pelo módulo corporativo
+            if (instance && typeof instance._initializeMemorySystem === 'function') instance._initializeMemorySystem();
+            if (instance && typeof instance._initializeHomeostaticEngine === 'function') instance._initializeHomeostaticEngine();
+            if (instance && typeof instance._bootObservatory === 'function') instance._bootObservatory();
+
+            health.status = 'INITIALIZED';
+            health.lastHeartbeat = performance.now();
+            this.trace('SCHEDULER', 'INFO', `Nó de runtime estabilizado com sucesso: [${name}]`);
+        } catch (err) {
+            health.status = 'FAULTY';
+            health.failureCount++;
+            this.trace('SCHEDULER', 'ERROR', `Falha ao acionar rotina de ativação no nó [${name}]: ${err.message}`);
+            this.recoverModule(name);
+        }
     }
 
-    // 4. MÉTODOS AUXILIARES DE SUPORTE E SEGURANÇA OPERACIONAL
-    async _transitionToPhase(phase) {
-        this._trace('PHASE', `Transicionando para fase de runtime: [${phase}]`, 'INFO');
-        this._activePhase = phase;
-        // Simulação controlada de estabilização do barramento
-        return new Promise(resolve => setTimeout(resolve, 30));
+    // ═══════════════════════════════════════════════════════════════════════
+    // E) HOOKS EXCLUSIVOS DE GOVERNANÇA DE CICLO DE VIDA (LIFECYCLE GOVERNANCE)
+    // ═══════════════════════════════════════════════════════════════════════
+    onBoot() {
+        this.trace('LIFECYCLE', 'INFO', 'Contratos de Boot assinados. Alocando buffers e canais latentes.');
     }
 
-    _bindEvents() {
-        if (window.SentinelBus) {
-            window.SentinelBus.on('system:panic', (err) => {
-                this._trace('KERNEL', `Pânico de Sistema capturado via barramento: ${err.message}`, 'CRITICAL');
-                this._enterSafeMode(err.message);
+    onReady() {
+        this.trace('LIFECYCLE', 'INFO', 'Sistema totalmente síncrono. Lock de performance liberado para exibição WebXR.');
+        if (this.bus) this.bus.emit('boot:complete');
+    }
+
+    suspend() {
+        if (this.activePhase === 'SUSPENDED') return;
+        this.activePhase = 'SUSPENDED';
+        this.onSuspend();
+    }
+
+    onSuspend() {
+        this.trace('LIFECYCLE', 'WARN', 'Metabolismo em modo passivo. Loops secundários e shaders complexos suprimidos.');
+        if (this.bus) this.bus.emit('kernel:suspended');
+    }
+
+    shutdown() {
+        this.activePhase = 'SHUTDOWN';
+        this.onShutdown();
+    }
+
+    onShutdown() {
+        this.trace('LIFECYCLE', 'CRITICAL', 'Ordem de encerramento recebida. Purgando alocações dinâmicas de heap.');
+        this._registry.clear();
+        this._moduleHealth.clear();
+        this._bootLock = false;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // F) MOTOR DE MITIGAÇÃO E AUTO-RECUPERAÇÃO (RECOVERY ENGINE)
+    // ═══════════════════════════════════════════════════════════════════════
+    recoverModule(name) {
+        const health = this._moduleHealth.get(name);
+        if (!health) return;
+
+        if (health.recoveryAttempts >= 3) {
+            this.trace('RECOVERY', 'CRITICAL', `Módulo [${name}] excedeu o teto de tolerância. Forçando isolamento do ecossistema.`);
+            this.recoverRuntime();
+            return;
+        }
+
+        health.recoveryAttempts++;
+        this.trace('RECOVERY', 'WARN', `Tentativa de auto-recuperação cirúrgica [${health.recoveryAttempts}/3] no nó: [${name}]`);
+        
+        // Re-executa isoladamente a montagem do nó corrompido
+        setTimeout(() => {
+            this.loadModule(name);
+        }, 150 * health.recoveryAttempts);
+    }
+
+    recoverRuntime() {
+        this.trace('RECOVERY', 'CRITICAL', 'Instabilidade sistêmica detectada. Acionando varredura geral de integridade de hardware.');
+        let absoluteCollapse = false;
+
+        this._moduleHealth.forEach((meta, name) => {
+            if (meta.status === 'FAULTY') {
+                this.trace('RECOVERY', 'WARN', `Purgando nó instável para tentar reinicialização a frio: [${name}]`);
+                if (this.dependencies[name] && this.dependencies[name].length === 0) {
+                    this.loadModule(name);
+                } else {
+                    absoluteCollapse = true;
+                }
+            }
+        });
+
+        if (absoluteCollapse) {
+            this.enterSafeMode('Cascata incontrolável de quebras no Grafo de Dependências.');
+        }
+    }
+
+    enterSafeMode(reason) {
+        this.activePhase = "SAFE_MODE";
+        this.hardwareGovernance.schedulerPriority = 'RECOVERY_CRITICAL';
+        this.trace('KERNEL', 'CRITICAL', `[MODO SEGURO ATIVADO] Motivo: ${reason}`);
+        
+        if (this.bus) {
+            this.bus.emit('kernel:emergency_fallback', { reason: reason, ts: performance.now() });
+            this.bus.emit('system:nsdr-trigger'); // Reduz dinamicamente a atividade visual periférica
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // G) ARBITRAGEM DE HARDWARE (HARDWARE GOVERNANCE)
+    // ═══════════════════════════════════════════════════════════════════════
+    updateHardwareTelemetry(metrics) {
+        if (!metrics) return;
+
+        // 1. Monitoramento Térmico Estrito
+        if (metrics.thermalTemperature) {
+            if (metrics.thermalTemperature > 75) {
+                this.hardwareGovernance.thermalState = 'CRITICAL';
+                this.enforceThermalThrottling();
+            } else if (metrics.thermalTemperature > 60) {
+                this.hardwareGovernance.thermalState = 'ELEVATED';
+            } else {
+                this.hardwareGovernance.thermalState = 'NOMINAL';
+            }
+        }
+
+        // 2. Orçamento e Governança de GPU / XR Frame Latency
+        if (metrics.frameExecutionTimeMs) {
+            this.hardwareGovernance.currentGpuLoadMs = metrics.frameExecutionTimeMs;
+            if (this.hardwareGovernance.currentGpuLoadMs > this.hardwareGovernance.gpuBudgetMs) {
+                this.trace('GPU_GOVERNANCE', 'WARN', `Estouro de Frame-Budget detectado: ${metrics.frameExecutionTimeMs.toFixed(2)}ms / Max: ${this.hardwareGovernance.gpuBudgetMs}ms`);
+                if (this.bus) this.bus.emit('performance:drop', { fps: metrics.fps || 45 });
+            }
+        }
+    }
+
+    enforceThermalThrottling() {
+        this.trace('THERMAL_GOVERNANCE', 'CRITICAL', 'Proteção de silício ativada. Comprimindo ciclos do Scheduler e desativando shaders secundários.');
+        if (this.bus) {
+            this.bus.emit('nexus:command', {
+                command: 'APPLY_DEGRADATION_PROFILE',
+                payload: { profile: 'LOW_POWER' },
+                source: 'KERNEL_THERMAL_GOVERNOR'
             });
         }
     }
 
-    updateHardwareTelemetry() {
-        // Coleta métricas de degradação sem acionar ciclos pesados de reflow geométrico
-        const mem = window.performance && window.performance.memory ? window.performance.memory.usedJSHeapSize : 0;
-        this._updateHardwareTelemetry('cpuLoad', Math.sin(Date.now() / 5000) * 10 + 25); // Simulação estática controlada
-        if (mem) this._updateHardwareTelemetry('memoryPressure', mem);
-    }
+    // ═══════════════════════════════════════════════════════════════════════
+    // H) MOTOR DE RASTREAMENTO E TELEMETRIA (TRACE ENGINE)
+    // ═══════════════════════════════════════════════════════════════════════
+    trace(namespace, level, message) {
+        const timestamp = new Date().toISOString();
+        const formattedMessage = `[${timestamp}] [KERNEL:${namespace}] [${level}] ${message}`;
 
-    _updateHardwareTelemetry(metric, value) {
-        this._moduleHealth.set(`telemetry:${metric}`, { value, updated: Date.now() });
-    }
-
-    _enterSafeMode(reason) {
-        this.status = "SAFE_MODE";
-        this._activePhase = "SAFE_MODE";
-        this._trace('RECOVERY', `FALLBACK: Kernel em modo de segurança. Razão: ${reason}`, 'WARN');
-        if (window.SentinelBus) {
-            window.SentinelBus.emit('kernel:emergency_fallback', { reason, ts: Date.now() });
+        switch (level) {
+            case 'CRITICAL':
+            case 'ERROR':
+                console.error(formattedMessage);
+                break;
+            case 'WARN':
+                console.warn(formattedMessage);
+                break;
+            case 'INFO':
+            default:
+                console.log(formattedMessage);
+                break;
         }
     }
 
-    // 5. RUNTIME REGISTRY MANAGERS
-    registerModule(name, instance) {
-        this._registry.set(name, instance);
-        this._moduleHealth.set(name, { status: 'NOMINAL', errors: 0 });
-        this._trace('REGISTRY', `Módulo operacional registrado: [${name}]`, 'INFO');
-    }
+    // Bind dos barramentos táticos e escutas de orquestração interna
+    _bindCoreEvents() {
+        if (!this.bus) return;
 
-    unregisterModule(name) {
-        this._registry.delete(name);
-        this._moduleHealth.delete(name);
-    }
+        this.bus.on('performance:diagnostics', (telemetry) => {
+            if (telemetry) {
+                this.updateHardwareTelemetry({
+                    frameExecutionTimeMs: telemetry.frameTime,
+                    fps: telemetry.fps,
+                    thermalTemperature: telemetry.cpuLoad ? telemetry.cpuLoad * 0.8 : 35
+                });
+            }
+        });
 
-    getModule(name) { return this._registry.get(name); }
-    hasModule(name) { return this._registry.has(name); }
-    getActivePhase() { return this._activePhase; }
-    getModuleStatus(name) { return this._moduleHealth.get(name); }
-
-    _trace(subsystem, message, level = 'INFO') {
-        const formatted = `[${new Date().toISOString()}] [KERNEL:${subsystem}] [${level}] ${message}`;
-        if (level === 'CRITICAL' || level === 'ERROR') console.error(formatted);
-        else if (level === 'WARN') console.warn(formatted);
-        else console.log(formatted);
+        this.trace('KERNEL', 'INFO', 'Conexões bidirecionais de telemetria acopladas ao SentinelBus.');
     }
 }
 
-// 6. INSTANCIAÇÃO SOBERANA E EXPORTAÇÃO COMPLIANT
+// Instanciação e exposição única na raiz do ecossistema
 const SovereignKernel = new SentinelKernel();
-
-// Mantém o espelhamento na Janela Global apenas para garantir compatibilidade com scripts legados não-ESM do ecossistema CMA
-if (typeof window !== 'undefined') {
-    window.SentinelKernel = SovereignKernel;
-    window.SovereignKernel = SovereignKernel;
-}
+window.SovereignKernel = SovereignKernel;
 
 export default SovereignKernel;
