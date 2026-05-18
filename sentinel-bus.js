@@ -10,8 +10,7 @@
  */
 
 // D) VALIDAÇÃO RÍGIDA DE EVENT NAMESPACES
-const VALID_NAMESPACES = new Set(['kernel', 'xr', 'hud', 'memory', 'attention', 'performance', 'system', 'nexus']);
-
+const VALID_NAMESPACES = new Set(['kernel', 'xr', 'hud', 'memory', 'attention', 'performance', 'system', 'nexus', 'boot']);
 class SentinelSignalBus {
     constructor() {
         this.version = "9.0-NERVOUS-BUS";
