@@ -1,280 +1,226 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SENTINEL v9.0 — HIGH-PRECISION SIGNAL BUS (CMA AUDIO/VISUAL SYNCHRONIZER)
+ * SENTINEL v9.0 — HIGH-PRECISION SIGNAL BUS (OPERATIONAL NERVOUS SYSTEM)
  * Arquivo: sentinel-bus.js
- * Papel: Barramento Assíncrono com Despacho por Quadros e Controle de Fluxo
- * Governança: Totalmente subordinado ao SovereignKernel. Sem auto-boot implícito.
+ * Papel: Barramento Assíncrono Verde com Fila de Prioridades e Despacho por Quadros
+ * Governança: Totalmente subordinado ao SovereignKernel e ao seu Scheduler.
+ * Fix: Implementação de Priority Queues, Anti-Flood, Anti-Cascade, Controle de 
+ * Backpressure e Validação Rígida de Namespaces Corporativos.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-const SentinelBus = (() => {
-    'use strict';
+// D) VALIDAÇÃO RÍGIDA DE EVENT NAMESPACES
+const VALID_NAMESPACES = new Set(['kernel', 'xr', 'hud', 'memory', 'attention', 'performance', 'system', 'nexus']);
 
-    // 1. REGISTRY INTERNO, HISTÓRICO E COMPATIBILIDADE LEGADA
-    const _handlers = Object.create(null);
-    const _history = [];
-    const _sticky = Object.create(null);
-    const _domains = Object.create(null);
-    const _metrics = Object.create(null);
-
-    const MAX_HISTORY = 200;
-    const MAX_BUFFER = 100;
-    let _bootCompleted = false;
-
-    // 2. ESTRUTURA E FILAS DE PRIORIDADES ESTREITAS (FRAME DISPATCH)
-    const _queues = {
-        CRITICAL:   [], // Sinais XR, Estabilização, Input Inercial (Imediato / Frame Target)
-        HIGH:       [], // Mudanças de Foco Cognitivo, Updates Críticos do HUD, Alertas
-        NORMAL:     [], // Render Sync, State Mutations, Cálculos Gerais de Subsistemas
-        BACKGROUND: []  // Logs de Depuração, Persistência L2/L3, Telemetria Passiva
-    };
-
-    // Namespaces Mandatórios de Validação Semântica
-    const MANDATORY_NAMESPACES = ['kernel', 'xr', 'hud', 'performance', 'attention', 'memory'];
-
-    // 3. CONTROLE DE FLUXO (THROTTLING) POR ASSINATURA DE EVENTO
-    // Teto de 5% reservado para BACKGROUND (Logs e Telemetrias) para mitigar overhead por spam
-    const BUS_BANDWIDTH_LIMIT_PER_SEC = 2000; 
-    const BACKGROUND_LIMIT_PER_SEC = Math.floor(BUS_BANDWIDTH_LIMIT_PER_SEC * 0.05); // 100 eventos/segundo max
-    
-    let _totalEventsEmittedInCurrentWindow = 0;
-    let _backgroundEventsInCurrentWindow = 0;
-    let _windowResetTimestamp = Date.now();
-
-    /**
-     * Mapeia dinamicamente e valida o namespace do sinal para determinar sua fila de prioridade
-     * @param {string} eventName - Nome do evento no formato namespace:acao
-     * @returns {string} Fila de prioridade correspondente (CRITICAL, HIGH, NORMAL, BACKGROUND)
-     */
-    const _resolvePriorityTier = (eventName) => {
-        const splitIndex = eventName.indexOf(':');
-        if (splitIndex === -1) {
-            // Logs soltos ou eventos sem namespace entram como background
-            return 'BACKGROUND';
-        }
-
-        const namespace = eventName.slice(0, splitIndex);
+class SentinelSignalBus {
+    constructor() {
+        this.version = "9.0-NERVOUS-BUS";
+        this._handlers = new Map();
+        this._sticky = new Map();
+        this._history = [];
         
-        // Atribuição de peso atencional e de hardware por namespace nativo
-        switch (namespace) {
-            case 'xr':
-                return 'CRITICAL';
-            case 'kernel':
-            case 'attention':
-                return 'HIGH';
-            case 'hud':
-            case 'performance':
-                return 'NORMAL';
-            case 'memory':
-                return 'BACKGROUND';
-            default:
-                return 'BACKGROUND';
-        }
-    };
-
-    /**
-     * Reseta as janelas de medição de largura de banda a cada 1000ms
-     */
-    const _enforceRateLimits = () => {
-        const now = Date.now();
-        if (now - _windowResetTimestamp >= 1000) {
-            _totalEventsEmittedInCurrentWindow = 0;
-            _backgroundEventsInCurrentWindow = 0;
-            _windowResetTimestamp = now;
-        }
-    };
-
-    /**
-     * Registra o escutador de eventos padrão (Assinatura Nativa)
-     */
-    const on = (eventName, handler) => {
-        if (typeof handler !== 'function') return;
-        if (!_handlers[eventName]) {
-            _handlers[eventName] = [];
-        }
-        _handlers[eventName].push(handler);
-    };
-
-    /**
-     * Remove o escutador de eventos
-     */
-    const off = (eventName, handler) => {
-        if (!_handlers[eventName]) return;
-        if (!handler) {
-            delete _handlers[eventName];
-            return;
-        }
-        const index = _handlers[eventName].indexOf(handler);
-        if (index !== -1) {
-            _handlers[eventName].splice(index, 1);
-        }
-    };
-
-    /**
-     * Escutador de disparo único (Self-Destructing Listener)
-     */
-    const once = (eventName, handler) => {
-        const wrapper = (data) => {
-            off(eventName, wrapper);
-            handler(data);
+        // B) FILAS INTERNAS DE EVENTOS POR GRAU DE PRIORIDADE
+        this._queues = {
+            CRITICAL:   [], // Sinais XR, Estabilização Ocular, Input Inercial (Imediato)
+            HIGH:       [], // Mudanças de Foco Atencional, Updates Críticos de HUD
+            NORMAL:     [], // Mutações de Estado do Core, Handshakes de Subsistemas
+            BACKGROUND: []  // Logs de Depuração, Indexação Histórica de Memória L2/L3
         };
-        on(eventName, wrapper);
-    };
 
-    /**
-     * Armazena ou recupera um evento persistente na memória estática (Sticky Events)
-     */
-    const sticky = (eventName, data = null) => {
-        if (data !== null) {
-            _sticky[eventName] = data;
-            emit(eventName, data); // Despacha imediatamente para a fila prioritária correspondente
-        }
-        return _sticky[eventName];
-    };
-
-    /**
-     * Reposiciona e re-executa o histórico de sinais passados em handlers recém-acoplados
-     */
-    const replay = (eventName, handler) => {
-        if (typeof handler !== 'function') return;
-        _history.forEach(record => {
-            if (record.name === eventName) {
-                handler(record.data);
-            }
-        });
-    };
-
-    /**
-     * Enfileira o sinal na infraestrutura com base em seu peso cognitivo e restrições de throttling
-     * Substitui o antigo disparo síncrono imediato por agendamento escalonado
-     */
-    const emit = (eventName, data = {}) => {
-        _enforceRateLimits();
-
-        const tier = _resolvePriorityTier(eventName);
-
-        // Aplicação estrita da trava de segurança de 5% para ruídos e telemetrias secundárias
-        if (tier === 'BACKGROUND') {
-            if (_backgroundEventsInCurrentWindow >= BACKGROUND_LIMIT_PER_SEC) {
-                // Descarta silenciosamente ou atenua o sinal para proteger o barramento da GPU/CPU
-                return;
-            }
-            _backgroundEventsInCurrentWindow++;
-        }
-
-        _totalEventsEmittedInCurrentWindow++;
-
-        // Registra métricas e histórico operacional volátil
-        _metrics[eventName] = (_metrics[eventName] || 0) + 1;
-        _history.push({ name: eventName, data: data, ts: Date.now() });
-        if (_history.length > MAX_HISTORY) {
-            _history.shift();
-        }
-
-        // Enfileira na partição correspondente para consumo no próximo Frame Target
-        _queues[tier].push({ name: eventName, data: data });
-    };
-
-    /**
-     * ⚡ METODO dispatchFrame() — EXECUÇÃO CRÍTICA DO TIME BUDGET
-     * Chamado de forma determinística pelo Scheduler do SovereignKernel.
-     * Limpa as filas respeitando a ordem de soberania dos sinais: CRITICAL -> HIGH -> NORMAL -> BACKGROUND
-     * @param {number} allocatedTimeMs - Tempo máximo em milissegundos permitido para despacho neste frame
-     */
-    const dispatchFrame = (allocatedTimeMs = 2.5) => {
-        const startTime = performance.now();
-        const tiers = ['CRITICAL', 'HIGH', 'NORMAL', 'BACKGROUND'];
-
-        for (const tier of tiers) {
-            const queue = _queues[tier];
-            
-            while (queue.length > 0) {
-                // Validação contínua do tempo gasto para evitar estouro de frame (Frame Drop Prevention)
-                if (performance.now() - startTime >= allocatedTimeMs) {
-                    return; // Interrompe e posterga o restante da fila para o próximo ciclo
-                }
-
-                const event = queue.shift();
-                const handlers = _handlers[event.name];
-
-                if (handlers && handlers.length > 0) {
-                    for (let i = 0; i < handlers.length; i++) {
-                        try {
-                            handlers[i](event.data);
-                        } catch (err) {
-                            console.error(`[BUS] Falha de execução no handler de [${event.name}]:`, err);
-                        }
-                    }
-                }
-            }
-        }
-    };
-
-    // Preenche domínios e assinaturas legadas do ecossistema CMA
-    _domains.SYSTEM = [
-        'boot:start', 'boot:complete', 'boot:module-ready', 'boot:handshake',
-        'nexus:command', 'system:error', 'system:warning'
-    ];
-
-    /**
-     * Retorna instantaneamente o estado instantâneo das métricas e filas (Observabilidade)
-     */
-    const getDiagnostics = () => {
-        return {
-            queues: {
-                critical: _queues.CRITICAL.length,
-                high: _queues.HIGH.length,
-                normal: _queues.NORMAL.length,
-                background: _queues.BACKGROUND.length
-            },
-            traffic: {
-                totalCurrentWindow: _totalEventsEmittedInCurrentWindow,
-                backgroundCurrentWindow: _backgroundEventsInCurrentWindow,
-                limitBackground: BACKGROUND_LIMIT_PER_SEC
-            },
-            historySize: _history.length,
-            metrics: { ..._metrics }
+        // F) MÉTRICAS DE CONTROLE DE BACKPRESSURE E ANTI-FLOOD
+        this.backpressure = {
+            maxHistorySize: 200,
+            maxQueueBuffer: 150,
+            floodThresholdPerSec: 400,
+            eventsInCurrentWindow: 0,
+            windowStartTimestamp: performance.now(),
+            activeExecutionCascadeDepth: 0,
+            maxAllowedCascadeDepth: 8 // Proteção contra estouro de pilha por loops recursivos
         };
-    };
 
-    // Interface Limpa e Consolidada do Barramento Estrito
-    return {
-        on,
-        off,
-        once,
-        emit,
-        sticky,
-        replay,
-        dispatchFrame,
-        getDiagnostics,
-        getHistory: () => _history,
-        getMetrics: () => _metrics,
-        setBootCompleted: (val) => { _bootCompleted = val; }
-    };
-})();
-
-// 4. ANCORAGEM LIMPA NO ESCOPO GLOBAL SEM EXECUÇÃO PREMATURA
-(() => {
-    window.SentinelBus = SentinelBus;
-    window.SENTINEL_BOOTED = false;
-
-    // Acoplamento passivo de segurança no SovereignKernel caso ele já coexista na janela
-    if (window.SovereignKernel) {
-        window.SovereignKernel.registerModule('sentinel-bus', SentinelBus);
-    } else {
-        Object.defineProperty(window, 'SovereignKernel', {
-            configurable: true,
-            enumerable: true,
-            set: (kernelInstance) => {
-                delete window.SovereignKernel;
-                window.SovereignKernel = kernelInstance;
-                window.SovereignKernel.registerModule('sentinel-bus', SentinelBus);
-            }
-        });
+        this._bootCompleted = false;
+        this.trace('SYSTEM', 'Nervous Core Signal Bus Instanciado com Sucesso.');
     }
 
-    console.log(
-        '%c OMC SENTINEL HIGH-PRECISION BUS v9.0 ONLINE [FRAME-PACED & CONTROLLED] ',
-        'background:#000; color:#00FF41; border:1px solid #00FF41; padding:3px; font-family:monospace;'
-    );
-})();
+    // ═══════════════════════════════════════════════════════════════════════
+    // A) MÉTODOS DE ASSINATURA E REGISTRO DE LISTENERS
+    // ═══════════════════════════════════════════════════════════════════════
+    on(event, handler) {
+        this._validateEventName(event);
+        if (!this._handlers.has(event)) {
+            this._handlers.set(event, new Set());
+        }
+        this._handlers.get(event).add(handler);
+
+        // Despacha imediatamente se houver um evento pegajoso (Sticky) em cache
+        if (this._sticky.has(event)) {
+            handler(this._sticky.get(event));
+        }
+    }
+
+    once(event, handler) {
+        const wrapper = (data) => {
+            this.off(event, wrapper);
+            handler(data);
+        };
+        this.on(event, wrapper);
+    }
+
+    off(event, handler) {
+        if (this._handlers.has(event)) {
+            this._handlers.get(event).delete(handler);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // B) EMISSÃO CONTROLADA COM TRATAMENTO DE PRIORIDADE (PRIORITY EVENTS)
+    // ═══════════════════════════════════════════════════════════════════════
+    emit(event, data = null, priority = 'NORMAL') {
+        this._validateEventName(event);
+
+        // 1. Mecanismo de Proteção Anti-Flood (Rate Limiting)
+        if (this._checkFloodProtection()) {
+            this.trace('WARN_FLOOD', `Bloqueio de Anti-Flood ativado para o evento: [${event}]. Taxa de injeção violada.`);
+            return false;
+        }
+
+        // 2. Encaminhamento direto de Sinais Críticos para Mitigação de Latência
+        if (priority === 'CRITICAL') {
+            this._executeDispatchImmediately(event, data);
+            return true;
+        }
+
+        // 3. Injeção na Fila de Prioridades do Scheduler se houver espaço
+        const targetQueue = this._queues[priority];
+        if (!targetQueue) {
+            throw new Error(`[BUS] Nível de prioridade inválido fornecido: ${priority}`);
+        }
+
+        if (targetQueue.length >= this.backpressure.maxQueueBuffer) {
+            this.trace('BACKPRESSURE', `Saturação detectada na fila [${priority}]. Purgando registro mais antigo.`, 'WARN');
+            targetQueue.shift(); // Remove o sinal obsoleto mais antigo da fila para mitigar lag
+        }
+
+        targetQueue.push({ event, data, ts: performance.now() });
+        return true;
+    }
+
+    sticky(event, data) {
+        this._sticky.set(event, data);
+        this.emit(event, data, 'HIGH');
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // C) FRAME DISPATCHER (GOVERNADO EXCLUSIVAMENTE PELO SCHEDULER DO KERNEL)
+    // ═══════════════════════════════════════════════════════════════════════
+    dispatchFrame() {
+        const startTime = performance.now();
+        // Orçamento máximo estrito de tempo de CPU alocado para o barramento por frame = 1.5ms
+        const timeBudgetMs = 1.5; 
+
+        // Esvazia as filas respeitando a ordem de precedência hierárquica (HIGH -> NORMAL -> BACKGROUND)
+        const priorityOrder = ['HIGH', 'NORMAL', 'BACKGROUND'];
+
+        for (const priority of priorityOrder) {
+            const queue = this._queues[priority];
+            
+            while (queue.length > 0) {
+                // Interrompe o esvaziamento imediatamente caso o frame-budget expire
+                if (performance.now() - startTime > timeBudgetMs) {
+                    this.trace('SCHEDULER_LAG', `Esvaziamento suspenso na fila [${priority}]. Orçamento de frame estourado. Volatilidade mitigada.`, 'WARN');
+                    return;
+                }
+
+                const packet = queue.shift();
+                this._executeDispatchImmediately(packet.event, packet.data);
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // F) CONTROLE DE BACKPRESSURE E PROTEÇÃO CONTRA CASCATAS (ANTI-CASCADE)
+    // ═══════════════════════════════════════════════════════════════════════
+    _executeDispatchImmediately(event, data) {
+        const listeners = this._handlers.get(event);
+        if (!listeners || listeners.size === 0) return;
+
+        // Proteção Anti-Cascade: Previne recursões infinitas geradas por loops cegos de emit
+        if (this.backpressure.activeExecutionCascadeDepth >= this.backpressure.maxAllowedCascadeDepth) {
+            this.trace('ANTI_CASCADE', `Interrupção estrita de loop infinito evitada para o evento: [${event}]. Profundidade: ${this.backpressure.activeExecutionCascadeDepth}`, 'ERROR');
+            return;
+        }
+
+        this.backpressure.activeExecutionCascadeDepth++;
+
+        // Execução sínclita de todos os handlers acoplados (Listener Storm Mitigation)
+        for (const handler of listeners) {
+            try {
+                handler(data);
+            } catch (err) {
+                this.trace('LISTENER_STORM_ERROR', `Falha de execução de callback no evento [${event}]: ${err.message}`, 'ERROR');
+            }
+        }
+
+        this.backpressure.activeExecutionCascadeDepth--;
+
+        // Registra a ocorrência no histórico unificado do observatório
+        this._pushToHistory({ event, data, ts: performance.now() });
+    }
+
+    _checkFloodProtection() {
+        const now = performance.now();
+        if (now - this.backpressure.windowStartTimestamp > 1000) {
+            this.backpressure.eventsInCurrentWindow = 0;
+            this.backpressure.windowStartTimestamp = now;
+        }
+
+        this.backpressure.eventsInCurrentWindow++;
+        return this.backpressure.eventsInCurrentWindow > this.backpressure.floodThresholdPerSec;
+    }
+
+    _pushToHistory(entry) {
+        this._history.push(entry);
+        if (this._history.length > this.backpressure.maxHistorySize) {
+            this._history.shift();
+        }
+    }
+
+    _validateEventName(event) {
+        if (!event || !event.includes(':')) {
+            throw new Error(`[BUS] Assinatura de evento inválida. Formato exigido: namespace:nome_evento. Fornecido: "${event}"`);
+        }
+        const namespace = event.split(':')[0];
+        if (!VALID_NAMESPACES.has(namespace)) {
+            throw new Error(`[BUS] Namespace corporativo ilegal detectado: "${namespace}". Utilize apenas: ${Array.from(VALID_NAMESPACES).join(', ')}`);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // E) TRACE SYSTEM EM TEMPO REAL
+    // ═══════════════════════════════════════════════════════════════════════
+    trace(subsystem, message, level = 'INFO') {
+        const formatted = `[${new Date().toISOString()}] [BUS:${subsystem}] [${level}] ${message}`;
+        if (level === 'CRITICAL' || level === 'ERROR') console.error(formatted);
+        else if (level === 'WARN') console.warn(formatted);
+        else console.log(formatted);
+    }
+
+    getDiagnostics() {
+        return {
+            queues: {
+                high: this._queues.HIGH.length,
+                normal: this._queues.NORMAL.length,
+                background: this._queues.BACKGROUND.length
+            },
+            historyCount: this._history.length,
+            currentWindowLoad: this.backpressure.eventsInCurrentWindow,
+            isFailing: this.backpressure.eventsInCurrentWindow > this.backpressure.floodThresholdPerSec
+        };
+    }
+}
+
+// Instanciação e exposição única na infraestrutura do ecossistema
+const SentinelBus = new SentinelSignalBus();
+window.SentinelBus = SentinelBus;
+
+export default SentinelBus;
