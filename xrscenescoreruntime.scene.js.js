@@ -1,180 +1,219 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SENTINEL v9.0 — COGNITIVE GPU PERCEPTION & SHADER RUNTIME
- * Arquivo: xr/shaders/core/shader-runtime.js
- * Papel: Centro de Estética Científica, Feedback de Fluidez e Efeitos GLSL
- * Domínio: GRAPHICS / SPATIAL INTERFACE / RENDER ACCELERATION
- * Fix: Correção de extensão dupla (.js.js) e isolamento estrito de strings GLSL
+ * SENTINEL v9.0 — COGNITIVE XR SCENE RUNTIME ORCHESTRATOR
+ * Arquivo: xr/scenes/core/runtime.scene.js
+ * Papel: Governador Soberano de Estados Espaciais, Iluminação de Baixo Impacto e WebXR
+ * Domínio: SPATIAL INTERFACE / RENDERING CONFIGURATION / REACTION LOOP
+ * Fix: Fusão do SceneManager v9.0 com o componente do ecossistema A-Frame
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 if (typeof AFRAME === 'undefined') {
-    throw new Error('[VR-OS SHADER] A-Frame precisa ser carregado antes da inicialização do runtime de shaders.');
+    throw new Error('[VR-OS SCENE] Falha crítica: O motor gráfico A-Frame está offline.');
 }
 
 /**
- * Registro do componente de Shader customizado no ecossistema A-Frame.
- * Fornece a identidade visual Cyber Glass com renderização acelerada por GPU.
+ * 1. GERENCIADOR DE ORQUESTRAÇÃO DE CENAS COGNITIVAS (MÁQUINA DE ESTADO ESPACIAL)
  */
-AFRAME.registerShader('sentinel-cyber-glass', {
-    // Esqueleto de Uniforms injetados diretamente no pipeline do WebGL2
-    schema: {
-        time: { type: 'time', is: 'uniform' },
-        glowColor: { type: 'color', is: 'uniform', default: '#D4AF37' },
-        focusIntensity: { type: 'float', is: 'uniform', default: 1.0 },
-        degradedMode: { type: 'float', is: 'uniform', default: 0.0 }
-    },
-
-    // 1. VERTEX SHADER: Projeta coordenadas espaciais na tela com latência zero de matriz
-    vertexShader: `
-        varying vec2 vUv;
-        varying vec3 vNormal;
-        varying vec3 vViewPosition;
-
-        void main() {
-            vUv = uv;
-            vNormal = normalize(normalMatrix * normal);
-            
-            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-            vViewPosition = -mvPosition.xyz;
-            
-            gl_Position = projectionMatrix * mvPosition;
-        }
-    `,
-
-    // 2. FRAGMENT SHADER: Assinatura visual Dark Mode Scientific com gradientes dourados e scanlines
-    fragmentShader: `
-        varying vec2 vUv;
-        varying vec3 vNormal;
-        varying vec3 vViewPosition;
-
-        uniform float time;
-        uniform vec3 glowColor;
-        uniform float focusIntensity;
-        uniform float degradedMode;
-
-        void main() {
-            // Conversão segura do tempo para rotação de ciclo senoidal sutil
-            float seconds = time * 0.001;
-            float pulse = 0.5 + 0.5 * sin(seconds * 1.5);
-            
-            // Fundo Escuro Translúcido Científico (Deep Obsidian Blue)
-            vec3 baseBackground = vec3(0.005, 0.012, 0.02);
-            
-            // Criação de linhas de varredura (Scanlines) horizontais anti-aliased para estética HUD
-            float scanlineFrequency = degradedMode > 0.5 ? 100.0 : 250.0;
-            float scanlineSpeed = degradedMode > 0.5 ? 2.0 : 4.0;
-            float scanline = sin(vUv.y * scanlineFrequency - seconds * scanlineSpeed) * 0.035;
-            
-            // Efeito Cyber Glass: Brilho de borda sutil (Fresnel Adaptativo Simplificado)
-            vec3 normalVec = normalize(vNormal);
-            vec3 viewVec = normalize(vViewPosition);
-            float fresnel = pow(1.0 - max(dot(normalVec, viewVec), 0.0), 3.0);
-            
-            // Gradiente dourado vertical estabilizado para diminuir a fadiga cognitiva
-            float gradientY = pow(1.0 - vUv.y, 2.0) * 0.15 + pow(vUv.y, 2.0) * 0.05;
-            
-            // Interpolação de cor final com base na saúde atencional do sistema
-            vec3 dynamicGlow = mix(glowColor, vec3(0.0, 0.83, 1.0), pulse * 0.1);
-            
-            // Compositor final de fragmentos (Pintura de pixels acelerada)
-            vec3 finalColor = baseBackground + (dynamicGlow * (gradientY + (fresnel * 0.45) + (pulse * 0.03) * focusIntensity));
-            
-            // Ajuste dinâmico de opacidade (Alpha Channel) contra quebras de oclusão tridimensional
-            float alpha = 0.68 + scanline + (fresnel * 0.22);
-            
-            // Mitigação instantânea de carga se o modo degradado (Performance Emergency) estiver ativo
-            if (degradedMode > 0.5) {
-                finalColor = baseBackground + (glowColor * (gradientY + 0.1));
-                alpha = 0.55;
-            }
-            
-            gl_FragColor = vec4(finalColor, alpha);
-        }
-    `
-});
-
-/**
- * ═══════════════════════════════════════════════════════════════════════════
- * CONTROLADOR DE GERENCIAMENTO DE PIPELINE DE SHADERS (LEGADO REESTRUTURADO)
- * ═══════════════════════════════════════════════════════════════════════════
- */
-class SentinelShaderRuntime {
+class SentinelSceneManager {
     constructor() {
-        this.version = "9.0-SHADER-RUNTIME";
-        this.programCache = new Map();
-        this.activeShaders = new Set();
-        this.glContext = null;
+        this.registry = new Map();
+        this.activeScene = null;
+        this.transitioning = false;
         this.bus = window.SentinelBus || null;
         
-        // Alocações de Perfilamento e Orçamento (Frame Budget Alvo para 90Hz = ~11.1ms)
-        this.budget = {
-            maxShaderExecutionTimeMs: 4.5, 
-            currentLoadMs: 0.0,
-            qualityTier: 'XR_SAFE' // HIGH, MEDIUM, LOW, XR_SAFE, EMERGENCY
-        };
-
+        // Cache de overlays de hardware
+        this.overlay = this._createTransitionOverlay();
+        
         this._initGlobalListeners();
     }
 
-    setGraphicsContext(glContext) {
-        this.glContext = glContext;
-        this._trace('CONTEXT', 'Contexto gráfico WebGL acoplado com sucesso ao Runtime.', 'INFO');
+    registerScene(id, sceneInstance) {
+        this.registry.set(id, sceneInstance);
+        this._trace('REGISTRY', `Estado espacial registrado com sucesso: [${id}]`);
     }
 
-    enforceQualityTier(tier) {
-        this.budget.qualityTier = tier;
-        this._trace('QUALITY', `Iniciando rebaixamento homeostático de shaders para o Tier: [${tier}]`, 'WARN');
+    async activateScene(targetId, transitionType = 'nominal') {
+        if (this.transitioning) return false;
+        if (!this.registry.has(targetId)) {
+            this._trace('ORCHESTRATION', `Falha: Cena alvo [${targetId}] não encontrada no registro físico.`, 'ERROR');
+            return false;
+        }
+
+        this.transitioning = true;
+        this._trace('TRANSITION', `Iniciando mutação espacial para [${targetId}] via perfil [${transitionType}]`);
+
+        // Executa fade por hardware para suavização atencional (Prevenção de Jitter Ocular)
+        await this._applyOverlayFade(1.0);
+
+        if (this.activeScene && typeof this.activeScene.unload === 'function') {
+            await this.activeScene.unload();
+        }
+
+        this.activeScene = this.registry.get(targetId);
         
-        // Propaga atualização de estados para todas as malhas tridimensionais ligadas ao DOM espacial
-        const sceneEl = document.querySelector('a-scene');
-        if (sceneEl) {
-            const entities = sceneEl.querySelectorAll('[material]');
-            entities.forEach(entity => {
-                if (entity.getAttribute('material')?.shader === 'sentinel-cyber-glass') {
-                    entity.setAttribute('material', 'degradedMode', tier === 'EMERGENCY' || tier === 'LOW' ? 1.0 : 0.0);
-                }
-            });
+        if (this.activeScene && typeof this.activeScene.load === 'function') {
+            await this.activeScene.load();
         }
+
+        // Notifica o barramento central e a máquina de estados jerárquica (HSM)
+        if (this.bus) {
+            this.bus.emit('scene:changed', { id: targetId, type: transitionType });
+        }
+
+        await this._applyOverlayFade(0.0);
+        this.transitioning = false;
+        return true;
     }
 
-    _updateGpuTelemetry() {
-        // Cálculo estático não bloqueante para evitar chamadas de ReadPixels na GPU
-        let totalMs = this.budget.qualityTier === 'HIGH' ? 3.2 : 1.1;
-        this.budget.currentLoadMs = totalMs;
+    _applyOverlayFade(targetOpacity) {
+        return new Promise(resolve => {
+            if (!this.overlay) return resolve();
+            this.overlay.style.opacity = targetOpacity;
+            setTimeout(resolve, 300); // Sincronizado com o transition CSS
+        });
+    }
 
-        if (this.bus) {
-            this.bus.emit('shader:metrics-update', {
-                loadMs: this.budget.currentLoadMs,
-                budgetFraction: (this.budget.currentLoadMs / this.budget.maxShaderExecutionTimeMs),
-                activeCount: this.activeShaders.size
-            });
+    _createTransitionOverlay() {
+        let el = document.getElementById('scene-transition-overlay');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'scene-transition-overlay';
+            el.style = 'position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:99999; transition: opacity 0.3s ease-in-out; opacity:0; background: #000408;';
+            document.body.appendChild(el);
         }
+        return el;
     }
 
     _initGlobalListeners() {
         if (this.bus) {
-            // Escuta o sinal de exaustão biológica para diminuir instantaneamente a atividade da GPU
-            this.bus.on('system:nsdr-trigger', () => {
-                this.enforceQualityTier('EMERGENCY');
+            // Escuta por degradação crítica de frames emitida pelo Performance Engine
+            this.bus.on('performance:drop', (telemetry) => {
+                if (telemetry && telemetry.fps < 45) {
+                    this._trace('HOMEOSTASIS', 'Queda severa de FPS detectada. Ajustando pipeline para modo econômico.', 'WARN');
+                    document.body.classList.add('fx-degraded', 'hud-minimal');
+                }
             });
 
-            // Restaura a qualidade nominal se a telemetria de performance estabilizar
-            this.bus.on('performance:nominal', () => {
-                if (this.budget.qualityTier === 'EMERGENCY' || this.budget.qualityTier === 'LOW') {
-                    this.enforceQualityTier('XR_SAFE');
-                }
+            // Força evacuação para a cena de recuperação em caso de colapso cognitivo (NSDR)
+            this.bus.on('system:nsdr-trigger', () => {
+                this._trace('RECOVERY', 'Sinal de exaustão biológica recebido. Acionando mitigação espacial.', 'WARN');
+                this.activateScene('recovery', 'emergency');
             });
         }
     }
 
     _trace(subsystem, message, level = 'INFO') {
-        console.log(`[${new Date().toISOString()}] [SHADER_RUNTIME:${subsystem}] [${level}] ${message}`);
+        console.log(`[${new Date().toISOString()}] [SCENE_MANAGER:${subsystem}] [${level}] ${message}`);
     }
 }
 
-// Inicialização automática e acoplamento seguro no escopo global
-const SovereignShaderRuntime = new SentinelShaderRuntime();
-window.SentinelShaderRuntime = SovereignShaderRuntime;
+// Inicializa e expõe o Governador do Ciclo de Vida de Cenas
+window.SentinelSceneManager = new SentinelSceneManager();
 
-console.log("%c[SENTINEL XR] Shader 'sentinel-cyber-glass' unificado e injetado no barramento gráfico.", "color: #D4AF37; font-weight: bold;");
+
+/**
+ * 2. COMPONENTE WEBXR A-FRAME (ORQUESTRAÇÃO FÍSICA E CAPTURA DE EVENTOS)
+ */
+AFRAME.registerComponent('sentinel-runtime-scene', {
+    init: function () {
+        this.sceneEl = this.el;
+        this.kernel = window.SovereignKernel || window.SentinelKernel;
+        this.bus = window.SentinelBus;
+
+        // Configura iluminação cinematográfica estrita de latência zero (Dark Mode Scientific)
+        this.setupEnvironment();
+
+        // Configuração do WebGLRenderer nativo para travar frame-rate ao hardware do display
+        this.optimizeGraphicsPipeline();
+
+        // Centraliza a escuta de intenções e despacha diretamente ao barramento tático do Kernel
+        this._boundTriggerInterceptor = this.onSpatialTriggerIntercepted.bind(this);
+        this.sceneEl.addEventListener('sentinel-trigger', this._boundTriggerInterceptor);
+
+        console.log("%c[SENTINEL XR] Componente 'sentinel-runtime-scene' acoplado à malha tridimensional.", "color: #9D00FF; font-weight: bold;");
+    },
+
+    // Configuração estrita de iluminação matemática sem geração de sombras custosas
+    setupEnvironment: function () {
+        // Desativa luzes automáticas e genéricas do A-Frame para cessar overhead de CPU
+        this.sceneEl.setAttribute('light', 'defaultLightsEnabled: false');
+
+        // Luz Ambiente Estabilizada Base (Obsidian Dark Field)
+        const ambientLight = document.createElement('a-entity');
+        ambientLight.setAttribute('id', 'sentinel-ambient-core');
+        ambientLight.setAttribute('light', {
+            type: 'ambient',
+            color: '#03070d', // Deep Space Navy
+            intensity: 1.2
+        });
+        this.sceneEl.appendChild(ambientLight);
+
+        // Luz Direcional Técnica de Alta Definição (Assinatura Gradiente Gold-Amber)
+        const directionalLight = document.createElement('a-entity');
+        directionalLight.setAttribute('id', 'sentinel-directional-accent');
+        directionalLight.setAttribute('light', {
+            type: 'directional',
+            color: '#D4AF37',   // Ouro Imperial Sutil
+            intensity: 0.55,
+            castShadow: false   // TOTALMENTE DESATIVADO PARA EVITAR PROCESSAMENTO EM CPU
+        });
+        directionalLight.setAttribute('position', '4.0 12.0 2.5');
+        this.sceneEl.appendChild(directionalLight);
+    },
+
+    // Ajustes diretos no motor Three.js para maximizar sincronização com headsets (90Hz/120Hz)
+    optimizeGraphicsPipeline: function () {
+        const renderer = this.sceneEl.renderer;
+        if (renderer) {
+            renderer.physicallyCorrectLights = true;
+            renderer.sortObjects = true; // Previne sobreposição e quebra de z-buffer
+            
+            // Força a liberação imediata dos buffers após a projeção ocular
+            const ctx = renderer.getContext();
+            if (ctx && ctx.hint) {
+                ctx.hint(ctx.FRAGMENT_SHADER_DERIVATIVE_HINT, ctx.NICEST);
+            }
+        }
+    },
+
+    // INTERCEPTADOR DE GATILHOS: Comunicação direta sub-milissegundo com o Kernel
+    onSpatialTriggerIntercepted: function (event) {
+        if (!event.detail) return;
+        
+        const { actionId, timestamp } = event.detail;
+        const currentLatency = performance.now() - timestamp;
+
+        // 1. Despacho assíncrono instantâneo no barramento sínclito para logs e observabilidade
+        if (this.bus) {
+            this.bus.emit('xr:intent_captured', {
+                actionId: actionId,
+                latencyMs: currentOpacity => currentLatency,
+                capturedAt: performance.now()
+            });
+        }
+
+        // 2. Acionamento direto da automação de hardware contida no Kernel Soberano
+        if (this.kernel) {
+            // Roteamento direto para os Gânglios Basais Automatizados (Se expostos)
+            if (typeof this.kernel.startBasalGangliaAutomation === 'function') {
+                this.kernel.startBasalGangliaAutomation(actionId, currentLatency);
+            } else {
+                // Fallback de injeção de comando limpo via comando centralizado
+                if (this.bus) {
+                    this.bus.emit('nexus:command', {
+                        command: 'TRIGGER_AUTOMATION_NODE',
+                        payload: { id: actionId, inputLatency: currentLatency },
+                        source: 'RUNTIME_SCENE_INTERCEPTOR'
+                    });
+                }
+            }
+        }
+
+        console.log(`[KERNEL COGNITIVO] Latência de entrada medida no barramento espacial: ${currentLatency.toFixed(3)}ms // Ação: ${actionId}`);
+    },
+
+    remove: function () {
+        this.sceneEl.removeEventListener('sentinel-trigger', this._boundTriggerInterceptor);
+    }
+});
