@@ -1,255 +1,242 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SENTINEL v9.0 — SOVEREIGN GOVERNANCE LAYER (FORMAL CONTRACT VALIDATOR)
+ * SENTINEL v9.0 — SOVEREIGN SECURITY & COMPLIANCE INFRASTRUCTURE (FIREWALL)
  * Arquivo: js_sentinel_protocols.js
- * Papel: Transition Policies, Runtime Contracts e Firewall de Frame Budget
- * Governança: Co-orquestrador de Conformidade. Sem auto-boot intrusivo.
+ * Papel: Firewall Formal do Runtime, Auditoria de Ciclo de Vida e Validador de Contratos
+ * Governança: Totalmente subordinado ao SovereignKernel; dita regras de integridade.
+ * Fix: Refatoração para ESM nativo. Implementação de Contratos de Governança,
+ * Validação de Módulos, Validação de Estados, Domínios de Segurança, Contratos XR e Performance.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-// 1. PRIORITY GOVERNANCE LEVELS — Escalonamento Verde de Salvaguarda
-const PRIORITY_LEVELS = Object.freeze({
-  CRITICAL:   'CRITICAL',   // Emergência de hardware, colapso de GPU ou pânico de memória
-  HIGH:       'HIGH',       // Missões ativas, isolamento de atenção, alertas biométricos
-  NORMAL:     'NORMAL',     // Fluxos operacionais nominais e telemetria padrão
-  BACKGROUND: 'BACKGROUND', // Loops metabólicos, indexação de histórico L2/L3
-  SUPPRESSED: 'SUPPRESSED'  // Saturação semântica mitigada ou contextos silenciados
-});
-
-// 2. DOMAIN ISOLATION DEFINITIONS — Fronteiras de Sandbox
-const PROTOCOL_DOMAINS = Object.freeze({
-  COGNITION:   'COGNITION',
-  RENDERING:   'RENDERING',
-  DIAGNOSTICS: 'DIAGNOSTICS',
-  MEMORY:      'MEMORY',
-  XR:          'XR'
+// D) SECURITY DOMAINS: Fronteiras rígidas de privilégios de isolamento (Sandbox)
+export const SECURITY_DOMAINS = Object.freeze({
+    KERNEL:      'KERNEL',      // Controle absoluto sobre a memória L1/L2 e ciclo de vida macro
+    PERCEPTION:  'PERCEPTION',  // Subsistemas de atenção ocular, fóvea e neuro-grafo
+    GRAPHICS:    'GRAPHICS',    // Pipelines de renderização WebGL2 e injeção de shaders
+    SPATIAL_XR:  'SPATIAL_XR',  // Matrizes tridimensionais, eyetracking e inputs inerciais
+    DIAGNOSTICS: 'DIAGNOSTICS'  // Telemetria secundária e HUD operacional externo
 });
 
 class SentinelProtocolsEngine {
-  constructor() {
-    this.version = '9.0-GOVERNANCE';
-    this.isActive = true;
+    constructor() {
+        this.version = "9.0-FORMAL-FIREWALL";
+        this.isActive = false;
 
-    // 3. ESTRUTURA CORE DE POLÍTICAS E VERIFICAÇÕES
-    this.protocols = {
-      runtime: {
-        boot: 'INITIALIZED',
-        suspend: 'ALLOWED',
-        wake: 'RESTRICTED',
-        shutdown: 'PROTECTED'
-      }
-    };
+        // A) GOVERNANCE CONTRACTS: Banco de regras matemáticas imutáveis
+        this.contracts = new Map();
+        
+        // Histórico detalhado de violações interceptadas para auditoria pós-falha
+        this.violationLog = [];
+        this.maxLogBuffer = 50;
 
-    // Registro interno de contratos e orçamentos homologados pelo Scheduler
-    this.registeredContracts = new Map();
-    this.violationLog = [];
-    
-    // Configurações de restrição do Frame Budget (Alvo nominal: 16.66ms para 60fps)
-    this.budgetConstraints = {
-      maxFrameBudgetMs: 16.66,
-      maxThirdPartyAllowance: 0.15 // Scripts externos não podem consumir mais que 15% do frame
-    };
-
-    this._initializeGovernanceEngine();
-  }
-
-  /**
-   * TRACE ENGINE UNIFICADO INTERNO DE POLÍTICAS
-   */
-  trace(message, level = 'INFO') {
-    if (window.SovereignKernel && typeof window.SovereignKernel.trace === 'function') {
-      window.SovereignKernel.trace('PROTOCOLS', message, level);
-    } else {
-      const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
-      console.log(`%c[${timestamp}] [PROTOCOLS] [${level}] ${message}`, 'color: #FFC400; font-weight: bold;');
-    }
-  }
-
-  traceProtocol(msg, level = 'INFO')  { this.trace(`[GOVERNANCE] ${msg}`, level); }
-  traceViolation(msg, level = 'WARN') { this.trace(`[VIOLATION] ${msg}`, level); }
-  traceRecovery(msg, level = 'INFO')  { this.trace(`[RECOVERY_CHAIN] ${msg}`, level); }
-
-  /**
-   * REGISTRO SEGURO DE CONTRATOS EXTERNOS DE COMPONENTES
-   */
-  registerProtocol(contractId, domain, allocationBudgetPercentage = 0.05) {
-    if (!PROTOCOL_DOMAINS[domain]) {
-      this.traceViolation(`Tentativa de registro em domínio inválido: [${domain}] pelo contrato [${contractId}]`, 'CRITICAL');
-      return false;
+        this.bus = null;
     }
 
-    const contract = {
-      id: contractId,
-      domain,
-      budgetShare: Math.min(this.budgetConstraints.maxThirdPartyAllowance, allocationBudgetPercentage),
-      authorized: true,
-      timestamp: Date.now()
-    };
-
-    this.registeredContracts.set(contractId, contract);
-    this.traceProtocol(`Contrato formal homologado com sucesso: [${contractId}] no Domínio [${domain}]`, 'INFO');
-    return true;
-  }
-
-  /**
-   * ⚡ TRANSITION POLICIES — VALIDAÇÃO FORMAL ANTES DE TRANSMUTAÇÕES DE HARDWARE
-   * Intercepta e valida transições de estado para garantir integridade e assinaturas válidas
-   */
-  verifyTransaction(sourceMode, targetMode, telemetryToken = {}) {
-    this.traceProtocol(`Avaliando política de transição: [${sourceMode}] ──► [${targetMode}]`, 'INFO');
-
-    // Regra de Ouro: Bloqueia qualquer rebaixamento para SAFE_MODE ou RECOVERY se a Missão estiver travada (Focus Lock)
-    if (window.SentinelAttention && window.SentinelAttention.attentionLock && targetMode === 'RECOVERY') {
-      if (!telemetryToken.overrideCriticalAuthority) {
-        this.traceViolation(`CONTRATO REJEITADO: Transição para RECOVERY negada. Focus Lock ativo em missão crítica.`, 'CRITICAL');
-        this._recordViolation('TRANSITION_DENIED', sourceMode, targetMode, 'Focus Lock Barrier');
-        return false;
-      }
-    }
-
-    // Valida tokens de telemetria corrompidos ou com sobrecarga metabólica simulada
-    if (telemetryToken.mentalBattery < 0.05 && targetMode === 'FOCUS') {
-      this.traceViolation(`CONTRATO REJEITADO: Carga metabólica em esgotamento fatal (${(telemetryToken.mentalBattery * 100).toFixed(1)}%). Modo FOCUS proibido.`, 'CRITICAL');
-      this._recordViolation('METABOLIC_FAILURE', sourceMode, targetMode, 'Low Mental Power Threshold');
-      return false;
-    }
-
-    this.traceProtocol(`Transição [${targetMode}] autorizada formalmente pela mesa de governança.`, 'INFO');
-    return true;
-  }
-
-  /**
-   * ⚡ RUNTIME CONTRACTS — FIREWALL DE FRAME BUDGET PARA SCRIPTING EXTERNO
-   * Protege a linha de execução do loop principal contra injeções de terceiros que causem lag ou stutters
-   */
-  executeGuardedBlock(contractId, executionBlock) {
-    // Se o contrato não estiver registrado, intercepta imediatamente como violação de caixa de areia
-    if (!this.registeredContracts.has(contractId)) {
-      this.traceViolation(`FIREWALL VIOLATION: Script não autorizado tentou executar instruções em runtime: [${contractId}]`, 'CRITICAL');
-      this._recordViolation('UNAUTHORIZED_SCRIPT_INJECTION', 'RUNTIME', 'EXECUTE', contractId);
-      return false;
-    }
-
-    const contract = this.registeredContracts.get(contractId);
-    const startTime = performance.now();
-
-    try {
-      // Execução isolada em sandbox temporária
-      executionBlock();
-    } catch (err) {
-      this.traceViolation(`Exceção capturada dentro do bloco do contrato [${contractId}]: ${err.message}`, 'ERROR');
-    }
-
-    const executionTimeMs = performance.now() - startTime;
-    const maxAllowedMs = this.budgetConstraints.maxFrameBudgetMs * contract.budgetShare;
-
-    // Avaliação de estouro de Frame Budget (Garantia de estabilidade de quadros)
-    if (executionTimeMs > maxAllowedMs) {
-      this.traceViolation(`🔥 CONTRATO VIOLADO: [${contractId}] estourou o Frame Budget Alocado! Gasto: ${executionTimeMs.toFixed(3)}ms (Máx Permitido: ${maxAllowedMs.toFixed(3)}ms)`, 'WARN');
-      this._recordViolation('FRAME_BUDGET_OVERFLOW', 'LOOP', contract.domain, `${contractId} expendeu demais`);
-      this._punishContract(contractId);
-    }
-  }
-
-  /**
-   * Reduz o orçamento de tempo ou revoga autorizações de scripts maliciosos ou ineficientes
-   */
-  _punishContract(contractId) {
-    const contract = this.registeredContracts.get(contractId);
-    if (contract) {
-      contract.budgetShare *= 0.5; // Degrada linearmente a cota de processamento pela metade (Pena de Throttling)
-      if (contract.budgetShare < 0.01) {
-        contract.authorized = false;
-        this.registeredContracts.delete(contractId);
-        this.traceViolation(`Contrato [${contractId}] cassado permanentemente por ineficiência crônica e stutters de renderização.`, 'CRITICAL');
-      }
-    }
-  }
-
-  _recordViolation(type, source, target, details) {
-    this.violationLog.push({ timestamp: Date.now(), type, source, target, details });
-    if (this.violationLog.length > 50) this.violationLog.shift();
-    
-    // Dispara alerta no barramento para que o Debug HUD capte a quebra de conformidade
-    window.SentinelBus?.emit('system:warning', { type: `CONTRATO_VIOLADO_${type}`, msg: details });
-  }
-
-  /**
-   * ⚡ COGNITIVE HOMEOCINESIS — MANUTENÇÃO E EQUILÍBRIO DE CONTRATOS (Core Loop)
-   */
-  maintainProtocolEquilibrium() {
-    if (!this.isActive) return;
-
-    // Se as violações acumuladas em curto espaço de tempo forem massivas, força o Kernel para SAFE_MODE
-    const shortTermViolations = this.violationLog.filter(v => Date.now() - v.timestamp < 10000);
-    if (shortTermViolations.length >= 4) {
-      this.traceRecovery('⚠️ Múltiplas violações de contratos simultâneas detectadas. Invocando cadeia de contenção do Kernel...', 'CRITICAL');
-      this.violationLog = []; // Zera buffer
-      
-      window.SentinelBus?.emit('state:phase-synchronized', { from: 'ANY', to: 'SAFE_MODE', reason: 'CRITICAL_CONTRACT_BREACH' });
-    }
-  }
-
-  /**
-   * Mapeamento e amarrações retrocompatíveis estritas com os contratos legados v6.1
-   */
-  _registerLegacyBinds() {
-    this.registerProtocol('legacy_core_adapter', PROTOCOL_DOMAINS.COGNITION, 0.05);
-    this.registerProtocol('ext_visual_particles', PROTOCOL_DOMAINS.RENDERING, 0.10);
-
-    // Conecta interceptores seguros na transição nativa do State Governor
-    window.SentinelBus?.on('state:changed', (data) => {
-      if (data && data.path === 'system:mode-transition') {
-        const mentalBattery = window.StateStore?.get?.('system.mental-battery') || 1.0;
-        const success = this.verifyTransaction('CURRENT', data.value, { mentalBattery });
-        if (!success) {
-          this.traceRecovery(`Transição interceptada e abortada em runtime pela mesa de governança.`, 'WARN');
+    // ═══════════════════════════════════════════════════════════════════════
+    // A) GOVERNANCE CONTRACTS CORE ARBITRATION
+    // ═══════════════════════════════════════════════════════════════════════
+    registerContract(contractId, domain, validationFn) {
+        if (!SECURITY_DOMAINS[domain]) {
+            this._trace('GOVERNANCE', `Tentativa de registrar contrato em domínio inválido: [${domain}]`, 'WARN');
+            return false;
         }
-      }
-    });
-  }
+        this.contracts.set(contractId, { domain, validate: validationFn, active: true });
+        return true;
+    }
 
-  _initializeGovernanceEngine() {
-    this.traceProtocol('Estruturando Malha de Verificação Formal de Contratos...', 'INFO');
+    evaluateContract(contractId, dataContext) {
+        const contract = this.contracts.get(contractId);
+        if (!contract || !contract.active) return true; // Contratos ausentes ou suspensos passam por omissão
 
-    window.SentinelBus?.on('boot:complete', () => {
-      this.traceProtocol('Fronteiras de isolamento de sandbox ativas. Governança online.');
-      this._registerLegacyBinds();
-    });
-  }
+        try {
+            const success = contract.validate(dataContext);
+            if (!success) {
+                this._logViolation(contractId, contract.domain, dataContext, 'REJECTED');
+                return false;
+            }
+            return true;
+        } catch (err) {
+            this._logViolation(contractId, contract.domain, { error: err.message, context: dataContext }, 'CRASH');
+            return false; // Bloqueio preventivo total se a função de validação quebrar
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // B) MODULE VALIDATION CONTRACTS
+    // ═══════════════════════════════════════════════════════════════════════
+    validateModuleIntegrity(moduleName, moduleInstance) {
+        if (!moduleInstance) {
+            this._trace('INTEGRITY', `Módulo [${moduleName}] nulo ou indefinido capturado.`, 'ERROR');
+            return false;
+        }
+
+        // Contrato Formal: Todo módulo homologado deve possuir assinatura de versão e métodos vitais de barramento
+        const hasLifecycleHooks = typeof moduleInstance._attachSignalBus === 'function' || typeof moduleInstance.initializeEngine === 'function';
+        const hasIdentity = typeof moduleInstance.version === 'string';
+
+        if (!hasLifecycleHooks || !hasIdentity) {
+            this._trace('INTEGRITY', `Módulo [${moduleName}] rejeitado no handshake por quebra de contrato estrutural.`, 'CRITICAL');
+            this._logViolation('MODULE_CONTRACT_FAIL', SECURITY_DOMAINS.KERNEL, { module: moduleName }, 'BLOCKED');
+            return false;
+        }
+
+        return true;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // C) STATE VALIDATION CONTRACTS
+    // ═══════════════════════════════════════════════════════════════════════
+    validateStateTransition(currentPhase, targetPhase) {
+        // Matriz Determinística de Transições de Fase do Kernel Permitidas
+        // Impede estados impossíveis ou retrocessos ilegais (Ex: SHUTDOWN -> READY sem passar por BOOT)
+        const LEGAL_TRANSITIONS = {
+            'SHUTDOWN':  ['BOOT'],
+            'BOOT':      ['INIT', 'EMERGENCY', 'SAFE_MODE'],
+            'INIT':      ['READY', 'EMERGENCY', 'SAFE_MODE'],
+            'READY':     ['ACTIVE', 'EMERGENCY', 'SAFE_MODE', 'SHUTDOWN'],
+            'ACTIVE':    ['EMERGENCY', 'SAFE_MODE', 'READY', 'SHUTDOWN'],
+            'SAFE_MODE': ['READY', 'SHUTDOWN'],
+            'EMERGENCY': ['SAFE_MODE', 'SHUTDOWN']
+        };
+
+        const allowedTargets = LEGAL_TRANSITIONS[currentPhase] || [];
+        if (!allowedTargets.includes(targetPhase)) {
+            this._trace('SECURITY', `Transição de fase ilegal barrada: [${currentPhase} ➔ ${targetPhase}]`, 'CRITICAL');
+            this._logViolation('ILLEGAL_PHASE_TRANSITION', SECURITY_DOMAINS.KERNEL, { from: currentPhase, to: targetPhase }, 'INTERCEPTED');
+            return false;
+        }
+
+        return true;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // E) XR SAFETY CONTRACTS (BLINDAGEM VESTIBULAR BIOLÓGICA)
+    // ═══════════════════════════════════════════════════════════════════════
+    _establishXrSafetyContracts() {
+        // Contrato de Escala de Resolução: Impede distorções ópticas agressivas na viewport imersiva
+        this.registerContract('XR_RESOLUTION_BOUNDS', SECURITY_DOMAINS.SPATIAL_XR, (ctx) => {
+            if (ctx && ctx.scale) {
+                return ctx.scale >= 0.5 && ctx.scale <= 2.0;
+            }
+            return false;
+        });
+
+        // Contrato Vestibular Ocular: Evita cinetose forçando taxas de atualização compatíveis
+        this.registerContract('XR_VESTIBULAR_INTEGRITY', SECURITY_DOMAINS.SPATIAL_XR, (ctx) => {
+            if (ctx && ctx.fps) {
+                // Alerta crítico se o frame rate imersivo cair abaixo do limiar de segurança vestibular (45Hz)
+                return ctx.fps >= 45.0;
+            }
+            return true;
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // F) PERFORMANCE CONTRACTS (CONTRATOS DE BUDGET POR FRAME)
+    // ═══════════════════════════════════════════════════════════════════════
+    _establishPerformanceContracts() {
+        // Limite de tempo de execução alocado exclusivamente para processamento de Shaders Cognitivos
+        this.registerContract('GPU_SHADER_BUDGET', SECURITY_DOMAINS.GRAPHICS, (ctx) => {
+            if (ctx && ctx.executionMs) {
+                return ctx.executionMs <= 4.5; // Teto rígido em milissegundos
+            }
+            return true;
+        });
+
+        // Limite de tarefas simultâneas no Scheduler temporário para mitigar estouros de pilha
+        this.registerContract('SCHEDULER_QUEUE_SATURATION', SECURITY_DOMAINS.KERNEL, (ctx) => {
+            if (ctx && ctx.pendingTasks) {
+                return ctx.pendingTasks < 150; 
+            }
+            return true;
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INTERRUPÇÕES E EVENTOS DE VIOLAÇÃO
+    // ═══════════════════════════════════════════════════════════════════════
+    _logViolation(contractId, domain, context, actionTaken) {
+        const violation = {
+            timestamp: performance.now(),
+            contractId,
+            domain,
+            context: JSON.parse(JSON.stringify(context || {})),
+            action: actionTaken
+        };
+
+        this.violationLog.unshift(violation);
+        if (this.violationLog.length > this.maxLogBuffer) {
+            this.violationLog.pop();
+        }
+
+        this._trace('FIREWALL', `VIOLAÇÃO: [${contractId}] no domínio [${domain}]. Ação aplicada: [${actionTaken}]`, 'CRITICAL');
+
+        // Emite interrupção síncrona imediata no barramento global de sinais
+        if (this.bus) {
+            this.bus.emit('firewall:contract_violation', violation);
+            
+            // Se o contrato violado for crítico do Kernel ou Espacial, força recuo para Modo de Segurança
+            if (domain === SECURITY_DOMAINS.KERNEL || contractId === 'XR_VESTIBULAR_INTEGRITY') {
+                this.bus.emit('kernel:force_emergency_panic', { reason: `CONTRACT_VIOLATION:${contractId}` });
+            }
+        }
+    }
+
+    maintainProtocolEquilibrium() {
+        // Auditoria passiva contínua de telemetria cruzada injetada na janela
+        if (!this.isActive) return;
+
+        if (window.SentinelShaderRuntime?.budget) {
+            this.evaluateContract('GPU_SHADER_BUDGET', { executionMs: window.SentinelShaderRuntime.budget.currentLoadMs });
+        }
+        
+        if (window.SentinelHUD?.panels?.fps) {
+            this.evaluateContract('XR_VESTIBULAR_INTEGRITY', { fps: window.SentinelHUD.panels.fps.current });
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LIFECYCLE E HANDSHAKES DO BARRAMENTO
+    // ═══════════════════════════════════════════════════════════════════════
+    initializeEngine() {
+        this.isActive = true;
+        this._establishXrSafetyContracts();
+        this._establishPerformanceContracts();
+        this._trace('LIFECYCLE', 'Firewall formal ativado. Contratos de conformidade de hardware selados.');
+    }
+
+    shutdownEngine() {
+        this.isActive = false;
+        this.contracts.clear();
+        this.violationLog = [];
+    }
+
+    _trace(subsystem, message, level = 'INFO') {
+        const formatted = `[${new Date().toISOString()}] [PROTOCOLS-FIREWALL:${subsystem}] [${level}] ${message}`;
+        if (level === 'CRITICAL' || level === 'ERROR') console.error(formatted);
+        else if (level === 'WARN') console.warn(formatted);
+        else console.log(formatted);
+    }
+
+    _attachSignalBus(busInstance) {
+        this.bus = busInstance;
+
+        // Escuta o sincronizador de fases para interceptar e validar transições antes de sua efetivação
+        this.bus.on('kernel:phase-request-authorize', (transitionData) => {
+            if (transitionData && transitionData.from && transitionData.to) {
+                const isLegal = this.validateStateTransition(transitionData.from, transitionData.to);
+                this.bus.emit('kernel:phase-response-authorize', { 
+                    transactionId: transitionData.transactionId, 
+                    approved: isLegal 
+                });
+            }
+        });
+    }
 }
 
-// 5. EXPOSIÇÃO OPERACIONAL E ANCORAGEM DETERMINÍSTICA NO KERNEL SOBERANO
-(() => {
-  const SovereignProtocolsEngine = new SentinelProtocolsEngine();
-  
-  window.SentinelProtocolsClass = SentinelProtocolsEngine; // Exposição estrutural da Classe
-  window.SentinelProtocols = SovereignProtocolsEngine;       // Instância operacional ativa
+// Instanciação e exposição única em total conformidade com o ecossistema v9.0
+const SovereignFirewall = new SentinelProtocolsEngine();
+window.SentinelProtocols = SovereignFirewall;
 
-  // Vinculação determinística como subsistema direto do Kernel Soberano
-  if (window.SovereignKernel) {
-    window.SovereignKernel.registerModule('protocols', SovereignProtocolsEngine);
-  } else {
-    Object.defineProperty(window, 'SovereignKernel', {
-      configurable: true,
-      enumerable: true,
-      set: (kernelInstance) => {
-        delete window.SovereignKernel;
-        window.SovereignKernel = kernelInstance;
-        window.SovereignKernel.registerModule('protocols', SovereignProtocolsEngine);
-      }
-    });
-  }
-
-  // Acopla a auditoria de estabilidade contínua ao batimento de renderização nativo
-  const governancePulse = () => {
-    SovereignProtocolsEngine.maintainProtocolEquilibrium();
-    requestAnimationFrame(governancePulse);
-  };
-  requestAnimationFrame(governancePulse);
-
-  console.log(
-    '%c OMC SENTINEL GOVERNANCE & FORMAL CONTRACTS v9.0 ONLINE [FIREWALL-ON] ',
-    'background:#332200; color:#FFC400; font-weight:bold; padding:3px; border-left:4px solid #FFC400;'
-  );
-})();
+export default SovereignFirewall;
