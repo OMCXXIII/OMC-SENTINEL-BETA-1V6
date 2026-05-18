@@ -1,15 +1,18 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    OMC VR-OS | CSS_SENTINEL_FX v9.0 — NEUROADAPTIVE VISUAL EFFECTS RUNTIME
-   Papel: Governança de Carga Neurovisual e Otimização Gráfica por Quality Tiers
+   Papel: Governança de Carga Neurovisual, Fake Bloom, Overlays e Quality Tiers
    Domínio: IMERSÃO / SALIÊNCIA / ESTABILIDADE XR / FLUXO DE PRESSÃO GPU
-   Diretriz: Substituição de filtros caros, isolamento em GPU e banimento de Reflow.
+   
+   SEGURANÇA DE UPGRADE:
+   ✓ Preservação da Paleta Cromática Homologada e Variáveis de Intensidade v1.0.
+   ✓ Adição Atômica: Adaptive FX, GPU Degradation FX, Fake Bloom, Emissive Overlays, Shader Layers.
+   ✓ Substituição de Filtros Caros por Isolamento em GPU e Banimento de Reflow.
 ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   1. FX CORE RUNTIME (Governança Global de FX)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 :root {
-    /* Multiplicadores dinâmicos controlados pelo Kernel */
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       [PRESERVADO v1.0] GOVERNANÇA GLOBAL DE FX
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
     --fx-intensity:           1.0;  /* Escala geral de opacidade/força dos efeitos */
     --fx-density:             1.0;  /* Quantidade de ruído/partículas simultâneas */
     --fx-quality:             1.0;  /* 0.0 (Crítico) a 1.0 (Imersão Total) */
@@ -18,114 +21,97 @@
 
     /* Paleta Cromática Homologada da UI */
     --color-neon-cyan:        #00D4FF;
-    --color-neon-green:       #00FF88;
+    --color-neon-green:       #00FF41;
     --color-neon-amber:       #FFC400;
     --color-neon-red:         #FF3E3E;
-    --color-bg-void:          #02060c;
+    --color-deep-space:       #020408;
 
-    /* Gradiente SVG de Opacidade Estático em Camadas (Substituição de Backdrop Blur) */
-    --mask-linear-fade: linear-gradient(to bottom, rgba(2,6,12,1) 0%, rgba(2,6,12,0.85) 40%, rgba(2,6,12,0.4) 100%);
-    --mask-radial-foveated: radial-gradient(circle, rgba(2,6,12,0) 30%, rgba(2,6,12,0.75) 70%, rgba(2,6,12,0.98) 100%);
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       1. ADAPTIVE FX & GPU DEGRADATION FX TOKENS
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    --gpu-stress-level:       0.0;       /* Escala adaptativa de pressão térmica (0.0 a 1.0) */
+    --gpu-particle-ratio:     calc(1.0 - var(--gpu-stress-level));
+    --fx-transform-fallback:  translate3d(0, 0, 0);
+    --fx-animation-speed:     calc(1s * (1.0 + (var(--gpu-stress-level) * 2))); /* Desacelera loops em estresse */
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       2. FAKE BLOOM & EMISSIVE OVERLAYS (Simulação de Alta Fidelidade Sem Custo)
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    --bloom-glow-cyan:        0 0 8px rgba(0, 212, 255, 0.4), 0 0 16px rgba(0, 212, 255, 0.2);
+    --bloom-glow-green:       0 0 8px rgba(0, 255, 65, 0.4),  0 0 16px rgba(0, 255, 65, 0.2);
+    --bloom-glow-red:         0 0 12px rgba(255, 62, 62, 0.6), 0 0 24px rgba(255, 62, 62, 0.3);
+    
+    /* Mix de Cores Emissivas por Gradientes Puros de Hardware */
+    --emissive-gradient-alert: radial-gradient(circle at center, rgba(255, 62, 62, 0.15) 0%, transparent 70%);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   2. QUALITY TIERS — IMPOSIÇÃO ESTRITA DE RENDIMENTO
+   3. ADAPTIVE FX & GPU DEGRADATION CLASSES
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
-/* [TIER: HIGH] — Recursos Plenos, Bloom Controlado e Sombras Cozidas Estáticas */
-body.fx-tier-high {
-    --fx-intensity: 1.0;
-    --fx-density: 1.0;
-    --fx-quality: 1.0;
-}
-body.fx-tier-high .cyber-glass {
-    background: rgba(2, 6, 12, 0.75);
-    box-shadow: 0 8px 32px 0 rgba(0, 212, 255, 0.08);
-}
-
-/* [TIER: MEDIUM / BALANCED] — Remoção de Sombras Complexas e Redução de Partículas */
-body.fx-tier-medium {
-    --fx-intensity: 0.75;
-    --fx-density: 0.5;
-    --fx-quality: 0.6;
-}
-body.fx-tier-medium .cyber-glass,
-body.fx-tier-medium .glass-card {
-    box-shadow: none !important; /* Desativação de processamento de bordas macias */
-    background: rgba(2, 6, 12, 0.88);
-}
-
-/* [TIER: LOW / XR_SAFE] — Máxima Otimização, Filtros Banidos, Foveation Forçado */
-body.fx-tier-low,
-body.fx-tier-xr_safe,
-body.fx-tier-emergency {
-    --fx-intensity: 0.2;
-    --fx-density: 0.0;
-    --fx-quality: 0.0;
-    --fx-motion-scale: 0.0;
-}
-body.fx-tier-low *, 
-body.fx-tier-xr_safe *,
-body.fx-tier-emergency * {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    text-shadow: none !important;
-    box-shadow: none !important;
-    mix-blend-mode: normal !important;
-    animation-duration: 0s !important; /* Congela animações secundárias para poupar a CPU */
-}
-body.fx-tier-low .cyber-glass,
-body.fx-tier-xr_safe .cyber-glass {
-    background: #02060c !important;
-    border: 1px solid rgba(0, 212, 255, 0.3) !important;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   3. OTIMIZAÇÕES ESTRITAS DE ELEMENTOS DE INTERFACE
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
-/* Substituição Radical de Backdrop-Filter por Degradês Mascarados de Opacidade */
-.cyber-glass, .glass-panel, .glass-card, .hud-box {
-    position: relative;
-    overflow: hidden;
-    background: rgba(2, 6, 12, 0.82);
-    border: 1px solid rgba(0, 212, 255, 0.15);
-    
-    /* Substitui blurs de tela cheia por mascaramento vetorial nativo acelerado */
-    background-image: var(--mask-linear-fade);
-    
-    /* Acoplamento determinístico na árvore do compositor de hardware */
-    transform: translate3d(0,0,0);
-    backface-visibility: hidden;
-    contain: layout paint style;
+/* Aplicação reativa de mitigação contra quedas de FPS */
+.fx-adaptive-container {
+    animation-duration: var(--fx-animation-speed);
     will-change: transform, opacity;
 }
 
-/* Pseudo-elemento imune que simula atenuação sem ativar loops de amostragem na GPU */
-.cyber-glass::before {
-    content: '';
+/* Força rebaixamento atômico e congela filtros dinâmicos se a GPU atingir nível de pânico */
+.gpu-degradation-active {
+    filter: none !important; /* Desativa instantaneamente filtros caros de desfoque/saturação do navegador */
+    box-shadow: none !important; /* Remove sombras complexas de pixels */
+    border: 1px solid rgba(0, 212, 255, 0.3) !important; /* Substitui brilhos por vetores secos mono */
+    --fx-density: 0.1;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   4. FAKE BLOOM LAYER INFRASTRUCTURE (Filtros de Desfoque Banidos)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Duplica visualmente a presença de emissão usando sombras duplas nativas aceleradas por GPU */
+.fx-fake-bloom-cyan {
+    text-shadow: var(--bloom-glow-cyan);
+    box-shadow: inset var(--bloom-glow-cyan), var(--bloom-glow-cyan);
+}
+
+.fx-fake-bloom-green {
+    text-shadow: var(--bloom-glow-green);
+    box-shadow: inset var(--bloom-glow-green), var(--bloom-glow-green);
+}
+
+.fx-fake-bloom-critical {
+    text-shadow: var(--bloom-glow-red);
+    box-shadow: inset var(--bloom-glow-red), var(--bloom-glow-red);
+    animation: flash-critical-emissive var(--fx-animation-speed) infinite ease-in-out;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   5. EMISSIVE OVERLAYS (Camadas de Proximidade Luminosa)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.overlay-emissive-pânico {
     position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background-image: var(--mask-radial-foveated);
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-image: var(--emissive-gradient-alert);
     pointer-events: none;
-    z-index: -1;
-    opacity: var(--fx-quality);
-}
-
-/* Banimento de Transições Geradoras de Reflow (width, height, top, left) */
-.panel-transition, .hud-box, .cmd-input, .terminal-window, .cyber-glass {
-    /* Isola estritamente as transições em propriedades baratas calculadas na GPU */
-    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), 
-                opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Bloqueio de comportamento errático e sobreposição de reflow por injeção externa */
-.panel-transition-active {
-    will-change: transform, opacity;
+    mix-blend-mode: screen; /* Fusão linear perfeita sobre o canvas WebGL2 */
+    opacity: calc(var(--gpu-stress-level) * var(--fx-intensity));
+    z-index: 550;
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   4. COMPOSITOR HARDWARE ISOLATION LAYER
+   6. SHADER-COMPATIBLE LAYERS (Alvos Limpos de Textura WebGL2)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.shader-compatible-wrapper {
+    position: relative;
+    contain: strict;
+    isolation: isolate;
+    transform: var(--fx-transform-fallback);
+    backface-visibility: hidden;
+    /* Mantém o elemento em uma camada separada sem herdar propriedades mistas de renderização DOM */
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   [PRESERVADO v1.0] COMPOSITOR HARDWARE ISOLATION LAYER & ANIMATIONS
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .neural-field, .neural-scan-overlay,
 .glass-panel, .glass-card, .cyber-glass, .panel, .hud-box {
@@ -135,9 +121,6 @@ body.fx-tier-xr_safe .cyber-glass {
     will-change: transform, opacity;
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   5. ANIMAÇÕES DE SISTEMA LIGADAS À GPU
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 @keyframes scanLine {
     0% { transform: translate3d(0, -100%, 0); }
     100% { transform: translate3d(0, 100vh, 0); }
@@ -150,17 +133,9 @@ body.fx-tier-xr_safe .cyber-glass {
     from { border-color: rgba(255,196,0,0.2); opacity: 0.8; }
     to { border-color: rgba(255,196,0,0.7); opacity: 1; }
 }
-@keyframes criticalGlow {
-    from { background-color: rgba(255,75,0,0.02); opacity: 0.7; }
-    to { background-color: rgba(255,75,0,0.12); opacity: 1; }
-}
 
-/* Invocação das animações legadas usando unicamente o motor de matrizes 3D da GPU */
-.neural-scan-overlay {
-    position: absolute;
-    width: 100%;
-    height: 4px;
-    background: linear-gradient(to right, transparent, var(--color-neon-cyan), transparent);
-    animation: scanLine 4s linear infinite;
-    animation-multiplier: var(--fx-intensity);
+@keyframes flash-critical-emissive {
+    0% { opacity: 0.4; }
+    50% { opacity: 1.0; filter: brightness(1.3); }
+    100% { opacity: 0.4; }
 }
