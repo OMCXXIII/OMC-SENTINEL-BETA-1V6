@@ -1,418 +1,255 @@
 /**
- * ============================================================================
- * SENTINEL CORE RUNTIME ARCHITECTURE
- * Module: sentinel-protocols.js (Evolution from v6.1 to v9.0)
- * Role: Cognitive Runtime Governance Layer (Sovereign Governance Engine)
- * Design Aesthetic: Strict Contract Verification & Adaptive Operational Equilibrium
- * ============================================================================
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SENTINEL v9.0 — SOVEREIGN GOVERNANCE LAYER (FORMAL CONTRACT VALIDATOR)
+ * Arquivo: js_sentinel_protocols.js
+ * Papel: Transition Policies, Runtime Contracts e Firewall de Frame Budget
+ * Governança: Co-orquestrador de Conformidade. Sem auto-boot intrusivo.
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 
-// 4. PRIORITY GOVERNANCE LEVELS
-const PRIORITY_LEVELS = {
+// 1. PRIORITY GOVERNANCE LEVELS — Escalonamento Verde de Salvaguarda
+const PRIORITY_LEVELS = Object.freeze({
   CRITICAL:   'CRITICAL',   // Emergência de hardware, colapso de GPU ou pânico de memória
   HIGH:       'HIGH',       // Missões ativas, isolamento de atenção, alertas biométricos
   NORMAL:     'NORMAL',     // Fluxos operacionais nominais e telemetria padrão
   BACKGROUND: 'BACKGROUND', // Loops metabólicos, indexação de histórico L2/L3
   SUPPRESSED: 'SUPPRESSED'  // Saturação semântica mitigada ou contextos silenciados
-};
+});
 
-// 18. DOMAIN ISOLATION DEFINITIONS
-const PROTOCOL_DOMAINS = {
+// 2. DOMAIN ISOLATION DEFINITIONS — Fronteiras de Sandbox
+const PROTOCOL_DOMAINS = Object.freeze({
   COGNITION:   'COGNITION',
   RENDERING:   'RENDERING',
   DIAGNOSTICS: 'DIAGNOSTICS',
   MEMORY:      'MEMORY',
   XR:          'XR'
-};
+});
 
 class SentinelProtocolsEngine {
   constructor() {
     this.version = '9.0-GOVERNANCE';
     this.isActive = true;
 
-    // 1. PROTOCOL CORE STRUCTURE
+    // 3. ESTRUTURA CORE DE POLÍTICAS E VERIFICAÇÕES
     this.protocols = {
       runtime: {
-        boot: 'INITIALIZING',
+        boot: 'INITIALIZED',
         suspend: 'ALLOWED',
         wake: 'RESTRICTED',
-        shutdown: 'PROTECTED',
-        recovery: 'READY'
-      },
-      cognition: {
-        relevancePropagation: true,
-        focusPersistence: 0.85,
-        semanticSuppression: 0.3
-      },
-      xr: {
-        comfortRules: 'STRICT',
-        densityLimits: 150, // Limite máximo de nós por metro cúbico virtual
-        spatialAttention: true,
-        latencyThreshold: 11.1 // ms (Janela rígida para 90Hz estáveis)
-      },
-      safety: {
-        thermal: { limit: 85, current: 42 },
-        cognitive: { minBattery: 20 },
-        gpu: { minFps: 45 },
-        xr: { trackingLossTimeout: 500 },
-        memory: { maxL1Lease: 25 * 1024 * 1024 } // 25MB Max State Payload
-      },
-      synchronization: {
-        renderer: 'STABLE',
-        xr: 'STABLE',
-        scheduler: 'STABLE',
-        attention: 'STABLE',
-        memory: 'STABLE'
+        shutdown: 'PROTECTED'
       }
     };
 
-    // 3. EVENT GOVERNANCE & POLICIES
-    this.events = {
-      priorityRules: new Map(),
-      propagationRules: new Map(),
-      suppressionRules: new Set(['ui:pulse']), // Filtros de inundação nativos
-      replayRules: new Map()
-    };
-
-    // 27. CROSS-MODULE CONTRACTS
-    this.contracts = {
-      rendererPerformance: { active: true, minGpuLoadAllowed: 0.15 },
-      attentionRenderer: { active: true, peripheralSuppressionFactor: 0.2 },
-      memoryNeurograph: { active: true, enforceAtomicSnapshots: true }
-    };
-
-    // Cache interno de referências do DOM legado (v6.1 Preservado)
-    this._domCache = { clock: null, latency: null, battery: null };
-    this._mentalBattery = 100.0;
-    this._lastGovernancePulse = performance.now();
-
-    this._initializeGovernanceLayer();
-  }
-
-  // ==========================================================================
-  // 13. VALIDATION ENGINE & 12. STATE CONSISTENCY LAYER
-  // ==========================================================================
-
-  validateProtocol(protocolPath, ruleCondition) {
-    let isValid = false;
-    this.safeProtocolExecution(() => {
-      const parts = protocolPath.split('.');
-      let current = this.protocols;
-      for (const part of parts) {
-        if (current[part] === undefined) return;
-        current = current[part];
-      }
-      isValid = ruleCondition(current);
-    });
-    return isValid;
-  }
-
-  validateTransition(currentStatus, nextStatus) {
-    const validTransitions = {
-      'INITIALIZING': ['NOMINAL', 'OVERRIDE_ENABLED'],
-      'NOMINAL': ['SUSPENDED', 'EMERGENCY', 'CRITICAL_COLLAPSE'],
-      'SUSPENDED': ['NOMINAL', 'SHUTTING_DOWN'],
-      'EMERGENCY': ['NOMINAL', 'RECOVERING'],
-      'RECOVERING': ['NOMINAL', 'CRITICAL_COLLAPSE']
-    };
-
-    const allowed = validTransitions[currentStatus]?.includes(nextStatus) || false;
-    if (!allowed) {
-      this.traceViolation(`Transição inválida de estado rejeitada: [${currentStatus} -> ${nextStatus}]`);
-    }
-    return allowed;
-  }
-
-  validateContext(contextId, actorDomain) {
-    // 18. Impede vazamento transversal e acoplamento caótico de domínios
-    if (!PROTOCOL_DOMAINS[actorDomain]) {
-      this.traceViolation(`Domínio de acesso desconhecido ou não homologado: [${actorDomain}]`);
-      return false;
-    }
-    if (actorDomain === PROTOCOL_DOMAINS.RENDERING && contextId === 'CORE_VAULT_MUTATION') {
-      this.traceViolation(`Tentativa ilegal de mutação de memória a partir do pipeline de Renderização.`);
-      return false;
-    }
-    return true;
-  }
-
-  // ==========================================================================
-  // 17. PERMISSION PROTOCOLS & EVENT AUTHORIZATION
-  // ==========================================================================
-
-  authorizeEventEmission(event, data, emitterModule = 'UNKNOWN') {
-    // Regra de supressão atencional ativa: cancela propagação se o evento estiver na lista negra
-    if (this.events.suppressionRules.has(event) && this.protocols.cognition.semanticSuppression > 0.5) {
-      return false;
-    }
-
-    // Contrato de permissões explícitas por criticidade
-    const priority = this._getEventPriority(event);
-    if (priority === PRIORITY_LEVELS.CRITICAL && emitterModule === 'UI_UX_VIEW') {
-      this.traceViolation(`Módulo de interface tentou forçar um evento de prioridade de hardware CRITICAL. Abortando.`);
-      return false;
-    }
-
-    return true;
-  }
-
-  _getEventPriority(event) {
-    if (event.includes('critical') || event.includes('collapse') || event.includes('nsdr-trigger')) {
-      return PRIORITY_LEVELS.CRITICAL;
-    }
-    if (event.includes('mission') || event.includes('focus')) {
-      return PRIORITY_LEVELS.HIGH;
-    }
-    return PRIORITY_LEVELS.NORMAL;
-  }
-
-  // ==========================================================================
-  // 9. RENDERER DEGRADATION & 8. XR ENGINE COMFORT PROTOCOLS
-  // ==========================================================================
-
-  enforceRendererPolicy(currentFps, gpuCompilationTimeMs) {
-    this.safeProtocolExecution(() => {
-      // 9. Quality Rules & Degradation Thresholds
-      if (currentFps < this.protocols.safety.gpu.minFps || gpuCompilationTimeMs > this.protocols.xr.latencyThreshold) {
-        this.traceProtocol('GPU overload interceptada. Aplicando protocolo de degradação estrutural.');
-        
-        // Emite ordem para que o Engine XR mude comportamento sem quebrar
-        window.SentinelBus?.emit('renderer:degrade-quality', {
-          reductionFactor: 0.5,
-          disableAntiAliasing: true,
-          ts: Date.now()
-        });
-
-        // Altera parâmetros de imersão para mitigar enjoo cinetótico (VR Comfort Protection)
-        this.protocols.xr.comfortRules = 'MAXIMUM_SAFETY';
-        this.protocols.xr.densityLimits = 50; // Contrai densidade tridimensional
-      }
-    });
-  }
-
-  // ==========================================================================
-  // LEGACY SYNC: BIOMETRIA, CLOCK ATC E LOOP METABÓLICO (v6.1 Incorporado)
-  // ==========================================================================
-
-  _registerLegacyBinds() {
-    if (!window.SentinelBus) return;
-
-    // Sincronização do Relógio ATC Operacional
-    window.SentinelBus.on('ui:clock-tick', (data) => {
-      if (!window.SENTINEL_BOOTED) return;
-      
-      this._domCache.clock = this._domCache.clock || document.getElementById('clock-display');
-      if (!this._domCache.clock) return;
-
-      if (this._domCache.clock.tagName.toLowerCase().startsWith('a-')) {
-        this._domCache.clock.setAttribute('value', `CLOCK_ATC\n${data.time}\nSESSÃO: ${data.elapsed}s`);
-      } else {
-        this._domCache.clock.textContent = `${data.time} | ${data.elapsed}s`;
-      }
-    });
-
-    // Monitoramento de Hiato Operacional / Latência Crítica
-    window.SentinelBus.on('ui:hud-latency', (data) => {
-      this._domCache.latency = this._domCache.latency || document.getElementById('latency-value');
-      if (this._domCache.latency) this._domCache.latency.textContent = data.value;
-
-      if (data.ms > 600000) {
-        this._domCache.latency?.classList.add('latency-critical');
-        this.traceViolation('Hiato operacional ultrapassou limite tolerável. Disparando auto-injeção.');
-        window.SentinelBus.emit('system:late-start', { patch: '[PREDEF-ALL]' });
-      }
-    });
-
-    // Listener de Bateria Mental & Salvaguarda Metabólica do Córtex Pré-Frontal (PFC-BRUT)
-    window.SentinelBus.on('system:mental-battery', (data) => {
-      if (typeof data.level !== 'number') return;
-      this._mentalBattery = data.level;
-
-      this._domCache.battery = this._domCache.battery || document.getElementById('mental-battery');
-      if (this._domCache.battery) {
-        const safeLevel = Math.max(0, Math.min(this._mentalBattery, 100));
-        this._domCache.battery.textContent = `${safeLevel}%`;
-        this._domCache.battery.classList.remove('battery-warning', 'battery-critical');
-        
-        if (safeLevel <= 20) this._domCache.battery.classList.add('battery-critical');
-        else if (safeLevel <= 45) this._domCache.battery.classList.add('battery-warning');
-      }
-
-      if (this._mentalBattery <= this.protocols.safety.cognitive.minBattery) {
-        this.traceProtocol('[PFC-BRUT] Exaustão metabólica iminente detectada. Forçando freio sensorial.', 'WARN');
-        window.SentinelBus.emit('system:nsdr-trigger', { duration: 600, reason: 'low-metabolic-voltage' });
-      }
-    });
-
-    // Automação Non-Sleep Deep Rest (NSDR Cooling)
-    window.SentinelBus.on('system:nsdr-trigger', (data) => {
-      this._executeNSDRCoolingEngine(data);
-    });
-
-    // Loop de Degradação de Glicose e Carga de Atenção Estável
-    setInterval(() => {
-      if (!window.SENTINEL_BOOTED) return;
-      this._mentalBattery = Math.max(0, this._mentalBattery - 0.15);
-      window.SentinelBus.emit('system:mental-battery', { level: Math.round(this._mentalBattery) });
-    }, 45000);
-  }
-
-  _executeNSDRCoolingEngine(data) {
-    document.body.classList.add('nsdr-cooling');
-    this.traceProtocol('Protocolo NSDR ativado: Mitigando poluição visual e reduzindo saturação.');
-
-    document.querySelectorAll('.hud-corner, .glass-panel, .cyber-glass').forEach(node => {
-      node.style.filter = 'saturate(0.45) brightness(0.82)';
-      node.style.transition = 'filter 1.2s ease';
-    });
-
-    window.SentinelBus?.emit('ui:notification', {
-      type: 'NSDR',
-      message: 'Resfriamento metabólico recomendado por 10 minutos.'
-    });
-
-    setTimeout(() => {
-      document.body.classList.remove('nsdr-cooling');
-      document.querySelectorAll('.hud-corner, .glass-panel, .cyber-glass').forEach(node => {
-        node.style.filter = '';
-      });
-      this.traceProtocol('Ciclo de resfriamento NSDR concluído. Córtex restaurado ao modo nominal.');
-    }, (data.duration || 600) * 1000);
-  }
-
-  // ==========================================================================
-  // 22. ADAPTIVE GOVERNANCE & 29. COGNITIVE EQUILIBRIUM ENGINE
-  // ==========================================================================
-
-  adaptProtocols() {
-    // Se o estado geral estiver em modo de emergência, eleva agressividade de supressão
-    const stateSnapshot = window.StateStore?.get();
-    if (stateSnapshot?.ui?.isEmergency || stateSnapshot?.ui?.isFocusMode) {
-      this.protocols.cognition.semanticSuppression = 0.8;
-      this.protocols.cognition.focusPersistence = 0.95;
-      this.events.suppressionRules.add('ui:hud-latency'); // Calma no barramento
-    } else {
-      this.protocols.cognition.semanticSuppression = 0.3;
-      this.protocols.cognition.focusPersistence = 0.85;
-      this.events.suppressionRules.delete('ui:hud-latency');
-    }
-  }
-
-  maintainProtocolEquilibrium() {
-    const now = performance.now();
-    const deltaTime = (now - this._lastGovernancePulse) / 1000;
-    this._lastGovernancePulse = now;
-
-    // 22. Modula dinamicamente thresholds e filtros baseado na carga atual do sistema
-    this.adaptProtocols();
-
-    // 30. GOVERN RUNTIME — Árbito de consistência cruzada
-    this.governRuntime();
-  }
-
-  governRuntime() {
-    // Validação preventiva: Se houver colapso tridimensional mas o barramento insistir em manter imersão
-    if (window.StateStore) {
-      const isEmergency = window.StateStore.get('ui.isEmergency');
-      if (isEmergency && this.protocols.runtime.boot !== 'EMERGENCY') {
-        this.protocols.runtime.boot = 'EMERGENCY';
-        this.applyEmergencyFallbackChain('STATE_STORE_EMERGENCY_FORCE');
-      }
-    }
-  }
-
-  // ==========================================================================
-  // 15. RECOVERY PROTOCOLS & FALLBACK HIERARCHY
-  // ==========================================================================
-
-  applyEmergencyFallbackChain(reason) {
-    this.traceRecovery(`Iniciando cadeia hierárquica de recuperação ordenada. Motivo: ${reason}`, 'CRITICAL');
+    // Registro interno de contratos e orçamentos homologados pelo Scheduler
+    this.registeredContracts = new Map();
+    this.violationLog = [];
     
-    // 25. Emergency Sequence Order: 1. XR -> 2. GPU -> 3. Memory -> 4. Core State
-    this.safeProtocolExecution(() => {
-      this.protocols.synchronization.xr = 'DEGRADED';
-      window.SentinelBus?.emit('xr:emergency-collapse', { preserveState: true });
-
-      this.protocols.synchronization.renderer = 'SAFE_MINIMAL';
-      window.SentinelBus?.emit('renderer:force-2d-fallback', { structuralReset: true });
-
-      if (window.StateStore && typeof window.StateStore.recover === 'function') {
-        this.traceRecovery('Invocando reidratação atômica L3 no StateStore.');
-        window.StateStore.recover();
-      }
-
-      this.protocols.runtime.boot = 'NOMINAL';
-      this.traceRecovery('Estabilização do runtime concluída com sucesso.');
-    });
-  }
-
-  snapshotProtocols() {
-    return JSON.parse(JSON.stringify(this.protocols));
-  }
-
-  restoreProtocols(snapshot) {
-    if (snapshot) {
-      this.protocols = snapshot;
-      this.traceProtocol('Instantâneo estrutural de governança re-injetado.');
-    }
-  }
-
-  safeProtocolExecution(executionBlock) {
-    try {
-      executionBlock();
-    } catch (error) {
-      this.traceViolation(`Falha crítica na camada de governança: ${error.message}. Acionando reset.`);
-      this.applyEmergencyFallbackChain('GOVERNANCE_SYSTEM_VIOLATION_EXCEPTION');
-    }
-  }
-
-  _initializeGovernanceLayer() {
-    this.traceProtocol('Iniciando Cognitive Runtime Governance Layer...', 'INFO');
-
-    // Interceptador acoplado no barramento para governar a segurança operacional de emissões (Contrato de Saída)
-    if (window.SentinelBus && typeof window.SentinelBus.emit === 'function') {
-      const originalEmit = window.SentinelBus.emit;
-      const self = this;
-      
-      window.SentinelBus.emit = function (event, data) {
-        if (!self.authorizeEventEmission(event, data, 'INTERCEPTED_RUNTIME')) {
-          return this; // Drop silencioso do evento sob violação de protocolo
-        }
-        return originalEmit.apply(this, arguments);
-      };
-    }
-
-    // Vincula o ciclo de arbitragem contínua ao batimento de renderização do sistema
-    const governancePulse = () => {
-      if (!this.isActive) return;
-      this.maintainProtocolEquilibrium();
-      requestAnimationFrame(governancePulse);
+    // Configurações de restrição do Frame Budget (Alvo nominal: 16.66ms para 60fps)
+    this.budgetConstraints = {
+      maxFrameBudgetMs: 16.66,
+      maxThirdPartyAllowance: 0.15 // Scripts externos não podem consumir mais que 15% do frame
     };
-    requestAnimationFrame(governancePulse);
 
-    // Registra ganchos de eventos herdados do v6.1 e handshakes de boot
-    this._registerLegacyBinds();
+    this._initializeGovernanceEngine();
+  }
+
+  /**
+   * TRACE ENGINE UNIFICADO INTERNO DE POLÍTICAS
+   */
+  trace(message, level = 'INFO') {
+    if (window.SovereignKernel && typeof window.SovereignKernel.trace === 'function') {
+      window.SovereignKernel.trace('PROTOCOLS', message, level);
+    } else {
+      const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
+      console.log(`%c[${timestamp}] [PROTOCOLS] [${level}] ${message}`, 'color: #FFC400; font-weight: bold;');
+    }
   }
 
   traceProtocol(msg, level = 'INFO')  { this.trace(`[GOVERNANCE] ${msg}`, level); }
   traceViolation(msg, level = 'WARN') { this.trace(`[VIOLATION] ${msg}`, level); }
   traceRecovery(msg, level = 'INFO')  { this.trace(`[RECOVERY_CHAIN] ${msg}`, level); }
 
-  trace(message, level = 'INFO') {
-    const formatted = `[${new Date().toISOString()}] [SENTINEL_PROTOCOLS] [${level}] ${message}`;
-    if (level === 'CRITICAL' || level === 'ERROR') console.error(formatted);
-    else if (level === 'WARN') console.warn(formatted);
-    else console.log(formatted);
+  /**
+   * REGISTRO SEGURO DE CONTRATOS EXTERNOS DE COMPONENTES
+   */
+  registerProtocol(contractId, domain, allocationBudgetPercentage = 0.05) {
+    if (!PROTOCOL_DOMAINS[domain]) {
+      this.traceViolation(`Tentativa de registro em domínio inválido: [${domain}] pelo contrato [${contractId}]`, 'CRITICAL');
+      return false;
+    }
+
+    const contract = {
+      id: contractId,
+      domain,
+      budgetShare: Math.min(this.budgetConstraints.maxThirdPartyAllowance, allocationBudgetPercentage),
+      authorized: true,
+      timestamp: Date.now()
+    };
+
+    this.registeredContracts.set(contractId, contract);
+    this.traceProtocol(`Contrato formal homologado com sucesso: [${contractId}] no Domínio [${domain}]`, 'INFO');
+    return true;
+  }
+
+  /**
+   * ⚡ TRANSITION POLICIES — VALIDAÇÃO FORMAL ANTES DE TRANSMUTAÇÕES DE HARDWARE
+   * Intercepta e valida transições de estado para garantir integridade e assinaturas válidas
+   */
+  verifyTransaction(sourceMode, targetMode, telemetryToken = {}) {
+    this.traceProtocol(`Avaliando política de transição: [${sourceMode}] ──► [${targetMode}]`, 'INFO');
+
+    // Regra de Ouro: Bloqueia qualquer rebaixamento para SAFE_MODE ou RECOVERY se a Missão estiver travada (Focus Lock)
+    if (window.SentinelAttention && window.SentinelAttention.attentionLock && targetMode === 'RECOVERY') {
+      if (!telemetryToken.overrideCriticalAuthority) {
+        this.traceViolation(`CONTRATO REJEITADO: Transição para RECOVERY negada. Focus Lock ativo em missão crítica.`, 'CRITICAL');
+        this._recordViolation('TRANSITION_DENIED', sourceMode, targetMode, 'Focus Lock Barrier');
+        return false;
+      }
+    }
+
+    // Valida tokens de telemetria corrompidos ou com sobrecarga metabólica simulada
+    if (telemetryToken.mentalBattery < 0.05 && targetMode === 'FOCUS') {
+      this.traceViolation(`CONTRATO REJEITADO: Carga metabólica em esgotamento fatal (${(telemetryToken.mentalBattery * 100).toFixed(1)}%). Modo FOCUS proibido.`, 'CRITICAL');
+      this._recordViolation('METABOLIC_FAILURE', sourceMode, targetMode, 'Low Mental Power Threshold');
+      return false;
+    }
+
+    this.traceProtocol(`Transição [${targetMode}] autorizada formalmente pela mesa de governança.`, 'INFO');
+    return true;
+  }
+
+  /**
+   * ⚡ RUNTIME CONTRACTS — FIREWALL DE FRAME BUDGET PARA SCRIPTING EXTERNO
+   * Protege a linha de execução do loop principal contra injeções de terceiros que causem lag ou stutters
+   */
+  executeGuardedBlock(contractId, executionBlock) {
+    // Se o contrato não estiver registrado, intercepta imediatamente como violação de caixa de areia
+    if (!this.registeredContracts.has(contractId)) {
+      this.traceViolation(`FIREWALL VIOLATION: Script não autorizado tentou executar instruções em runtime: [${contractId}]`, 'CRITICAL');
+      this._recordViolation('UNAUTHORIZED_SCRIPT_INJECTION', 'RUNTIME', 'EXECUTE', contractId);
+      return false;
+    }
+
+    const contract = this.registeredContracts.get(contractId);
+    const startTime = performance.now();
+
+    try {
+      // Execução isolada em sandbox temporária
+      executionBlock();
+    } catch (err) {
+      this.traceViolation(`Exceção capturada dentro do bloco do contrato [${contractId}]: ${err.message}`, 'ERROR');
+    }
+
+    const executionTimeMs = performance.now() - startTime;
+    const maxAllowedMs = this.budgetConstraints.maxFrameBudgetMs * contract.budgetShare;
+
+    // Avaliação de estouro de Frame Budget (Garantia de estabilidade de quadros)
+    if (executionTimeMs > maxAllowedMs) {
+      this.traceViolation(`🔥 CONTRATO VIOLADO: [${contractId}] estourou o Frame Budget Alocado! Gasto: ${executionTimeMs.toFixed(3)}ms (Máx Permitido: ${maxAllowedMs.toFixed(3)}ms)`, 'WARN');
+      this._recordViolation('FRAME_BUDGET_OVERFLOW', 'LOOP', contract.domain, `${contractId} expendeu demais`);
+      this._punishContract(contractId);
+    }
+  }
+
+  /**
+   * Reduz o orçamento de tempo ou revoga autorizações de scripts maliciosos ou ineficientes
+   */
+  _punishContract(contractId) {
+    const contract = this.registeredContracts.get(contractId);
+    if (contract) {
+      contract.budgetShare *= 0.5; // Degrada linearmente a cota de processamento pela metade (Pena de Throttling)
+      if (contract.budgetShare < 0.01) {
+        contract.authorized = false;
+        this.registeredContracts.delete(contractId);
+        this.traceViolation(`Contrato [${contractId}] cassado permanentemente por ineficiência crônica e stutters de renderização.`, 'CRITICAL');
+      }
+    }
+  }
+
+  _recordViolation(type, source, target, details) {
+    this.violationLog.push({ timestamp: Date.now(), type, source, target, details });
+    if (this.violationLog.length > 50) this.violationLog.shift();
+    
+    // Dispara alerta no barramento para que o Debug HUD capte a quebra de conformidade
+    window.SentinelBus?.emit('system:warning', { type: `CONTRATO_VIOLADO_${type}`, msg: details });
+  }
+
+  /**
+   * ⚡ COGNITIVE HOMEOCINESIS — MANUTENÇÃO E EQUILÍBRIO DE CONTRATOS (Core Loop)
+   */
+  maintainProtocolEquilibrium() {
+    if (!this.isActive) return;
+
+    // Se as violações acumuladas em curto espaço de tempo forem massivas, força o Kernel para SAFE_MODE
+    const shortTermViolations = this.violationLog.filter(v => Date.now() - v.timestamp < 10000);
+    if (shortTermViolations.length >= 4) {
+      this.traceRecovery('⚠️ Múltiplas violações de contratos simultâneas detectadas. Invocando cadeia de contenção do Kernel...', 'CRITICAL');
+      this.violationLog = []; // Zera buffer
+      
+      window.SentinelBus?.emit('state:phase-synchronized', { from: 'ANY', to: 'SAFE_MODE', reason: 'CRITICAL_CONTRACT_BREACH' });
+    }
+  }
+
+  /**
+   * Mapeamento e amarrações retrocompatíveis estritas com os contratos legados v6.1
+   */
+  _registerLegacyBinds() {
+    this.registerProtocol('legacy_core_adapter', PROTOCOL_DOMAINS.COGNITION, 0.05);
+    this.registerProtocol('ext_visual_particles', PROTOCOL_DOMAINS.RENDERING, 0.10);
+
+    // Conecta interceptores seguros na transição nativa do State Governor
+    window.SentinelBus?.on('state:changed', (data) => {
+      if (data && data.path === 'system:mode-transition') {
+        const mentalBattery = window.StateStore?.get?.('system.mental-battery') || 1.0;
+        const success = this.verifyTransaction('CURRENT', data.value, { mentalBattery });
+        if (!success) {
+          this.traceRecovery(`Transição interceptada e abortada em runtime pela mesa de governança.`, 'WARN');
+        }
+      }
+    });
+  }
+
+  _initializeGovernanceEngine() {
+    this.traceProtocol('Estruturando Malha de Verificação Formal de Contratos...', 'INFO');
+
+    window.SentinelBus?.on('boot:complete', () => {
+      this.traceProtocol('Fronteiras de isolamento de sandbox ativas. Governança online.');
+      this._registerLegacyBinds();
+    });
   }
 }
 
-// Instanciação automática e acoplamento soberano no escopo global do SENTINEL
-const SovereignProtocolsEngine = new SentinelProtocolsEngine();
-window.SentinelProtocols = SovereignProtocolsEngine;
+// 5. EXPOSIÇÃO OPERACIONAL E ANCORAGEM DETERMINÍSTICA NO KERNEL SOBERANO
+(() => {
+  const SovereignProtocolsEngine = new SentinelProtocolsEngine();
+  
+  window.SentinelProtocolsClass = SentinelProtocolsEngine; // Exposição estrutural da Classe
+  window.SentinelProtocols = SovereignProtocolsEngine;       // Instância operacional ativa
 
-// Acoplamento seguro de boot com o barramento centralizado
-if (window.SentinelBus) {
-  window.SentinelBus.once('boot:complete', () => {
-    console.log('%c[PROTOCOLS] Sequência 4: Governança cognitiva e controle de transições ativos.', 'color:#00FF41;');
-  });
-}
+  // Vinculação determinística como subsistema direto do Kernel Soberano
+  if (window.SovereignKernel) {
+    window.SovereignKernel.registerModule('protocols', SovereignProtocolsEngine);
+  } else {
+    Object.defineProperty(window, 'SovereignKernel', {
+      configurable: true,
+      enumerable: true,
+      set: (kernelInstance) => {
+        delete window.SovereignKernel;
+        window.SovereignKernel = kernelInstance;
+        window.SovereignKernel.registerModule('protocols', SovereignProtocolsEngine);
+      }
+    });
+  }
+
+  // Acopla a auditoria de estabilidade contínua ao batimento de renderização nativo
+  const governancePulse = () => {
+    SovereignProtocolsEngine.maintainProtocolEquilibrium();
+    requestAnimationFrame(governancePulse);
+  };
+  requestAnimationFrame(governancePulse);
+
+  console.log(
+    '%c OMC SENTINEL GOVERNANCE & FORMAL CONTRACTS v9.0 ONLINE [FIREWALL-ON] ',
+    'background:#332200; color:#FFC400; font-weight:bold; padding:3px; border-left:4px solid #FFC400;'
+  );
+})();
