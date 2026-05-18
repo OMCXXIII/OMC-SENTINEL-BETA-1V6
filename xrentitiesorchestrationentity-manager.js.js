@@ -1,153 +1,182 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SENTINEL v9.0 — COGNITIVE STATE SCENE
- * Arquivo: xr/scenes/core/runtime.scene.js
- * Papel: Gerenciamento do Espaço Cognitivo Padrão Nominal de Operação
+ * SENTINEL v9.0 — COGNITIVE ENTITY RUNTIME INFRASTRUCTURE
+ * Arquivo: xr/entities/core/base.entity.js
+ * Papel: Classe Abstrata Fundamental, Componente A-Frame e Contratos de Gatilhos
+ * Domínio: SPATIAL INTERFACE / PERCEPTUAL INHIBITION / AUTOMATED ACTION
+ * Fix: Fusão da estrutura abstrata v9.0 com o componente de registro A-Frame
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-(() => {
-    const SceneId = 'runtime';
+if (typeof AFRAME === 'undefined') {
+    throw new Error('[VR-OS ENTITY] A-Frame não detectado na inicialização da entidade base.');
+}
 
-    const RuntimeScene = {
-        // 1. Scene Identity & Metadata
-        identity: SceneId,
-        type: 'CORE_OPERATIONAL',
-        initialized: false,
-        active: false,
-
-        // 2. Profiles de Controle Perceptivo e Restrição de Hardware
-        profiles: {
-            fxIntensity: 1.0,           // Intensidade nominal de shaders e glows
-            hudOpacity: 0.95,           // Opacidade alta para leitura soberana de dados
-            cognitiveDensity: 0.8,      // Densidade de widgets ativa (Permite detalhamento tático)
-            motionScale: 1.0,           // Cinemática em velocidade total estável
-            xrDepthScale: 1.0,          // Projeção estereoscópica tridimensional completa
-            gpuBudgetFraction: 0.85,    // Aloca até 85% do tempo de frame para esta camada visual
-            targetFps: 90,              // Alvo padrão para displays XR estáveis
-        },
-
-        priorityProfile: {
-            rank: 2,                    // Prioridade média-alta
-            unloadOnSuspend: false      // Mantém em cache na RAM para restauração instantânea
-        },
-
-        // 3. Estado Interno de Elementos e Nós de Cena Espacializados
-        spatialTopology: {
-            focusZones: ['#central-foveal-display', '#task-scheduler-pool'],
-            safeZones: ['#vestibular-horizon-anchor'],
-            activeEntities: []
-        },
-
-        // 4. Lifecycle Hooks (Implementação Obrigatória)
-        
-        /**
-         * Executa o warmup inicial, injeção de marcações HTML e pré-compilação de assets gráficos
-         */
-        onLoad: async function() {
-            console.log(`[SCENE:${SceneId}] Executando alocação de buffers e parsing semântico...`);
-            
-            // Simulação de injeção/ativação de templates tridimensionais no A-Frame / Three.js
-            const container = document.getElementById('scene-wrapper');
-            if (container) {
-                // Prepara as entidades táticas invisíveis em standby na árvore DOM/GPU
-                this.spatialTopology.activeEntities = Array.from(container.querySelectorAll('.operational-node'));
-            }
-
-            this.initialized = true;
-            return true;
-        },
-
-        /**
-         * Desperta a cena do estado de suspensão e liga os renderizadores físicos
-         */
-        onActivate: async function() {
-            this.active = true;
-            
-            // Exibe as entidades vinculadas a este contexto operacional
-            this.spatialTopology.activeEntities.forEach(entity => {
-                entity.setAttribute('visible', 'true');
-                entity.classList.add('fx-semantic-relevant');
-            });
-
-            // Sincroniza o HUD e os clocks de telemetria biológica
-            const hudOverlay = document.getElementById('sentinel-debug-hud');
-            if (hudOverlay) {
-                hudOverlay.className = 'hud-layer-runtime hud-density-high';
-            }
-
-            console.log(`[SCENE:${SceneId}] Estado ativo acoplado à pipeline principal.`);
-            return true;
-        },
-
-        /**
-         * Executado quando o foco cognitivo principal se volta para esta cena
-         */
-        onFocus: async function() {
-            // Aplica os filtros balísticos de foco nos seletores do CSS do SENTINEL
-            const mainZone = document.querySelector('#central-foveal-display');
-            mainZone?.classList.add('fx-focus-lock', 'hud-focus-lock');
-
-            // Ativa pulsações e sincronizadores auditivos táticos
-            window.SentinelBus?.emit('audio:play-ambience', { track: 'operational_rhythm_low.mp3', volume: 0.4 });
-            
-            console.log(`[SCENE:${SceneId}] Foco perceptivo travado.`);
-            return true;
-        },
-
-        /**
-         * Executado quando o operador desvia a atenção ou o sistema altera o contexto
-         */
-        onBlur: async function() {
-            const mainZone = document.querySelector('#central-foveal-display');
-            mainZone?.classList.remove('fx-focus-lock', 'hud-focus-lock');
-            
-            console.log(`[SCENE:${SceneId}] Foco liberado para redirecionamento atencional.`);
-            return true;
-        },
-
-        /**
-         * Congela execuções secundárias, loops e eventos para preservação de processamento
-         */
-        onSuspend: async function() {
-            this.active = false;
-
-            // Oculta nós físicos para remover as draw-calls da árvore ativa da GPU
-            this.spatialTopology.activeEntities.forEach(entity => {
-                entity.setAttribute('visible', 'false');
-                entity.classList.remove('fx-semantic-relevant');
-            });
-
-            console.log(`[SCENE:${SceneId}] Linha de execução suspensa e colocada em Background Cache.`);
-            return true;
-        },
-
-        /**
-         * Recupera a integridade de variáveis locais se houver perda de sincronia ou quebra de frame
-         */
-        onRecover: async function() {
-            console.warn(`[SCENE:${SceneId}] Disparando reinicialização de sanidade de buffers.`);
-            this.profiles.cognitiveDensity = 0.5; // Auto-reduz a carga atencional temporariamente
-            return this.onActivate();
-        },
-
-        /**
-         * Desaloca completamente a memória física e remove os nós do grafo de cena
-         */
-        onDestroy: async function() {
-            console.log(`[SCENE:${SceneId}] Purgando referências de memória. Coletor de lixo liberado.`);
-            this.spatialTopology.activeEntities = [];
-            this.initialized = false;
-            return true;
+/**
+ * 1. CLASSE ABSTRATA SOBERANA (CONTRATOS LOGICOS E COMPORTAMENTAIS)
+ */
+class SentinelBaseEntity {
+    constructor(entityId, entityType = 'GENERIC_COGNITIVE') {
+        if (this.constructor === SentinelBaseEntity) {
+            throw new TypeError('Não é possível instanciar a classe abstrata SentinelBaseEntity diretamente.');
         }
-    };
 
-    // Auto-registro compulsório no barramento central do gerenciador de cenas
-    if (window.SentinelSceneManager) {
-        window.SentinelSceneManager.registerScene(SceneId, RuntimeScene);
-    } else {
-        window.addEventListener('boot:complete', () => {
-            window.SentinelSceneManager?.registerScene(SceneId, RuntimeScene);
-        });
+        // Identidade e Metadados Estruturais
+        this.entityId = entityId;
+        this.entityType = entityType;
+        this.lifecycleState = 'UNLOADED'; // UNLOADED, SUSPENDED, ACTIVE, FOCUSING, DESTROYED
+        this.visibilityState = 'HIDDEN';   // VISIBLE, SUPRESSED, HIDDEN, OCCLUDED, FOCUS-ONLY
+
+        // Perfis de Controle Perceptivo e Semântico 
+        this.profiles = {
+            attentionProfile: {
+                weight: 1.0,               // Multiplicador base de relevância atencional
+                focusAffinity: 0.5,        // Afinidade com o centro da fóvea do operador
+                semanticPriority: 1        // Rank de importância por significado tático
+            },
+            performanceProfile: {
+                gpuCostFraction: 0.05,     // Estimativa de impacto no pipeline do fragment shader
+                allocationBudgetMs: 0.2     // Fração máxima de processamento permitida por frame
+            }
+        };
     }
-})();
+
+    // Handshake de Ativação Perceptiva
+    activate() {
+        this.lifecycleState = 'ACTIVE';
+        this.visibilityState = 'VISIBLE';
+    }
+
+    suspend() {
+        this.lifecycleState = 'SUSPENDED';
+        this.visibilityState = 'SUPRESSED';
+    }
+}
+
+// Registro na janela para heranças futuras e extensões de sistema
+window.SentinelBaseEntity = SentinelBaseEntity;
+
+
+/**
+ * 2. COMPONENTE WEBXR A-FRAME (ACOPLAMENTO GEOMÉTRICO AO DOM ESPACIAL)
+ */
+AFRAME.registerComponent('sentinel-base-entity', {
+    schema: {
+        actionId: { type: 'string', default: 'generic-trigger' },
+        latencyThreshold: { type: 'number', default: 100 },
+        weight: { type: 'float', default: 1.0 },
+        semanticPriority: { type: 'int', default: 1 }
+    },
+
+    // Inicialização nativa do ciclo de vida tridimensional
+    init: function () {
+        this.el.classList.add('cognitive-transition', 'layer-context');
+        
+        // Instanciação interna ligada à arquitetura de classes abstratas
+        this.runtimeInstance = {
+            entityId: this.data.actionId,
+            lifecycleState: 'ACTIVE',
+            visibilityState: 'VISIBLE',
+            isFocused: false
+        };
+
+        // Cache de referências e binds para evitar alocações dinâmicas na memória (Anti-GC Jitter)
+        this._boundFocusEnter = this.onFocusEnter.bind(this);
+        this._boundFocusLeave = this.onFocusLeave.bind(this);
+        this._boundExecuteAction = this.executeAction.bind(this);
+
+        this.setupHardwareListeners();
+    },
+
+    // Registro estrito de listeners isolados por nó geométrico
+    setupHardwareListeners: function () {
+        this.el.addEventListener('mouseenter', this._boundFocusEnter);
+        this.el.addEventListener('mouseleave', this._boundFocusLeave);
+        this.el.addEventListener('click', this._boundExecuteAction);
+    },
+
+    // Remoção cirúrgica de eventos ao desincorporar o objeto (Prevenção de Memory Leaks)
+    remove: function () {
+        this.el.removeEventListener('mouseenter', this._boundFocusEnter);
+        this.el.removeEventListener('mouseleave', this._boundFocusLeave);
+        this.el.removeEventListener('click', this._boundExecuteAction);
+    },
+
+    // GATILHO: Intersecção do Olhar (Foco Foveal Ativado)
+    onFocusEnter: function () {
+        this.runtimeInstance.isFocused = true;
+        this.runtimeInstance.lifecycleState = 'FOCUSING';
+        
+        // Modificação de estado estético via transformações aceleradas na GPU (Zero Reflow)
+        this.el.setAttribute('animation__focus', 'property: scale; to: 1.05 1.05 1.05; dur: 120; easing: easeOutQuad');
+        this._syncHardwareBridge(true);
+
+        // Comunicação instantânea com o Barramento Central do Ecossistema
+        if (window.SentinelBus) {
+            window.SentinelBus.emit('xr:gaze_moved', {
+                target: this.data.actionId,
+                gazeVector: this.el.object3D.position,
+                urgency: 0.5,
+                distance: this.el.object3D.position.length()
+            });
+        }
+        
+        this._trace('FOCUS', `Foco foveal estabelecido na entidade ID: [${this.data.actionId}]`);
+    },
+
+    // GATILHO: Evasão do Olhar (Inibição Perceptual)
+    onFocusLeave: function () {
+        this.runtimeInstance.isFocused = false;
+        this.runtimeInstance.lifecycleState = 'ACTIVE';
+        
+        this.el.setAttribute('animation__focus', 'property: scale; to: 1 1 1; dur: 120; easing: easeOutQuad');
+        this._syncHardwareBridge(false);
+        
+        this._trace('FOCUS', `Foco evacuado da entidade ID: [${this.data.actionId}]`);
+    },
+
+    // GATILHO: Disparo de Ação Mecânica ou Intencional
+    executeAction: function () {
+        const timestamp = performance.now();
+
+        // 1. Despacha evento de bolha nativo do DOM para árvores lógicas superiores
+        const event = new CustomEvent('sentinel-trigger', {
+            detail: { actionId: this.data.actionId, timestamp: timestamp },
+            bubbles: true,
+            composed: true
+        });
+        this.el.dispatchEvent(event);
+
+        // 2. Acionamento assíncrono direto do Kernel através do barramento CMA (Ignora UI Central)
+        if (window.SentinelBus) {
+            window.SentinelBus.emit('nexus:command', {
+                command: 'EXECUTE_AUTOMATION',
+                payload: { actionId: this.data.actionId, initiatedAt: timestamp },
+                source: 'SPATIAL_ENTITY_GATED'
+            });
+        }
+
+        this._trace('AUTOMATION', `Gatilho acionado. Intenção mapeada diretamente para o Kernel: [${this.data.actionId}]`, 'SUCCESS');
+    },
+
+    // Ponte de Hardware: Sincroniza classes e variáveis CSS sem alocações pesadas
+    _syncHardwareBridge: function (isFocused) {
+        if (isFocused) {
+            this.el.classList.add('layer-focus', 'hud-focus-lock');
+            this.el.classList.remove('layer-context');
+            this.el.style.setProperty('--hud-opacity', '1.0');
+            this.el.style.setProperty('--hud-focus-strength', '1.00');
+        } else {
+            this.el.classList.remove('layer-focus', 'hud-focus-lock');
+            this.el.classList.add('layer-context');
+            this.el.style.setProperty('--hud-opacity', '0.78');
+            this.el.style.setProperty('--hud-focus-strength', '0.50');
+        }
+    },
+
+    _trace: function (subsystem, message, level = 'INFO') {
+        console.log(`[${new Date().toISOString()}] [ENTITY_RUNTIME:${subsystem}] [${level}] ${message}`);
+    }
+});
+
+console.log("%c[SENTINEL XR] Componente 'sentinel-base-entity' e blueprint de abstração instanciados com sucesso.", "color: #00D4FF; font-weight: bold;");
