@@ -2,300 +2,275 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * SENTINEL v9.0 — COGNITIVE RUNTIME MEMORY SYSTEM (STATE VAULT)
  * Arquivo: sentinel-memory.js
- * Papel: Persistência de Missão, Micro-Dumps JSON e Restauração de Baixa Latência
- * Governança: Totalmente subordinado ao SovereignKernel. Sem auto-boot implícito.
+ * Papel: Continuidade Cognitiva, Snapshots Atômicos e Recuperação de Desastres
+ * Governança: Totalmente subordinado ao SovereignKernel; dita regras de Persistência.
+ * Fix: Refatoração integral para ESM. Implementação de Session Memory,
+ * XR Recovery Vault, Mission Persistence, Attention History e State Recovery.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-// 1. MEMORY TIERS — Camadas de Persistência Física
-const MEMORY_TIERS = Object.freeze({
-  VOLATILE:    'VOLATILE',    // Dados efêmeros em RAM de alta velocidade (Sub-μs)
-  SESSION:     'SESSION',     // Persistente em sessionStorage (Coordenadas/HUD)
-  PERSISTENT:  'PERSISTENT',  // Espelhado rigidamente em localStorage (Missão/Objetivos)
-  ARCHIVAL:    'ARCHIVAL'     // Armazenamento frio compactado para análise histórica (Focus Logs)
-});
-
-// 2. MEMORY PRIORITIES — Escalonamento de Retenção
-const MEMORY_PRIORITIES = Object.freeze({
-  CRITICAL:   'CRITICAL',   // Snapshots de recuperação, estados mutacionais XR
-  IMPORTANT:  'IMPORTANT',  // Estado da missão ativa, objetivos estruturados, checkpoints
-  CONTEXTUAL: 'CONTEXTUAL', // Mapas de calor de atenção, logs analíticos de foco
-  DISPOSABLE: 'DISPOSABLE'  // Telemetria bruta secundária, buffers de partículas
+// Chaves normativas imutáveis para persistência física em L2/L3
+const STORAGE_KEYS = Object.freeze({
+    SESSION:     'SENTINEL_SESSION_L1',
+    RECOVERY:    'SENTINEL_XR_RECOVERY_CRASH_DUMP',
+    MISSION:     'SENTINEL_MISSION_PERSISTENCE_L3',
+    ATTENTION:   'SENTINEL_ATTENTION_HISTORY_L2'
 });
 
 class SentinelMemorySystem {
-  constructor() {
-    this.version = '9.0-SOVEREIGN';
-    this.schemaVersion = 'v9.0-SOVEREIGN';
+    constructor() {
+        this.version = "9.0-COGNITIVE-CONTINUITY";
+        this.isActive = false;
 
-    // 3. INTERNAL MEMORY REGISTRY (RAM L1 Cache)
-    this.memory = new Map();
+        // A) SESSION MEMORY: Memória volátil operacional de altíssima velocidade
+        this.sessionStorage = new Map();
 
-    // Domínios Isolados de Contexto
-    this.domains = {
-      SESSION: new Map(),     // Estado imediato das visualizações e coordenadas do HUD
-      MISSION: new Map(),     // Objetivos consolidados e rotinas ativas estruturadas
-      FOCUS_HISTORY: [],      // Logs analíticos de desvios de atenção para calibração
-      SNAPSHOTS: []           // Capturas de estado em micro-dumps JSON
-    };
+        // D) ATTENTION HISTORY: Buffer circular de telemetria foveal e fixação do olhar
+        this.attentionHistory = [];
+        this.maxAttentionHistorySize = 150; // Mantém histórico das últimas ~3 fixações profundas
 
-    this._initializeMemorySystem();
-  }
+        // B) XR RECOVERY MEMORY & E) MEMORY SNAPSHOTS METADATA
+        this.recoveryRegistry = {
+            lastSnapshotTimestamp: 0,
+            consecutiveRecoveries: 0,
+            isHydrating: false
+        };
 
-  /**
-   * TRACE ENGINE UNIFICADO INTERNO DA MEMÓRIA
-   */
-  trace(message, level = 'INFO') {
-    if (window.SovereignKernel && typeof window.SovereignKernel.trace === 'function') {
-      window.SovereignKernel.trace('MEMORY', message, level);
-    } else {
-      const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
-      console.log(`%c[${timestamp}] [MEMORY] [${level}] ${message}`, 'color: #00D4FF; font-weight: bold;');
+        this.bus = null;
     }
-  }
 
-  /**
-   * ⚡ GRAVAÇÃO E PERSISTÊNCIA ESTRUTURADA (RAM L1 ──► STORAGE L2)
-   */
-  store(key, value, tier = MEMORY_TIERS.VOLATILE, priority = MEMORY_PRIORITIES.CONTEXTUAL) {
-    const memoryEntry = {
-      value,
-      tier,
-      priority,
-      timestamp: Date.now(),
-      schema: this.schemaVersion
-    };
-
-    // Escrita imediata em RAM L1 (< 1μs)
-    this.memory.set(key, memoryEntry);
-
-    // Roteamento físico de acordo com a Estrutura de Armazenamento designada
-    switch (tier) {
-      case MEMORY_TIERS.SESSION:
-        this.domains.SESSION.set(key, memoryEntry);
-        this._writeToHardware(sessionStorage, `SENTINEL_S1_${key}`, memoryEntry);
-        break;
-
-      case MEMORY_TIERS.PERSISTENT:
-        this.domains.MISSION.set(key, memoryEntry);
-        this._writeToHardware(localStorage, `SENTINEL_L2_${key}`, memoryEntry);
-        break;
-
-      case MEMORY_TIERS.ARCHIVAL:
-        if (key.includes('focus_deviation')) {
-          this.domains.FOCUS_HISTORY.push(memoryEntry);
-          // Mantém cap de segurança em RAM para histórico de foco (evita estouro de heap)
-          if (this.domains.FOCUS_HISTORY.length > 200) this.domains.FOCUS_HISTORY.shift();
+    // ═══════════════════════════════════════════════════════════════════════
+    // A) SESSION MEMORY (L1 IN-MEMORY STORAGE)
+    // ═══════════════════════════════════════════════════════════════════════
+    setSessionData(key, value) {
+        this.sessionStorage.set(key, value);
+        
+        // Espelhamento volátil não-bloqueante na SessionStorage nativa do navegador
+        try {
+            sessionStorage.setItem(`${STORAGE_KEYS.SESSION}_${key}`, JSON.stringify(value));
+        } catch (e) {
+            this._trace('SESSION', 'Falha na serialização assíncrona em L1.', 'WARN');
         }
-        break;
-    }
-  }
-
-  /**
-   * ⚡ RECUPERAÇÃO HIDRATADA DE ESTADO COMPLETO
-   */
-  retrieve(key, tier = MEMORY_TIERS.VOLATILE) {
-    // Tenta ler do cache L1 em RAM para performance máxima
-    if (this.memory.has(key)) {
-      return this.memory.get(key).value;
     }
 
-    // Fallback: Busca física na camada L2 persistente
-    let entry = null;
-    if (tier === MEMORY_TIERS.SESSION) {
-      entry = this._readFromHardware(sessionStorage, `SENTINEL_S1_${key}`);
-    } else if (tier === MEMORY_TIERS.PERSISTENT) {
-      entry = this._readFromHardware(localStorage, `SENTINEL_L2_${key}`);
+    getSessionData(key) {
+        if (this.sessionStorage.has(key)) {
+            return this.sessionStorage.get(key);
+        }
+        // Fallback de reidratação tardia
+        try {
+            const raw = sessionStorage.getItem(`${STORAGE_KEYS.SESSION}_${key}`);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                this.sessionStorage.set(key, parsed);
+                return parsed;
+            }
+        } catch (e) {}
+        return null;
     }
 
-    if (entry) {
-      this.memory.set(key, entry); // Hidrata o cache L1
-      return entry.value;
+    // ═══════════════════════════════════════════════════════════════════════
+    // C) MISSION PERSISTENCE (L3 COLD STORAGE HARDENING)
+    // ═══════════════════════════════════════════════════════════════════════
+    writeMissionState(missionId, payload) {
+        const packageData = {
+            missionId,
+            timestamp: Date.now(),
+            checksum: this._generateSimpleChecksum(payload),
+            data: payload
+        };
+
+        try {
+            localStorage.setItem(STORAGE_KEYS.MISSION, JSON.stringify(packageData));
+            this._trace('MISSION', `Estado tático da missão [${missionId}] persistido rigidamente em L3.`);
+            return true;
+        } catch (error) {
+            this._trace('MISSION', `Falha crítica ao gravar persistência de missão em disco: ${error.message}`, 'ERROR');
+            return false;
+        }
     }
 
-    return null;
-  }
+    readMissionState() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEYS.MISSION);
+            if (!raw) return null;
 
-  /**
-   * ⚡ RUNTIME SNAPSHOTS — MICRO-DUMPS DE CONFIGURAÇÃO IMEDIATA (< 12ms)
-   * Captura o estado atômico atual do sistema para recuperação instantânea contra falhas
-   */
-  createRuntimeSnapshot() {
-    const startTime = performance.now();
-    
-    // Varre e condensa o estado consolidado da memória ativa L1
-    const serializedState = {};
-    this.memory.forEach((entry, key) => {
-      if (entry.priority === MEMORY_PRIORITIES.CRITICAL || entry.priority === MEMORY_PRIORITIES.IMPORTANT) {
-        serializedState[key] = entry.value;
-      }
-    });
+            const packageData = JSON.parse(raw);
+            const currentChecksum = this._generateSimpleChecksum(packageData.data);
 
-    const snapshotDump = {
-      id: `snapshot_${Date.now()}`,
-      timestamp: Date.now(),
-      kernelMode: window.SovereignKernel?.getActiveMode?.() || 'IDLE',
-      payload: serializedState
-    };
+            // Validação de Integridade Estrutural contra corrupção de setores
+            if (currentChecksum !== packageData.checksum) {
+                this._trace('MISSION', 'CORRUPÇÃO DE DADOS DETECTADA EM L3. Checksum inválido.', 'CRITICAL');
+                return null;
+            }
 
-    // Armazena o dump JSON diretamente no topo do armazenamento local persistente
-    localStorage.setItem('SENTINEL_L3_EMERGENCY_DUMP', JSON.stringify(snapshotDump));
-    this.domains.SNAPSHOTS.push(snapshotDump);
-    
-    // Rotatividade: mantém apenas as duas últimas capturas estruturais de emergência
-    if (this.domains.SNAPSHOTS.length > 2) this.domains.SNAPSHOTS.shift();
-
-    const duration = performance.now() - startTime;
-    this.trace(`[SNAPSHOT] Micro-dump JSON executado. Latência de gravação: ${duration.toFixed(2)}ms (Alvo: < 12ms)`, 'INFO');
-    return snapshotDump.id;
-  }
-
-  /**
-   * ⚡ EXECUÇÃO DE RESTAURAÇÃO COMPLETA PÓS-COLAPSO
-   * Hidrata todo o ecossistema do OS a partir do último micro-dump válido
-   */
-  restoreFromEmergencyDump() {
-    const startTime = performance.now();
-    try {
-      const rawDump = localStorage.getItem('SENTINEL_L3_EMERGENCY_DUMP');
-      if (!rawDump) return false;
-
-      const snapshot = JSON.parse(rawDump);
-      this.trace(`[RECOVERY] Micro-dump de emergência localizado. ID: ${snapshot.id}. Remontando OS...`, 'WARN');
-
-      // Loop de hidratação forçada síncrona
-      Object.keys(snapshot.payload).forEach(key => {
-        this.store(key, snapshot.payload[key], MEMORY_TIERS.PERSISTENT, MEMORY_PRIORITIES.IMPORTANT);
-      });
-
-      const duration = performance.now() - startTime;
-      this.trace(`[RECOVERY] Restauração concluída em ${duration.toFixed(2)}ms. Sistema operacional estabilizado.`, 'INFO');
-      
-      window.SentinelBus?.emit('memory:state-restored', { timestamp: snapshot.timestamp, durationMs: duration });
-      return true;
-    } catch (err) {
-      this.trace(`Falha catastrófica ao descriptografar e injetar dump JSON: ${err.message}`, 'CRITICAL');
-      return false;
+            return packageData;
+        } catch (error) {
+            return null;
+        }
     }
-  }
 
-  /**
-   * Gravação direta de registros históricos e eventos analíticos
-   */
-  recordEvent(eventType, payload = {}) {
-    const logKey = `focus_deviation_${Date.now()}`;
-    if (eventType === 'ATTENTION_DIVERTED' || eventType === 'FOCUS_DROP') {
-      // Aloca na subestrutura de logs de foco para calibração analítica
-      this.store(logKey, payload, MEMORY_TIERS.ARCHIVAL, MEMORY_PRIORITIES.CONTEXTUAL);
-    } else {
-      this.store(`evt_${Date.now()}`, payload, MEMORY_TIERS.VOLATILE, MEMORY_PRIORITIES.DISPOSABLE);
+    // ═══════════════════════════════════════════════════════════════════════
+    // D) ATTENTION HISTORY (BUFFER CIRCULAR ANALÍTICO)
+    // ═══════════════════════════════════════════════════════════════════════
+    recordAttentionFixation(nodeId, durationMs, priorityTier) {
+        const logEntry = {
+            id: nodeId,
+            duration: durationMs,
+            tier: priorityTier,
+            ts: Date.now()
+        };
+
+        this.attentionHistory.push(logEntry);
+
+        // Estrangulamento do tamanho máximo para evitar vazamento de heap na RAM
+        if (this.attentionHistory.length > this.maxAttentionHistorySize) {
+            this.attentionHistory.shift();
+        }
+
+        // Despacha persistência em lote a cada 10 registros
+        if (this.attentionHistory.length % 10 === 0) {
+            try {
+                localStorage.setItem(STORAGE_KEYS.ATTENTION, JSON.stringify(this.attentionHistory));
+            } catch (e) {}
+        }
     }
-  }
 
-  /**
-   * ⚡ POLÍTICA DE RETENÇÃO E DIETA DE MEMÓRIA (RETENTION POLICY)
-   * Expura registros de telemetria descartáveis para impedir vazamento de memória e lentidão
-   */
-  retentionPolicy() {
-    this.trace('[RETENTION] Iniciando varredura cíclica de eliminação de lixo em cache...', 'INFO');
-    const now = Date.now();
-    let evictions = 0;
+    // ═══════════════════════════════════════════════════════════════════════
+    // E) MEMORY SNAPSHOTS & B) XR RECOVERY VAULT (PROTEÇÃO CONTRA QUEDAS)
+    // ═══════════════════════════════════════════════════════════════════════
+    createImmutableSnapshot(reason = 'ROUTINE') {
+        if (!this.isActive) return null;
 
-    this.memory.forEach((entry, key) => {
-      // Filtra entradas de telemetria bruta e descartável com mais de 45 segundos de vida
-      if (entry.priority === MEMORY_PRIORITIES.DISPOSABLE && (now - entry.timestamp > 45000)) {
-        this.memory.delete(key);
-        evictions++;
-      }
-    });
+        // Captura o estado atômico de todos os subsistemas vivos do ecossistema
+        const snapshot = {
+            timestamp: Date.now(),
+            reason,
+            sessionStoreDump: Array.from(this.sessionStorage.entries()),
+            kernelPhase: window.SovereignKernel ? window.SovereignKernel.getActivePhase() : 'UNKNOWN',
+            attentionActiveFocus: window.AttentionManager?.cognitiveLoad?.activeFocusId || null,
+            xrResolutionMultiplier: window.SentinelEngineXR?.resolution?.viewportMultiplier || 1.0
+        };
 
-    if (evictions > 0) {
-      this.trace(`[RETENTION] Purga concluída. Evictadas ${evictions} entradas obsoletas de telemetria de L1 RAM.`, 'INFO');
+        try {
+            // B) XR RECOVERY MEMORY: Escrita síncrona emergencial em área isolada
+            localStorage.setItem(STORAGE_KEYS.RECOVERY, JSON.stringify(snapshot));
+            this.recoveryRegistry.lastSnapshotTimestamp = snapshot.timestamp;
+            this._trace('SNAPSHOT', `Snapshot de contingência imutável selado em L2. Motivo: [${reason}]`);
+            return snapshot;
+        } catch (err) {
+            this._trace('SNAPSHOT', `Aborto de salvamento de emergência: ${err.message}`, 'ERROR');
+            return null;
+        }
     }
-  }
 
-  // --- MÉTODOS COMPLEMENTARES DE ACESSO LEGADO COMPATÍVEL ---
-  _writeToPersistentHardware(key, memoryEntry) { this._writeToHardware(localStorage, `SENTINEL_L2_MEM_${key}`, memoryEntry); }
-  _readFromPersistentHardware(key) {
-    const entry = this._readFromHardware(localStorage, `SENTINEL_L2_MEM_${key}`);
-    return entry ? entry.value : null;
-  }
+    // ═══════════════════════════════════════════════════════════════════════
+    // F) STATE RECOVERY (REIDRATAÇÃO OPERACIONAL)
+    // ═══════════════════════════════════════════════════════════════════════
+    executeStateRecovery() {
+        if (this.recoveryRegistry.isHydrating) return false;
+        this.recoveryRegistry.isHydrating = true;
 
-  // --- DRIVERS FÍSICOS DE HARDWARE INTERNOS ---
-  _writeToHardware(storageAPI, namespaceKey, entry) {
-    try {
-      storageAPI.setItem(namespaceKey, JSON.stringify(entry));
-    } catch (e) {
-      this.trace(`Falha física na escrita sobre o barramento do navegador: ${e.message}`, 'ERROR');
+        this._trace('STATE_RECOVERY', 'INICIANDO PROTOCOLO DE RECONSTITUIÇÃO COGNITIVA POST-CRASH...', 'WARN');
+
+        try {
+            const rawDump = localStorage.getItem(STORAGE_KEYS.RECOVERY);
+            if (!rawDump) {
+                this._trace('STATE_RECOVERY', 'Nenhum dump de colapso localizado em L2. Abortando reidratação.', 'INFO');
+                this.recoveryRegistry.isHydrating = false;
+                return false;
+            }
+
+            const snapshot = JSON.parse(rawDump);
+
+            // 1. Reidrata a Session Memory L1
+            if (snapshot.sessionStoreDump) {
+                this.sessionStorage = new Map(snapshot.sessionStoreDump);
+                // Restaura o espelhamento volátil físico
+                for (const [k, v] of snapshot.sessionStoreDump) {
+                    sessionStorage.setItem(`${STORAGE_KEYS.SESSION}_${k}`, JSON.stringify(v));
+                }
+            }
+
+            // 2. Reidrata cruzado no Attention Manager se ele coexistir
+            if (snapshot.attentionActiveFocus && window.AttentionManager) {
+                window.AttentionManager.registerCognitiveNode(snapshot.attentionActiveFocus, 'PRIMARY');
+                window.AttentionManager.acquireFocusLock(snapshot.attentionActiveFocus, 0);
+            }
+
+            // 3. Reidrata cruzado as propriedades de Viewport do Engine XR
+            if (snapshot.xrResolutionMultiplier && window.SentinelEngineXR) {
+                window.SentinelEngineXR.resolution.viewportMultiplier = snapshot.xrResolutionMultiplier;
+            }
+
+            this.recoveryRegistry.consecutiveRecoveries++;
+            this._trace('STATE_RECOVERY', `RECONSTITUIÇÃO COMPLETA. Malha restaurada com sucesso. Restauros seguidos: ${this.recoveryRegistry.consecutiveRecoveries}`);
+            
+            if (this.bus) {
+                this.bus.emit('memory:state_recovered', { ts: snapshot.timestamp, count: this.recoveryRegistry.consecutiveRecoveries });
+            }
+
+            this.recoveryRegistry.isHydrating = false;
+            return true;
+        } catch (fatalError) {
+            this._trace('STATE_RECOVERY', `Falha crítica irreversível na descompressão do snapshot: ${fatalError.message}`, 'CRITICAL');
+            this.recoveryRegistry.isHydrating = false;
+            return false;
+        }
     }
-  }
 
-  _readFromHardware(storageAPI, namespaceKey) {
-    try {
-      const raw = storageAPI.getItem(namespaceKey);
-      if (raw) return JSON.parse(raw);
-    } catch (e) {
-      return null;
+    // ═══════════════════════════════════════════════════════════════════════
+    // INTERFACES INTERNAS E AUXILIARES
+    // ═══════════════════════════════════════════════════════════════════════
+    _generateSimpleChecksum(obj) {
+        const stringified = JSON.stringify(obj || {});
+        let hash = 0;
+        for (let i = 0; i < stringified.length; i++) {
+            hash = (hash << 5) - hash + stringified.charCodeAt(i);
+            hash |= 0; // Converte para inteiro de 32 bits
+        }
+        return hash;
     }
-    return null;
-  }
 
-  _initializeMemorySystem() {
-    this.trace('Estruturando Canais Síncronos/Assíncronos de Continuidade Cognitiva...', 'INFO');
+    initializeMemory() {
+        this.isActive = true;
+        this._trace('LIFECYCLE', 'Cofre de persistência integrado e escutando canais operacionais.');
+        
+        // Executa auto-recuperação preemptiva no boot se houver registro de falha remanescente
+        this.executeStateRecovery();
+    }
 
-    // Varredura de retenção periódica de lixo em L1 (A cada 30 segundos)
-    setInterval(() => this.retentionPolicy(), 30000);
+    shutdownMemory() {
+        this.isActive = false;
+        this.sessionStorage.clear();
+    }
 
-    // Auto-captura periódica de micro-dumps preventivos (A cada 60 segundos) se o Kernel estiver pronto
-    setInterval(() => {
-      if (window.SovereignKernel && window.SovereignKernel.getActiveMode() !== 'BOOT') {
-        this.createRuntimeSnapshot();
-      }
-    }, 60000);
+    _trace(subsystem, message, level = 'INFO') {
+        const formatted = `[${new Date().toISOString()}] [MEMORY-VAULT:${subsystem}] [${level}] ${message}`;
+        if (level === 'CRITICAL' || level === 'ERROR') console.error(formatted);
+        else if (level === 'WARN') console.warn(formatted);
+        else console.log(formatted);
+    }
 
-    // Captura eventos síncronos de desvio do Filtro de Inibição Periférica
-    window.SentinelBus?.on('attention:suppression-trigger', (data) => {
-      this.recordEvent('ATTENTION_DIVERTED', { timestamp: Date.now(), focusProfile: data.profile });
-    });
+    _attachSignalBus(busInstance) {
+        this.bus = busInstance;
 
-    // Escuta sinalizações de erro crítico vindas do Kernel ou do State Governor para disparar dump imediato
-    window.SentinelBus?.on('state:phase-synchronized', (data) => {
-      if (data.to === 'EMERGENCY' || data.to === 'SAFE_MODE') {
-        this.createRuntimeSnapshot();
-      }
-    });
+        // Escuta gatilhos de pane iminente do governador de performance para gerar snapshot preventivo
+        this.bus.on('system:state_changed', (state) => {
+            if (state.to === 'LOW_POWER' || state.to === 'DEGRADED') {
+                this.createImmutableSnapshot('PREEMPTIVE_HARDWARE_STRESS');
+            }
+        });
 
-    this.recordEvent('MEMORY_SYSTEM_ONLINE', { version: this.version });
-  }
+        // Se o motor XR for forçado ao Blackout Técnico, gera snapshot imediato
+        this.bus.on('kernel:emergency_fallback', (evt) => {
+            this.createImmutableSnapshot(`KERNEL_PANIC_${evt.reason}`);
+        });
+    }
 }
 
-// 5. EXPOSIÇÃO OPERACIONAL E ANCORAGEM PASSIVA NO KERNEL SOBERANO
-(() => {
-  const MemorySystemInstance = new SentinelMemorySystem();
-  
-  window.SentinelMemorySystemClass = SentinelMemorySystem; // Exposição estrutural da Classe
-  window.SentinelMemory = MemorySystemInstance;            // Instância operacional ativa
+// Instanciação e exposição única em total conformidade com o ecossistema v9.0
+const SovereignMemory = new SentinelMemorySystem();
+window.SentinelMemory = SovereignMemory;
 
-  // Vinculação determinística como subsistema direto do Kernel Soberano
-  if (window.SovereignKernel) {
-    window.SovereignKernel.registerModule('memory', MemorySystemInstance);
-    // Executa reconstituição imediata de boot caso haja um dump persistido em disco
-    MemorySystemInstance.restoreFromEmergencyDump();
-  } else {
-    Object.defineProperty(window, 'SovereignKernel', {
-      configurable: true,
-      enumerable: true,
-      set: (kernelInstance) => {
-        delete window.SovereignKernel;
-        window.SovereignKernel = kernelInstance;
-        window.SovereignKernel.registerModule('memory', MemorySystemInstance);
-        MemorySystemInstance.restoreFromEmergencyDump();
-      }
-    });
-  }
-
-  console.log(
-    '%c OMC SENTINEL STATE VAULT & COGNITIVE MEMORY v9.0 ONLINE [PERSISTENCE-SECURED] ',
-    'background:#003344; color:#fff; font-weight:bold; padding:3px; border-left:4px solid #00D4FF;'
-  );
-})();
+export default SovereignMemory;
