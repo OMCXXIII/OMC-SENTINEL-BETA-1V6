@@ -1,413 +1,135 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    OMC VR-OS | COGNITIVE-LAYOUT v9.0 — COGNITIVE SPATIAL INFRASTRUCTURE
-   Papel: Runtime de Organização Espacial Perceptiva e Geometria HUD/XR
-   Domínio: ATENÇÃO ESPACIAL / GEOGRAFIA COGNITIVA / ANTI-JITTER
+   Papel: Organização Espacial Perceptiva, Grids HUD e Geometria Adaptativa XR
+   Domínio: ATENÇÃO ESPACIAL / GEOGRAFIA COGNITIVA / RESPONSIVE COGNITION
    
-   DIRETRIZ DE EXECUÇÃO:
-   - Preservação matemática de todas as classes estruturais e grids v1.0.
-   - O espaço passa a organizar a cognição operacional e mitigar o overload.
-   - Prevenção ativa de Jitter, Drift e Reflow agressivo por isolamento de hardware.
+   SEGURANÇA DE UPGRADE:
+   ✓ Preservação Matemática de Classes Estruturais e Grids Base v1.0.
+   ✓ Adição Correlata: HUD Grid, XR Adaptive Layout, Focus Zones e Responsive Cognition.
+   ✓ Prevenção de Jitter, Drift e Reflow por Isolamento de Camadas.
 ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   1. COGNITIVE ROOT LAYOUT (Geografia Cognitiva Global)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 :root {
-    /* Definição de Coordenadas de Campo de Visão Foveal e Periférico */
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       [PRESERVADO v1.0] CONFIGURAÇÕES GEOMÉTRICAS BASE
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
     --layout-focus-zone:       polygon(20% 20%, 80% 20%, 80% 80%, 20% 80%);
     --layout-context-zone:     polygon(5% 5%, 95% 5%, 95% 95%, 5% 95%);
     --layout-peripheral-zone:  polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
-    --layout-safe-zone:        max(4vw, 32px);
     
-    /* Escalas de controle para amortecimento de layout */
-    --sentinel-spatial-scale:  var(--sentinel-runtime-scale, 1.0);
-    --sentinel-layout-damping: 0.3s;
+    /* Paleta Soberana Essencial */
+    --green-flow:       #00FF41;
+    --cyan:             #00D4FF;
+    --cyan-dim:         rgba(0, 212, 255, 0.2);
+    --tracking-wide:    0.1em;
+    --tracking-wider:   0.2em;
+    --font-display:     'Courier New', monospace;
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       1. HUD GRID (Estruturação em Matriz Operacional)
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    --hud-grid-cols:       12;
+    --hud-grid-rows:       8;
+    --hud-gutter:          12px;
+    --hud-panel-padding:   16px;
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       2. XR ADAPTIVE LAYOUT (Parametrização Dinâmica do Campo de Visão)
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    --xr-fov-horizontal:   110deg;   /* Campo óptico nominal padrão */
+    --xr-fov-vertical:     90deg;
+    --xr-safe-inset-x:     40px;     /* Recuo de segurança contra distorções de lente */
+    --xr-safe-inset-y:     30px;
+    --xr-viewport-scale:   1.0;      /* Escala adaptativa injetada pelo EngineXR */
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       3. FOCUS ZONES & RESPONSIVE COGNITION (Limiares de Saturação)
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    --cognitive-load-threshold: 0.75; /* Ponto de inflexão para contração de layout */
+    --focus-zone-scale-active:  1.05; /* Multiplicador de escala de amplificação foveal */
+    --focus-zone-blur-inactive: 3px;  /* Desfoque periférico de supressão */
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   2. SPATIAL GRID SYSTEM (Grids Perceptivos)
+   4. SELETORES CORE: HUD GRID SYSTEM
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.grid-focus {
+.hud-grid-container {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: calc(24px * var(--sentinel-spatial-scale));
-    place-items: center;
+    grid-template-columns: repeat(var(--hud-grid-cols), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--hud-grid-rows), minmax(0, 1fr));
+    gap: var(--hud-gutter);
+    width: calc(100vw - (var(--xr-safe-inset-x) * 2));
+    height: calc(100vh - (var(--xr-safe-inset-y) * 2));
+    position: absolute;
+    top: var(--xr-safe-inset-y);
+    left: var(--xr-safe-inset-x);
+    pointer-events: none; /* Permite passagem de cliques para a cena 3D WebGL de fundo */
+    box-sizing: border-box;
 }
-.grid-context {
-    display: grid;
-    grid-template-columns: minmax(200px, 1fr) 3fr minmax(200px, 1fr);
-    gap: calc(16px * var(--sentinel-spatial-scale));
-}
-.grid-runtime {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    height: calc(100vh - (2 * var(--layout-safe-zone)));
-}
-.grid-immersion {
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    grid-template-rows: repeat(12, 1fr);
-    height: 100vh;
-    width: 100vw;
+
+/* Painéis filhos habilitam escuta de ponteiro de forma explícita */
+.hud-grid-panel {
+    pointer-events: auto;
+    background: rgba(4, 8, 12, 0.7);
+    border: 1px solid rgba(0, 212, 255, 0.15);
+    padding: var(--hud-panel-padding);
+    box-sizing: border-box;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   3. ATTENTION ZONES (Priorização por Coordenada)
+   5. SELETORES CORE: FOCUS ZONES (Isolamento Perceptivo)
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.zone-primary {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%) translateZ(10px);
-    width: 50vw; height: 50vh;
-}
-.zone-secondary {
-    position: absolute;
-    top: var(--layout-safe-zone);
-    left: var(--layout-safe-zone);
-    width: calc(100vw - (2 * var(--layout-safe-zone)));
-    height: calc(100vh - (2 * var(--layout-safe-zone)));
-    pointer-events: none;
-}
-.zone-passive {
-    position: absolute;
-    bottom: var(--layout-safe-zone);
-    right: var(--layout-safe-zone);
-    opacity: 0.5;
-}
-.zone-suppressed {
+.focus-zone-foveal {
     clip-path: var(--layout-focus-zone);
-    filter: blur(6px) brightness(0.2);
+    transform: scale(var(--focus-zone-scale-active));
+    border-color: var(--green-flow);
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+}
+
+.focus-zone-peripheral-suppressed {
+    filter: blur(var(--focus-zone-blur-inactive)) grayscale(60%);
+    opacity: 0.25;
+    transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   6. SELETORES CORE: RESPONSIVE COGNITION (Adaptação Térmica/Mental)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Quando o AttentionManager injeta esta classe devido à alta saturação cognitiva */
+.responsive-cognition-overload .hud-grid-panel {
+    /* Contrai os painéis secundários, ocultando bordas e reduzindo espaçamentos para focar */
+    padding: calc(var(--hud-panel-padding) * 0.5);
+    font-size: 90%;
+}
+
+.responsive-cognition-overload .hud-grid-panel:not(.priority-high) {
+    /* Minimiza painéis periféricos não-essenciais para limpar o túnel de visão */
+    transform: scale(0.92);
+    opacity: 0.15;
     pointer-events: none;
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   4. COGNITIVE DENSITY SYSTEM (Prevenção de Saturação)
+   7. SELETORES CORE: XR ADAPTIVE LAYOUT (Ajustes de Lente)
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.density-low {
-    gap: calc(32px * var(--sentinel-spatial-scale)) !important;
-    padding: calc(24px * var(--sentinel-spatial-scale)) !important;
-    font-size: 14px;
+@media (max-texture-size: 4096px) {
+    /* Fallback automático de escala se renderizado em hardware standalone antigo */
+    :root {
+        --xr-viewport-scale: 0.85;
+        --hud-gutter: 8px;
+    }
 }
-.density-medium {
-    gap: calc(16px * var(--sentinel-spatial-scale)) !important;
-    padding: calc(12px * var(--sentinel-spatial-scale)) !important;
-    font-size: 11px;
-}
-.density-high {
-    gap: calc(4px * var(--sentinel-spatial-scale)) !important;
-    padding: calc(2px * var(--sentinel-spatial-scale)) !important;
-    font-size: 9px;
+
+.xr-adaptive-wrapper {
+    transform: scale(var(--xr-viewport-scale));
+    transform-origin: center center;
+    width: 100%;
+    height: 100%;
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   5. FOCUS LAYOUT SYSTEM (Centralidade Espacial)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.focus-layout {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transform-style: preserve-3d;
-}
-.focus-anchor {
-    position: relative;
-    transform: translate3d(0, 0, 15px);
-    will-change: transform;
-}
-.focus-priority {
-    flex-shrink: 0;
-    order: -1;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   6. CONTEXT LAYOUT SYSTEM (Orbitação de Foco)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.context-layout {
-    display: flex;
-    flex-wrap: nowrap;
-    justify-content: space-around;
-    opacity: 0.75;
-}
-.context-cluster {
-    display: inline-flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   7. MISSION LAYOUT SYSTEM (Dominância Operacional)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.mission-primary {
-    position: absolute;
-    top: calc(var(--layout-safe-zone) * 1.5);
-    left: 50%;
-    transform: translateX(-50%) translateZ(5px);
-    text-align: center;
-}
-.mission-secondary {
-    position: absolute;
-    top: calc(var(--layout-safe-zone) * 2.5);
-    left: var(--layout-safe-zone);
-}
-.mission-objective {
-    grid-column: span 12;
-    justify-self: center;
-    font-weight: bold;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   8. XR SPATIAL LAYOUT & 9. IMMERSION GEOMETRY
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.xr-layout {
-    transform-style: preserve-3d;
-    perspective: 1200px;
-    backface-visibility: hidden;
-}
-.xr-anchor {
-    transform: translate3d(0, 0, 0);
-    transition: transform var(--sentinel-layout-damping) cubic-bezier(0.16, 1, 0.3, 1);
-}
-.xr-safe-distance {
-    transform: translateZ(-300px); /* Afasta elementos para evitar fadiga de vergência-acomodação */
-}
-
-.immersion-field {
-    width: 100vw;
-    height: 100vh;
-    transform: perspective(800px) rotateX(1deg);
-}
-.immersion-depth {
-    transform: translate3d(0, 0, calc(25px * var(--sentinel-runtime-immersion, 1)));
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   10. PERIPHERAL LAYOUT SYSTEM (Sustentação Passiva)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.peripheral-layout {
-    position: fixed;
-    width: 100vw; height: 100vh;
-    top: 0; left: 0;
-    pointer-events: none;
-}
-.peripheral-muted {
-    opacity: 0.2;
-    transform: translateZ(-20px);
-    filter: blur(1px);
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   11. SEMANTIC POSITIONING (O Significado Define o Espaço)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.semantic-primary {
-    align-self: flex-start;
-    justify-content: flex-start;
-}
-.semantic-related {
-    align-self: flex-end;
-    opacity: 0.8;
-}
-.semantic-passive {
-    position: absolute;
-    bottom: 2px;
-    opacity: 0.4;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   12. DYNAMIC LAYOUT ADAPTATION (Mudança Baseada em Estado)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.layout-adaptive {
-    transition: all var(--sentinel-layout-damping) cubic-bezier(0.25, 1, 0.5, 1);
-}
-.layout-focus-mode {
-    grid-template-columns: 1fr !important;
-    max-width: 600px;
-    margin: 0 auto;
-}
-.layout-immersive-mode {
-    display: block;
-    position: absolute;
-    width: 100%; height: 100%;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   13. RUNTIME SPATIAL SCALING & 14. LAYERED SPATIAL DEPTH
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.scale-runtime { transform: scale(var(--sentinel-spatial-scale)); }
-.scale-focus   { transform: scale(calc(var(--sentinel-spatial-scale) * 1.25)); }
-.scale-xr      { transform: scale3d(var(--sentinel-spatial-scale), var(--sentinel-spatial-scale), 1); }
-
-.depth-near { transform: translate3d(0, 0, 50px); }
-.depth-mid  { transform: translate3d(0, 0, 0px); }
-.depth-far  { transform: translate3d(0, 0, -80px); }
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   15. NEUROADAPTIVE LAYOUT (Ajuste por Fadiga)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.neuroadaptive-layout {
-    will-change: gap, padding, transform;
-    transform: translate3d(0,0,0);
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   16. ALERT SPATIAL PRIORITY & 17. EMERGENCY SPATIAL OVERRIDE
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.alert-priority {
-    position: relative;
-    z-index: var(--layer-alert, 400);
-    order: -99;
-}
-.alert-critical {
-    position: fixed !important;
-    top: 25%; left: 5%;
-    width: 90%;
-    transform: translateZ(60px);
-}
-
-.emergency-override {
-    position: fixed !important;
-    top: 0; left: 0;
-    width: 100vw !important; height: 100vh !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    z-index: var(--layer-emergency, 500) !important;
-    background: rgba(0,0,0,0.9);
-    transform: translateZ(120px) scale(1.0);
-}
-.emergency-override * {
-    display: none !important; /* Expulsa elementos secundários do espaço */
-}
-.emergency-override .alert-critical,
-.emergency-override .focus-priority {
-    display: block !important; /* Mantém apenas o nó vital */
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   18. TEMPORAL LAYOUT PERSISTENCE (Memória Espacial)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.layout-persistent {
-    contain: layout paint size; /* Congela o elemento para evitar reflows flutuantes */
-}
-.layout-memory {
-    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   19. COGNITIVE NAVIGATION FLOW (Trajetória Controlada)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.navigation-flow {
-    display: flex;
-    flex-direction: column;
-}
-.attention-flow {
-    animation: flowGuide 4s infinite ease-in-out;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   20. SPATIAL COMPRESSION & 21. RECOVERY LAYOUT SYSTEM
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.compressed-layout {
-    grid-template-columns: 1fr !important;
-    gap: 4px !important;
-}
-.minimal-layout {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-}
-
-.recovery-layout {
-    display: block !important;
-    transform: none !important;
-    perspective: none !important;
-    gap: 16px !important;
-    padding: 16px !important;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   22. GPU-AWARE LAYOUT & 23. MOTION-AWARE LAYOUT
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.gpu-light-layout {
-    transform: none !important;
-    contain: strict;
-}
-.gpu-heavy-layout {
-    transform: translate3d(0, 0, 1px);
-    backface-visibility: hidden;
-}
-
-.motion-aware-layout {
-    will-change: transform;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   24. STABILITY CONSTRAINTS (Mitigação Absoluta de Jitter)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.layout-stable {
-    transform-style: flat !important;
-    transform: translate3d(0,0,0) !important;
-    transition: none !important;
-}
-.layout-locked {
-    position: fixed !important;
-    pointer-events: none;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   25. OCCLUSION AVOIDANCE & 26. SPATIAL COMFORT SYSTEM
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.occlusion-safe {
-    margin: calc(var(--layout-safe-zone) * 0.5);
-    isolation: isolate;
-}
-.occlusion-priority {
-    position: relative;
-    z-index: 1000;
-}
-
-.comfort-spacing {
-    padding: calc(20px * var(--sentinel-spatial-scale));
-    line-height: 1.6;
-}
-.comfort-depth {
-    transform: translateZ(15px);
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   27. COGNITIVE ALIGNMENT RULES (Lógica de Varredura Humana)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.cognitive-aligned {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   28. PREDICTIVE LAYOUT ENGINE & 29. FUTURE WEBGPU MAPPING
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.predictive-layout {
-    border: 1px dashed rgba(0, 212, 255, 0.1);
-}
-.predictive-focus-zone {
-    box-shadow: inset 0 0 20px rgba(0, 255, 65, 0.05);
-}
-
-.webgpu-spatial { content-visibility: auto; }
-.webgpu-depth-layout { contain-intrinsic-size: 0 500px; }
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   30. AUTONOMOUS COGNITIVE REFLOW
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.autonomous-reflow {
-    will-change: auto;
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   [PRESERVADO v1.0] CLASSES ESTRUTURAIS DE SUPORTE
-   Garante compatibilidade total com os arquivos index.html anteriores
+   [PRESERVADO v1.0] CAMADA ESTÉTICA BASE DE CLASSES
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 #scene-wrapper {
     position: relative;
@@ -420,22 +142,25 @@
 }
 
 .telemetry-compact {
+    font-family: var(--font-display);
     font-size: 10px;
-    letter-spacing: var(--tracking-wide, 0.1em);
+    letter-spacing: var(--tracking-wide);
     color: rgba(0, 212, 255, 0.65);
 }
 
 .sys-id {
+    font-family: var(--font-display);
     font-size: 12px;
     font-weight: bold;
-    letter-spacing: var(--tracking-wider, 0.2em);
-    color: var(--green-flow, #00FF41);
+    letter-spacing: var(--tracking-wider);
+    color: var(--green-flow);
     text-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
 }
 
 .sys-signature {
+    font-family: var(--font-display);
     font-size: 9px;
-    letter-spacing: var(--tracking-wider, 0.2em);
+    letter-spacing: var(--tracking-wider);
     color: rgba(0, 212, 255, 0.4);
 }
 
@@ -443,24 +168,8 @@
     background: transparent;
     border: none;
     border-bottom: 1px solid rgba(0, 212, 255, 0.22);
-    color: var(--green-flow, #00FF41);
-    font-family: var(--font-display, monospace);
+    color: var(--green-flow);
+    font-family: var(--font-display);
     font-size: 11px;
-    letter-spacing: var(--tracking-wide, 0.1em);
-    padding: 4px 0;
     outline: none;
-    caret-color: var(--green-flow, #00FF41);
-}
-
-.cmd-input::placeholder {
-    color: rgba(0, 212, 255, 0.35);
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   MOTORES ANIMADOS DE AUXÍLIO COGNITIVO
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-@keyframes flowGuide {
-    0% { border-left: 2px solid transparent; }
-    50% { border-left: 2px solid var(--cyan, #00D4FF); }
-    100% { border-left: 2px solid transparent; }
 }
