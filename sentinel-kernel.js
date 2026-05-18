@@ -173,7 +173,7 @@ class SentinelKernel {
 
     onReady() {
         this.trace('LIFECYCLE', 'INFO', 'Sistema totalmente síncrono. Lock de performance liberado para exibição WebXR.');
-        if (this.bus) this.bus.emit('boot:complete');
+        if (this.bus) this.bus.emit('system:boot-complete');
     }
 
     suspend() {
