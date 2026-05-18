@@ -1,190 +1,180 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SENTINEL v9.0 — COGNITIVE XR SCENE RUNTIME ORCHESTRATOR
- * Arquivo: xr/scenes/orchestration/scene-manager.js
- * Papel: Governador Soberano de Estados Espaciais Cognitivos e Pressão GPU
+ * SENTINEL v9.0 — COGNITIVE GPU PERCEPTION & SHADER RUNTIME
+ * Arquivo: xr/shaders/core/shader-runtime.js
+ * Papel: Centro de Estética Científica, Feedback de Fluidez e Efeitos GLSL
+ * Domínio: GRAPHICS / SPATIAL INTERFACE / RENDER ACCELERATION
+ * Fix: Correção de extensão dupla (.js.js) e isolamento estrito de strings GLSL
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-class SentinelSceneManager {
+if (typeof AFRAME === 'undefined') {
+    throw new Error('[VR-OS SHADER] A-Frame precisa ser carregado antes da inicialização do runtime de shaders.');
+}
+
+/**
+ * Registro do componente de Shader customizado no ecossistema A-Frame.
+ * Fornece a identidade visual Cyber Glass com renderização acelerada por GPU.
+ */
+AFRAME.registerShader('sentinel-cyber-glass', {
+    // Esqueleto de Uniforms injetados diretamente no pipeline do WebGL2
+    schema: {
+        time: { type: 'time', is: 'uniform' },
+        glowColor: { type: 'color', is: 'uniform', default: '#D4AF37' },
+        focusIntensity: { type: 'float', is: 'uniform', default: 1.0 },
+        degradedMode: { type: 'float', is: 'uniform', default: 0.0 }
+    },
+
+    // 1. VERTEX SHADER: Projeta coordenadas espaciais na tela com latência zero de matriz
+    vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+
+        void main() {
+            vUv = uv;
+            vNormal = normalize(normalMatrix * normal);
+            
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            vViewPosition = -mvPosition.xyz;
+            
+            gl_Position = projectionMatrix * mvPosition;
+        }
+    `,
+
+    // 2. FRAGMENT SHADER: Assinatura visual Dark Mode Scientific com gradientes dourados e scanlines
+    fragmentShader: `
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+
+        uniform float time;
+        uniform vec3 glowColor;
+        uniform float focusIntensity;
+        uniform float degradedMode;
+
+        void main() {
+            // Conversão segura do tempo para rotação de ciclo senoidal sutil
+            float seconds = time * 0.001;
+            float pulse = 0.5 + 0.5 * sin(seconds * 1.5);
+            
+            // Fundo Escuro Translúcido Científico (Deep Obsidian Blue)
+            vec3 baseBackground = vec3(0.005, 0.012, 0.02);
+            
+            // Criação de linhas de varredura (Scanlines) horizontais anti-aliased para estética HUD
+            float scanlineFrequency = degradedMode > 0.5 ? 100.0 : 250.0;
+            float scanlineSpeed = degradedMode > 0.5 ? 2.0 : 4.0;
+            float scanline = sin(vUv.y * scanlineFrequency - seconds * scanlineSpeed) * 0.035;
+            
+            // Efeito Cyber Glass: Brilho de borda sutil (Fresnel Adaptativo Simplificado)
+            vec3 normalVec = normalize(vNormal);
+            vec3 viewVec = normalize(vViewPosition);
+            float fresnel = pow(1.0 - max(dot(normalVec, viewVec), 0.0), 3.0);
+            
+            // Gradiente dourado vertical estabilizado para diminuir a fadiga cognitiva
+            float gradientY = pow(1.0 - vUv.y, 2.0) * 0.15 + pow(vUv.y, 2.0) * 0.05;
+            
+            // Interpolação de cor final com base na saúde atencional do sistema
+            vec3 dynamicGlow = mix(glowColor, vec3(0.0, 0.83, 1.0), pulse * 0.1);
+            
+            // Compositor final de fragmentos (Pintura de pixels acelerada)
+            vec3 finalColor = baseBackground + (dynamicGlow * (gradientY + (fresnel * 0.45) + (pulse * 0.03) * focusIntensity));
+            
+            // Ajuste dinâmico de opacidade (Alpha Channel) contra quebras de oclusão tridimensional
+            float alpha = 0.68 + scanline + (fresnel * 0.22);
+            
+            // Mitigação instantânea de carga se o modo degradado (Performance Emergency) estiver ativo
+            if (degradedMode > 0.5) {
+                finalColor = baseBackground + (glowColor * (gradientY + 0.1));
+                alpha = 0.55;
+            }
+            
+            gl_FragColor = vec4(finalColor, alpha);
+        }
+    `
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * CONTROLADOR DE GERENCIAMENTO DE PIPELINE DE SHADERS (LEGADO REESTRUTURADO)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+class SentinelShaderRuntime {
     constructor() {
-        this.registry = new Map();
-        this.activeScene = null;
-        this.transitioning = false;
+        this.version = "9.0-SHADER-RUNTIME";
+        this.programCache = new Map();
+        this.activeShaders = new Set();
+        this.glContext = null;
         this.bus = window.SentinelBus || null;
         
+        // Alocações de Perfilamento e Orçamento (Frame Budget Alvo para 90Hz = ~11.1ms)
+        this.budget = {
+            maxShaderExecutionTimeMs: 4.5, 
+            currentLoadMs: 0.0,
+            qualityTier: 'XR_SAFE' // HIGH, MEDIUM, LOW, XR_SAFE, EMERGENCY
+        };
+
         this._initGlobalListeners();
     }
 
-    /**
-     * Registra uma cena na infraestrutura de runtime
-     * @param {string} id - Identificador único da cena cognitiva
-     * @param {Object} sceneInstance - Instância estendida da cena
-     */
-    registerScene(id, sceneInstance) {
-        if (this.registry.has(id)) {
-            console.warn(`[SCENE-MANAGER] Sobrescrevendo registro da cena: ${id}`);
-        }
-        this.registry.set(id, sceneInstance);
-        console.log(`[SCENE-MANAGER] Estado espacial registrado: ${id}`);
+    setGraphicsContext(glContext) {
+        this.glContext = glContext;
+        this._trace('CONTEXT', 'Contexto gráfico WebGL acoplado com sucesso ao Runtime.', 'INFO');
     }
 
-    /**
-     * Muta o estado espacial atual do sistema com governança de transição e hardware
-     * @param {string} targetId - ID da cena de destino
-     * @param {string} transitionType - Tipo de transição cognitiva a aplicar
-     */
-    async activateScene(targetId, transitionType = 'focus') {
-        if (this.transitioning) {
-            console.warn('[SCENE-MANAGER] Ativação bloqueada: Transição concorrente em progresso.');
-            return false;
-        }
-
-        const nextScene = this.registry.get(targetId);
-        if (!nextScene) {
-            console.error(`[SCENE-MANAGER] Falha catastrófica: Cena não encontrada -> ${targetId}`);
-            this._triggerFallback();
-            return false;
-        }
-
-        this.transitioning = true;
-        const currentScene = this.activeScene;
-
-        console.log(`[SCENE-MANAGER] Iniciando mutação de estado: ${currentScene?.identity || 'NULL'} ➔ ${targetId}`);
-
-        try {
-            // 1. Notifica o Barramento Global do Sistema
-            this.bus?.emit('scene:transition-start', { from: currentScene?.identity, to: targetId, type: transitionType });
-
-            // 2. Aplica Perfil de Transição Cognitiva Visual / Suprime Estresse Retiniano
-            this._applyTransitionMetrics(transitionType, true);
-
-            // 3. Executa Desativação da Cena Atual (onBlur -> onSuspend)
-            if (currentScene) {
-                await currentScene.onBlur();
-                await currentScene.onSuspend();
-                // Se a cena antiga for de baixa prioridade, descarrega entidades para liberar RAM/GPU
-                if (currentScene.priorityProfile?.unloadOnSuspend) {
-                    await currentScene.onDestroy();
+    enforceQualityTier(tier) {
+        this.budget.qualityTier = tier;
+        this._trace('QUALITY', `Iniciando rebaixamento homeostático de shaders para o Tier: [${tier}]`, 'WARN');
+        
+        // Propaga atualização de estados para todas as malhas tridimensionais ligadas ao DOM espacial
+        const sceneEl = document.querySelector('a-scene');
+        if (sceneEl) {
+            const entities = sceneEl.querySelectorAll('[material]');
+            entities.forEach(entity => {
+                if (entity.getAttribute('material')?.shader === 'sentinel-cyber-glass') {
+                    entity.setAttribute('material', 'degradedMode', tier === 'EMERGENCY' || tier === 'LOW' ? 1.0 : 0.0);
                 }
-            }
-
-            // 4. Carrega e Inicializa a Nova Cena se necessário
-            if (!nextScene.initialized) {
-                await nextScene.onLoad();
-            }
-
-            // 5. Aplica Restrições de Hardware e Perfis de Atenção na Pipeline antes da renderização
-            this._enforceProfiles(nextScene);
-
-            // 6. Ativa e Foca a Nova Cena
-            await nextScene.onActivate();
-            await nextScene.onFocus();
-
-            this.activeScene = nextScene;
-
-            // 7. Finaliza a Transição e Remove Mascaramento Visual
-            this._applyTransitionMetrics(transitionType, false);
-            this.bus?.emit('scene:transition-complete', { active: targetId });
-            
-            console.log(`%c [SCENE-MANAGER] Estado '${targetId}' assumiu a soberania do runtime visual. `, 'background:#000; color:#00D4FF;');
-
-        } catch (error) {
-            console.error(`[SCENE-MANAGER] Erro crítico durante ciclo de vida da cena:`, error);
-            await this.recoverScene(targetId, error);
-        } finally {
-            this.transitioning = false;
+            });
         }
     }
 
-    /**
-     * Força a aplicação estrita de perfis de GPU, Atenção e XR no DOM/Renderer
-     * @param {Object} scene - Instância da cena ativa
-     */
-    _enforceProfiles(scene) {
-        const root = document.documentElement;
+    _updateGpuTelemetry() {
+        // Cálculo estático não bloqueante para evitar chamadas de ReadPixels na GPU
+        let totalMs = this.budget.qualityTier === 'HIGH' ? 3.2 : 1.1;
+        this.budget.currentLoadMs = totalMs;
 
-        // Injeção de Variáveis CSS de Controle de Fluxo Perceptivo (Ligar ao hud.css / fx.css)
-        root.style.setProperty('--fx-intensity', scene.profiles.fxIntensity.toFixed(2));
-        root.style.setProperty('--fx-density', scene.profiles.cognitiveDensity.toFixed(2));
-        root.style.setProperty('--hud-opacity', scene.profiles.hudOpacity.toFixed(2));
-        root.style.setProperty('--hud-density', scene.profiles.cognitiveDensity.toFixed(2));
-        root.style.setProperty('--fx-motion-scale', scene.profiles.motionScale.toFixed(2));
-        root.style.setProperty('--fx-immersion-scale', scene.profiles.xrDepthScale.toFixed(2));
-
-        // Mutação de Classes Estruturais no Body para Chaveamento de Shader / Filtros CSS
-        const body = document.body;
-        
-        // Remove classes adaptativas anteriores
-        body.classList.remove('fx-degraded', 'fx-minimal', 'fx-recovery', 'fx-low-stimulation', 'hud-recovery', 'hud-minimal');
-        
-        // Injeta classes de densidade cognitiva baseadas no perfil da cena
-        if (scene.profiles.cognitiveDensity < 0.3) {
-            body.classList.add('fx-minimal', 'hud-minimal');
+        if (this.bus) {
+            this.bus.emit('shader:metrics-update', {
+                loadMs: this.budget.currentLoadMs,
+                budgetFraction: (this.budget.currentLoadMs / this.budget.maxShaderExecutionTimeMs),
+                activeCount: this.activeShaders.size
+            });
         }
-        if (scene.identity === 'recovery') {
-            body.classList.add('fx-recovery', 'fx-low-stimulation', 'hud-recovery');
-        }
-
-        // Informa o Renderer de Hardware (Three.js / A-Frame / WebGPU Bridge) sobre o orçamento de processamento
-        if (window.SentinelEngineXR) {
-            window.SentinelEngineXR.setGpuBudget(scene.profiles.gpuBudgetFraction);
-            window.SentinelEngineXR.setTargetFps(scene.profiles.targetFps);
-            window.SentinelEngineXR.togglePeripheralCulling(scene.profiles.cognitiveDensity < 0.6);
-        }
-    }
-
-    /**
-     * Executa protocolo de mitigação e recuperação em caso de travamento de frame ou exceção
-     */
-    async recoverScene(failedId, error) {
-        console.error(`[SCENE-MANAGER] Ativando Protocolo de Recuperação Espacial para: ${failedId}`);
-        this.bus?.emit('system:error-fallback', { scene: failedId, reason: error?.message });
-        
-        this.transitioning = false;
-        // Salto direto para a cena de recuperação nativa de falhas do SENTINEL
-        await this.activateScene('recovery', 'emergency');
-    }
-
-    _applyTransitionMetrics(type, isStart) {
-        const overlay = document.getElementById('scene-transition-overlay') || this._createTransitionOverlay();
-        if (isStart) {
-            overlay.className = `transition-active mode-${type}`;
-            overlay.style.opacity = '1';
-        } else {
-            overlay.style.opacity = '0';
-            setTimeout(() => { overlay.className = ''; }, 400);
-        }
-    }
-
-    _createTransitionOverlay() {
-        const el = document.createElement('div');
-        el.id = 'scene-transition-overlay';
-        el.style = 'position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:99999; transition: opacity 0.3s ease-in-out; opacity:0; background: #000408;';
-        document.body.appendChild(el);
-        return el;
-    }
-
-    _triggerFallback() {
-        document.body.classList.add('fx-degraded', 'hud-minimal');
-        document.documentElement.style.setProperty('--fx-intensity', '0.1');
     }
 
     _initGlobalListeners() {
-        // Escuta o barramento para degradação forçada em caso de estresse de hardware (Telemetria do Kernel)
-        this.bus?.on('performance:drop', (telemetry) => {
-            if (telemetry.fps < 30 && this.activeScene?.identity !== 'recovery') {
-                console.warn('[SCENE-MANAGER] Queda severa de FPS detectada. Forçando migração para micro-infraestrutura adaptativa.');
-                this.activateScene('degraded', 'emergency');
-            }
-        });
+        if (this.bus) {
+            // Escuta o sinal de exaustão biológica para diminuir instantaneamente a atividade da GPU
+            this.bus.on('system:nsdr-trigger', () => {
+                this.enforceQualityTier('EMERGENCY');
+            });
 
-        this.bus?.on('system:nsdr-trigger', () => {
-            console.log('[SCENE-MANAGER] Sinal de exaustão biológica recebido. Forçando transição para Recovery Scene.');
-            this.activateScene('recovery', 'semantic');
-        });
+            // Restaura a qualidade nominal se a telemetria de performance estabilizar
+            this.bus.on('performance:nominal', () => {
+                if (this.budget.qualityTier === 'EMERGENCY' || this.budget.qualityTier === 'LOW') {
+                    this.enforceQualityTier('XR_SAFE');
+                }
+            });
+        }
+    }
+
+    _trace(subsystem, message, level = 'INFO') {
+        console.log(`[${new Date().toISOString()}] [SHADER_RUNTIME:${subsystem}] [${level}] ${message}`);
     }
 }
 
-// Inicialização Global no Contexto Soberano
-window.SentinelSceneManager = new SentinelSceneManager();
+// Inicialização automática e acoplamento seguro no escopo global
+const SovereignShaderRuntime = new SentinelShaderRuntime();
+window.SentinelShaderRuntime = SovereignShaderRuntime;
+
+console.log("%c[SENTINEL XR] Shader 'sentinel-cyber-glass' unificado e injetado no barramento gráfico.", "color: #D4AF37; font-weight: bold;");
