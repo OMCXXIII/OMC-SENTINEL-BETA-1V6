@@ -1,252 +1,250 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SENTINEL v9.0 — ADAPTATIVE HOMEOSYTASIS ENGINE (PERFORMANCE GOVERNOR)
+ * SENTINEL v9.0 — ADAPTIVE HOMEOSTASIS ENGINE (PERFORMANCE GOVERNOR)
  * Arquivo: sentinel-performance.js
- * Papel: Análise Analítica, Cálculo de Pressão de Frame e Degradação Preventiva
- * Governança: Totalmente subordinado ao SovereignKernel. Sem auto-boot implícito.
+ * Papel: Homeostase Operacional, Perfilamento Térmico e Prevenção de Colapso
+ * Governança: Totalmente subordinado ao SovereignKernel; dita regras de Throttling.
+ * Fix: Implementação de Thermal Estimation, GPU Saturation Index, Adaptive
+ * Degradation, Predictive Collapse Logic e Escalonamento Estrito de Tiers.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-// 1. DEGRADATION PROFILES — Perfis Homeostáticos de Sobrevivência de Hardware
-const PERFORMANCE_PROFILES = Object.freeze({
-  NORMAL:    'NORMAL',    // Fidelidade máxima, shaders complexos ativos, sem supressão periférica
-  BALANCED:  'BALANCED',  // Redução sutil de efeitos secundários (partículas à metade)
-  LOW_POWER: 'LOW_POWER', // Viewport reduzida, desativação de Bloom/Glow, intervalos de ociosidade CPU
-  XR_SAFE:   'XR_SAFE',   // Priorização absoluta de latência ocular, foveation forçado, trava em 72Hz
-  EMERGENCY: 'EMERGENCY'  // Suspensão de módulos ambientais, renderização apenas de diagnóstico e HUD crítico
+// F) PERFORMANCE TIERS: Matriz Homologada de Operação do Sistema
+export const PERFORMANCE_TIERS = Object.freeze({
+    LOW:    'LOW',    // Modo sobrevivência. Suspensão de efeitos e renderização básica de HUD
+    MEDIUM: 'MEDIUM', // Equilíbrio tático. Filtros reduzidos à metade e amostragem nominal
+    HIGH:   'HIGH',   // Fidelidade total. Volumetria complexa e buffers sem restrição
+    XR:     'XR'      // Prioridade absoluta. Trava determinística de latência ocular e clock
 });
 
-class SentinelPerformanceEngine {
-  constructor() {
-    this.version = '9.0.0-SOVEREIGN';
-    this.isActive = true;
-    this.currentProfile = PERFORMANCE_PROFILES.NORMAL;
+class SentinelPerformanceGovernor {
+    constructor() {
+        this.version = "9.0-HOMEOSTASIS-GOVERNOR";
+        this.isActive = false;
+        this.currentTier = PERFORMANCE_TIERS.HIGH;
 
-    // 2. MÉTRICAS DE TELEMETRIA DE PRECISÃO REALTIME
-    this.metrics = {
-      fps: 60.0,
-      frameTime: 16.66,
-      gpuPressure: 0.0,
-      cpuLoad: 0.0,
-      memoryPressure: 0.0,
-      xrLatency: 0.0,
-      
-      // Expansões de Precisão Analítica
-      microStutterProbability: 0.0, // Predição de engasgos baseada em derivadas adjacentes
-      estimatedThermalC: 36.5,       // Curva preditiva de dissipação calórica por saturação
-      runtimePressureIdx: 0.0        // Razão matemática: Tempo restante / Tamanho da Fila
-    };
+        // METRIC BUFFER & WINDOWS
+        this._frameTimeHistory = [];
+        this.historyWindowSize = 60; // Janela de análise móvel de 1 segundo a 60Hz
 
-    // Históricos voláteis de amostragem matemática curta
-    this.frame = {
-      current: 0,
-      lastTimestamp: 0,
-      deltaHistory: [],
-      maxHistorySize: 10,
-      cumulativeSaturationTime: 0
-    };
+        // A) THERMAL ESTIMATION (Cálculo derivado de dissipação passiva por silício)
+        this.thermal = {
+            estimatedTemperatureC: 38.0,
+            ambientTemperatureC: 24.0,
+            criticalThresholdC: 75.0,
+            warningThresholdC: 60.0,
+            thermalDissipationFactor: 0.0015 // Coeficiente metabólico de resfriamento
+        };
 
-    this._initializeHomeostaticEngine();
-  }
+        // B) GPU SATURATION INDEX (Gargalo de Render Target e Fillrate)
+        this.gpu = {
+            saturationIndex: 0.0,        // 0.0 (Ocioso) a 1.0+ (Saturado/Gargalo)
+            averageFrameTimeMs: 0.0,
+            vertexLoadFactor: 0.0,
+            fillratePressure: 0.0
+        };
 
-  /**
-   * TRACE ENGINE UNIFICADO INTERNO DA HOMEOSTASE
-   */
-  trace(message, level = 'INFO') {
-    if (window.SovereignKernel && typeof window.SovereignKernel.trace === 'function') {
-      window.SovereignKernel.trace('PERFORMANCE', message, level);
-    } else {
-      const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
-      console.log(`%c[${timestamp}] [PERFORMANCE] [${level}] ${message}`, 'color: #FF5500; font-weight: bold;');
-    }
-  }
+        // E) PREDICTIVE COLLAPSE DETECTION SYSTEM
+        this.prediction = {
+            collapseProbability: 0.0,    // Probabilidade percentual de desassociação vestibular
+            timeToThermalThrottlingSec: 999,
+            consecutiveFrameDrops: 0
+        };
 
-  tracePerformance(msg, level = 'INFO') { this.trace(`[HOMEOSTASIS] ${msg}`, level); }
-  traceGPU(msg, level = 'INFO')         { this.trace(`[GPU_TELEMETRY] ${msg}`, level); }
-  traceXR(msg, level = 'INFO')          { this.trace(`[XR_LATENCY] ${msg}`, level); }
+        // C) ADAPTIVE DEGRADATION MATRIX
+        this.degradation = {
+            lastDegradationTimestamp: 0,
+            cooldownPeriodMs: 2000,      // Evita oscilação frenética de resolução (Jitter visual)
+            forceMinimalHud: false
+        };
 
-  /**
-   * ⚡ FPS TRACKING AVANÇADO — PREDIÇÃO DE MICRO-STUTTERING
-   * Analisa a variação abrupta da derivada temporal entre deltas adjacentes (Jitter de Frame)
-   */
-  trackFPS(timestamp) {
-    if (!this.frame.lastTimestamp) {
-      this.frame.lastTimestamp = timestamp;
-      return;
+        this.bus = null;
     }
 
-    const currentDelta = timestamp - this.frame.lastTimestamp;
-    this.frame.lastTimestamp = timestamp;
-
-    this.metrics.frameTime = currentDelta;
-    this.metrics.fps = currentDelta > 0 ? 1000 / currentDelta : 60.0;
-
-    const history = this.frame.deltaHistory;
-    history.push(currentDelta);
-
-    if (history.length > this.frame.maxHistorySize) {
-      const previousDelta = history[history.length - 2];
-      
-      // Derivada de primeira ordem do tempo de quadro (Variação de aceleração do frame)
-      const frameAccelerationJitter = Math.abs(currentDelta - previousDelta);
-      
-      // Se a variação do frame tempo ultrapassar 4.5ms entre dois quadros, a probabilidade de stutter escala
-      this.metrics.microStutterProbability = frameAccelerationJitter > 4.5 ? 0.88 : 0.05;
-
-      history.shift();
-    }
-
-    this.frame.current++;
-  }
-
-  /**
-   * ⚡ THERMAL ESTIMATION — CURVA PREDITIVA DE DISSIPAÇÃO CALÓRICA
-   * Computa o estresse térmico baseado no tempo cumulativo de saturação ininterrupta do laço
-   */
-  _computeThermalDissipationModel() {
-    const ambientTemp = 36.5;
-    const maxThermalCap = 45.0;
-
-    // Se o frame atual gasta mais de 12.0ms, o silício está operando em regime de saturação contínua
-    if (this.metrics.frameTime > 12.0) {
-      this.frame.cumulativeSaturationTime += 0.016; // Incrementa peso cronométrico cumulativo
-    } else {
-      this.frame.cumulativeSaturationTime = Math.max(0, this.frame.cumulativeSaturationTime - 0.032); // Resfria o dobro
-    }
-
-    // Curva logística exponencial assintótica
-    const thermalRise = (maxThermalCap - ambientTemp) * (1 - Math.exp(-0.05 * this.frame.cumulativeSaturationTime));
-    this.metrics.estimatedThermalC = ambientTemp + thermalRise;
-  }
-
-  /**
-   * ⚡ RUNTIME PRESSURE LAYER — CÁLCULO REALTIME DA RAZÃO DO SCHEDULER
-   * Computa a folga matemática do Time Budget contra a fila de mensagens do Barramento (SentinelBus)
-   */
-  _calculateRuntimePressure() {
-    const totalAllocatedBudget = window.SovereignKernel?.isXRActive ? 13.88 : 16.66;
-    const timeRemaining = Math.max(0.1, totalAllocatedBudget - this.metrics.frameTime);
-    
-    // Obtém o tamanho da fila pendente do Barramento prioritário
-    const busDiagnostics = window.SentinelBus?.getDiagnostics();
-    const activeQueueSize = busDiagnostics ? 
-      (busDiagnostics.queues.critical + busDiagnostics.queues.high + busDiagnostics.queues.normal) : 0;
-
-    // Fórmula Operacional: Razão entre o tamanho da carga e a folga cronométrica
-    // Se a folga encolhe ou a fila infla, o índice de pressão escala assintoticamente
-    const rawPressure = (activeQueueSize * 0.15) / timeRemaining;
-    this.metrics.runtimePressureIdx = Math.min(1.0, Math.max(0.0, rawPressure));
-  }
-
-  /**
-   * SINCRONIZAÇÃO E DISPARO DA TELEMETRIA PARA A PONTE DE SERVIÇOS DO BACKBONE
-   */
-  synchronizePerformance() {
-    this._computeThermalDissipationModel();
-    this._calculateRuntimePressure();
-
-    // Despacha pacote homeostático unificado para o barramento com limite controlado (Throttling do Bus ativo)
-    window.SentinelBus?.emit('performance:telemetry-sync', {
-      fps: Math.round(this.metrics.fps),
-      frameTimeMs: this.metrics.frameTime,
-      temperatureC: this.metrics.estimatedThermalC,
-      pressureIndex: this.metrics.runtimePressureIdx,
-      stutterAlert: this.metrics.microStutterProbability > 0.5
-    });
-  }
-
-  /**
-   * ⚡ LÓGICA DE DEGRADAÇÃO PREVENTIVA (MAINTAIN EQUILIBRIUM)
-   * Avalia a integridade e força alterações em cascata caso os limites de colapso sejam violados
-   */
-  maintainEquilibrium() {
-    const CRITICAL_PRESSURE_THRESHOLD = 0.85;
-
-    // 1. VERIFICAÇÃO DA AUTORIDADE HOMEOSTÁTICA CONTRA COLAPSO GRÁFICO/TÉRMICO
-    if (this.metrics.runtimePressureIdx >= CRITICAL_PRESSURE_THRESHOLD || this.metrics.estimatedThermalC > 41.5) {
-      if (this.currentProfile !== PERFORMANCE_PROFILES.EMERGENCY && this.currentProfile !== PERFORMANCE_PROFILES.LOW_POWER) {
+    // ═══════════════════════════════════════════════════════════════════════
+    // A) THERMAL ESTIMATION ENGINE (ALGORITMO METABÓLICO)
+    // ═══════════════════════════════════════════════════════════════════════
+    _estimateThermalLoad(frameTimeMs) {
+        // Equação de geração de calor simplificada: Trabalho da GPU eleva a temperatura
+        const workDone = frameTimeMs * (this.currentTier === PERFORMANCE_TIERS.XR ? 1.4 : 1.0);
         
-        this.currentProfile = PERFORMANCE_PROFILES.LOW_POWER;
-        this.tracePerformance(`💥 LIMITE CRÍTICO VIOLADO (${this.metrics.runtimePressureIdx.toFixed(2)}). Forçando Degradação Preventiva!`, 'CRITICAL');
+        // Dissipação passiva em direção à temperatura ambiente do ecossistema
+        const dissipation = (this.thermal.estimatedTemperatureC - this.thermal.ambientTemperatureC) * this.thermal.thermalDissipationFactor;
         
-        // Sinalização direta de autoridade sobre os módulos de infraestrutura
-        if (window.SentinelRenderer) {
-          // Desativação síncrona imediata de sombras e efeitos visuais secundários
-          window.SentinelRenderer.currentFxLevel = 'LOW';
-          window.SentinelRenderer.performanceMetrics.samplingScale = 0.70;
-          this.traceGPU('Autoridade de barramento exercida: Sombras suprimidas e efeitos visuais secundários desativados.', 'WARN');
+        // Nova estimativa acumulada de calor por pulso de amostragem
+        this.thermal.estimatedTemperatureC += (workDone * 0.005) - dissipation;
+        this.thermal.estimatedTemperatureC = Math.max(this.thermal.ambientTemperatureC, this.thermal.estimatedTemperatureC);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // METRIC COLLECTION INPUTS & B) GPU SATURATION INDEXING
+    // ═══════════════════════════════════════════════════════════════════════
+    recordFrameMetrics(actualFrameTimeMs, targetIntervalMs) {
+        if (!this.isActive) return;
+
+        // Mantém a janela móvel limpa
+        this._frameTimeHistory.push(actualFrameTimeMs);
+        if (this._frameTimeHistory.length > this.historyWindowSize) {
+            this._frameTimeHistory.shift();
         }
 
-        window.SentinelBus?.emit('performance:profile-degraded', { profile: PERFORMANCE_PROFILES.LOW_POWER, reason: 'PRESSURE_THRESHOLD_VIOLATION' });
-      }
-    } 
-    // 2. RECUPERAÇÃO GRADUAL DA HOMEOSTASE SE OPERANDO ABAIXO DA MARGEM DE RISCO
-    else if (this.metrics.runtimePressureIdx < 0.40 && this.metrics.estimatedThermalC < 38.0) {
-      if (this.currentProfile === PERFORMANCE_PROFILES.LOW_POWER) {
-        this.currentProfile = PERFORMANCE_PROFILES.NORMAL;
-        this.tracePerformance('Estabilidade e equilíbrio homeostático restaurados. Retornando ao perfil NORMAL.', 'INFO');
+        // Calcula média móvel linear
+        const sum = this._frameTimeHistory.reduce((a, b) => a + b, 0);
+        this.gpu.averageFrameTimeMs = sum / this._frameTimeHistory.length;
+
+        // B) GPU SATURATION: Proporção entre tempo de desenho consumido e o intervalo físico alvo
+        this.gpu.saturationIndex = this.gpu.averageFrameTimeMs / targetIntervalMs;
+        this.gpu.fillratePressure = Math.min(1.5, actualFrameTimeMs / (targetIntervalMs * 0.85));
+
+        // Executa estimadores de hardware complementares
+        this._estimateThermalLoad(actualFrameTimeMs);
+        this._evaluatePredictiveCollapse(actualFrameTimeMs, targetIntervalMs);
         
-        if (window.SentinelRenderer) {
-          window.SentinelRenderer.currentFxLevel = 'HIGH';
-          window.SentinelRenderer.performanceMetrics.samplingScale = 1.0;
+        // Dispara ciclo homeostático adaptativo
+        this._performHomeostaticArbitration();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // E) PREDICTIVE COLLAPSE DETECTION (PREVENÇÃO DE CINETOSE PREEMPTIVA)
+    // ═══════════════════════════════════════════════════════════════════════
+    _evaluatePredictiveCollapse(frameTimeMs, targetIntervalMs) {
+        if (frameTimeMs > targetIntervalMs * 1.2) {
+            this.prediction.consecutiveFrameDrops++;
+        } else {
+            this.prediction.consecutiveFrameDrops = Math.max(0, this.prediction.consecutiveFrameDrops - 1);
         }
 
-        window.SentinelBus?.emit('performance:profile-restored', { profile: PERFORMANCE_PROFILES.NORMAL });
-      }
+        // Fatores de risco cumulativos: frames perdidos em sequência + temperatura em elevação
+        const frameDropRisk = Math.min(0.6, (this.prediction.consecutiveFrameDrops / 5));
+        const thermalRisk = this.thermal.estimatedTemperatureC > this.thermal.warningThresholdC ? 0.3 : 0.0;
+        
+        this.prediction.collapseProbability = Math.min(1.0, frameDropRisk + thermalRisk);
+
+        // Se a probabilidade de colapso cinestésico ultrapassar 80%, aciona o escudo de blackout tático
+        if (this.prediction.collapseProbability > 0.80 && this.currentTier === PERFORMANCE_TIERS.XR) {
+            this._trace('COLLAPSE_PREVENTION', 'Risco iminente de desassociação vestibular detectado. Disparando interrupção de emergência.', 'CRITICAL');
+            if (window.SentinelEngineXR) {
+                window.SentinelEngineXR.triggerEmergencySpatialRecovery();
+            }
+            this.prediction.consecutiveFrameDrops = 0; // Reseta após a interrupção
+        }
     }
-  }
 
-  /**
-   * Publica relatório formal de integridade técnica a cada ciclo longo do Scheduler
-   */
-  pushDiagnostics() {
-    const diag = {
-      engineVersion: this.version,
-      activeProfile: this.currentProfile,
-      telemetry: { ...this.metrics },
-      saturationAccumulator: this.frame.cumulativeSaturationTime.toFixed(2)
-    };
-    
-    this.tracePerformance(`Relatório Homeostático ── FPS: ${diag.telemetry.fps.toFixed(1)} | Térmico: ${diag.telemetry.estimatedThermalC.toFixed(1)}°C | Pressão: ${(diag.telemetry.runtimePressureIdx * 100).toFixed(0)}%`, 'INFO');
-    return diag;
-  }
+    // ═══════════════════════════════════════════════════════════════════════
+    // C) ADAPTIVE DEGRADATION ARBITRATION (MALHA FECHADA HOMEOSTÁTICA)
+    // ═══════════════════════════════════════════════════════════════════════
+    _performHomeostaticArbitration() {
+        const now = performance.now();
+        if (now - this.degradation.lastDegradationTimestamp < this.degradation.cooldownPeriodMs) {
+            return; // Bloqueia oscilação contínua para preservar estabilidade semântica visual
+        }
 
-  _initializeHomeostaticEngine() {
-    this.tracePerformance('Acoplando Motor de Análise Preditiva de Hardware...', 'INFO');
-    
-    // O Loop reativo é acoplado de forma inerte. Não roda até o Kernel disparar o laço oficial.
-    window.SentinelBus?.on('kernel:phase-synchronized', (data) => {
-      if (data.to === 'READY') {
-        this.tracePerformance('Laço homeostático integrado e liberado para monitoramento ativo.', 'INFO');
-      }
-    });
-  }
+        let desiredTier = this.currentTier;
+
+        // Regra 1: Intervenção Térmica Crítica
+        if (this.thermal.estimatedTemperatureC >= this.thermal.criticalThresholdC) {
+            desiredTier = PERFORMANCE_TIERS.LOW;
+            this._trace('HOMEOSTASIS', `Emergência Térmica (${this.thermal.estimatedTemperatureC.toFixed(1)}°C). Rebaixando para nível mínimo de consumo.`, 'WARN');
+        }
+        // Regra 2: Saturação Severa de GPU ou Queda drástica de Frame Pacing
+        else if (this.gpu.saturationIndex > 1.05 || this.prediction.consecutiveFrameDrops >= 4) {
+            if (this.currentTier === PERFORMANCE_TIERS.HIGH) desiredTier = PERFORMANCE_TIERS.MEDIUM;
+            else if (this.currentTier === PERFORMANCE_TIERS.MEDIUM) desiredTier = PERFORMANCE_TIERS.LOW;
+            this._trace('HOMEOSTASIS', `Saturação Crítica detectada (GPU Index: ${this.gpu.saturationIndex.toFixed(2)}). Degradando tier operacional.`, 'WARN');
+        }
+        // Regra 3: Reidratação Gradual sob folga estável de hardware
+        else if (this.gpu.saturationIndex < 0.60 && this.thermal.estimatedTemperatureC < this.thermal.warningThresholdC) {
+            if (this.currentTier === PERFORMANCE_TIERS.LOW) desiredTier = PERFORMANCE_TIERS.MEDIUM;
+            else if (this.currentTier === PERFORMANCE_TIERS.MEDIUM && !this._isXRSessionActive()) desiredTier = PERFORMANCE_TIERS.HIGH;
+        }
+
+        // Executa mutação se houver divergência estrita com o estado atual
+        if (desiredTier !== this.currentTier) {
+            this.enforcePerformanceTier(desiredTier);
+            this.degradation.lastDegradationTimestamp = now;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // F) PERFORMANCE TIERS CONTROL HANDLERS (AÇÕES DE THROTTLING)
+    // ═══════════════════════════════════════════════════════════════════════
+    enforcePerformanceTier(tier) {
+        this.currentTier = tier;
+        this._trace('GOVERNOR', `Nível de homeostase reconfigurado com sucesso para: [${tier}]`);
+
+        if (!this.bus) return;
+
+        // Propaga ordens de restrição e compressão de fragmentos por todo o ecossistema
+        switch (tier) {
+            case PERFORMANCE_TIERS.LOW:
+                this.bus.emit('system:state_changed', { to: 'LOW_POWER' });
+                document.documentElement.style.setProperty('--fx-quality', '0.10');
+                document.documentElement.style.setProperty('--hud-density', '0.30');
+                break;
+
+            case PERFORMANCE_TIERS.MEDIUM:
+                this.bus.emit('system:state_changed', { to: 'DEGRADED' });
+                document.documentElement.style.setProperty('--fx-quality', '0.50');
+                document.documentElement.style.setProperty('--hud-density', '0.70');
+                break;
+
+            case PERFORMANCE_TIERS.HIGH:
+                this.bus.emit('system:state_changed', { to: 'READY' });
+                document.documentElement.style.setProperty('--fx-quality', '1.00');
+                document.documentElement.style.setProperty('--hud-density', '1.00');
+                break;
+
+            case PERFORMANCE_TIERS.XR:
+                // D) XR PERFORMANCE PROFILE: Trava compulsória de fidelidade com foco em latência zero
+                this.bus.emit('system:state_changed', { to: 'XR' });
+                document.documentElement.style.setProperty('--fx-quality', '0.75'); // Margem de segurança de hardware
+                document.documentElement.style.setProperty('--hud-density', '1.00');
+                break;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LIFECYCLE E HANDSHAKES
+    // ═══════════════════════════════════════════════════════════════════════
+    initializeGovernor() {
+        this.isActive = true;
+        this._trace('LIFECYCLE', 'Loops homeostáticos integrados e liberados para monitoramento contínuo.');
+    }
+
+    shutdownGovernor() {
+        this.isActive = false;
+        this._frameTimeHistory = [];
+    }
+
+    _isXRSessionActive() {
+        return window.SentinelEngineXR && window.SentinelEngineXR.isActive;
+    }
+
+    _trace(subsystem, message, level = 'INFO') {
+        const formatted = `[${new Date().toISOString()}] [PERFORMANCE-GOVERNOR:${subsystem}] [${level}] ${message}`;
+        if (level === 'CRITICAL' || level === 'ERROR') console.error(formatted);
+        else if (level === 'WARN') console.warn(formatted);
+        else console.log(formatted);
+    }
+
+    _attachSignalBus(busInstance) {
+        this.bus = busInstance;
+
+        // Sincroniza dinamicamente a ativação física do modo espacial
+        this.bus.on('xr:session_start', () => {
+            this.enforcePerformanceTier(PERFORMANCE_TIERS.XR);
+            this.historyWindowSize = 90; // Alarga a janela para se adequar ao barramento de 90Hz
+        });
+
+        this.bus.on('xr:session_end', () => {
+            this.enforcePerformanceTier(PERFORMANCE_TIERS.HIGH);
+            this.historyWindowSize = 60;
+        });
+    }
 }
 
-// 3. EXPOSIÇÃO OPERACIONAL E ANCORAGEM DETERMINÍSTICA NO KERNEL SOBERANO
-(() => {
-  const PerformanceGovernorInstance = new SentinelPerformanceEngine();
-  
-  window.SentinelPerformanceClass = SentinelPerformanceEngine; // Exposição estrutural da Classe
-  window.SentinelPerformance = PerformanceGovernorInstance;       // Instância operacional ativa
+// Instanciação e exposição única na infraestrutura do ecossistema
+const SovereignPerformance = new SentinelPerformanceGovernor();
+window.SovereignPerformance = SovereignPerformance;
 
-  // Vinculação determinística como subsistema direto do Kernel Soberano
-  if (window.SovereignKernel) {
-    window.SovereignKernel.registerModule('performance', PerformanceGovernorInstance);
-  } else {
-    Object.defineProperty(window, 'SovereignKernel', {
-      configurable: true,
-      enumerable: true,
-      set: (kernelInstance) => {
-        delete window.SovereignKernel;
-        window.SovereignKernel = kernelInstance;
-        window.SovereignKernel.registerModule('performance', PerformanceGovernorInstance);
-      }
-    });
-  }
-
-  console.log(
-    '%c OMC SENTINEL PERFORMANCE GOVERNOR v9.0 ONLINE [ACTIVE-HOMEOSTASIS] ',
-    'background:#3a1c00; color:#ff5500; font-weight:bold; padding:3px; border-left:4px solid #ff5500;'
-  );
-})();
+export default SovereignPerformance;
