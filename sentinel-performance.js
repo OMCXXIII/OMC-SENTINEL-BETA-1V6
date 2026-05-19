@@ -142,9 +142,11 @@ class SentinelPerformanceGovernor {
         // Fix 1: Purga determinística de Listeners do EventBus
         if (this.bus) {
             for (const { event, handler } of this._busListeners) {
-                this.bus.off(event, handler);
-            }
-        }
+               if (typeof this.bus.off === 'function') {
+    this.bus.off(event, handler);
+} else if (typeof this.bus.removeListener === 'function') {
+    this.bus.removeListener(event, handler);
+} 
         this._busListeners = [];
 
         // Fix 8: Purga de Listeners de Contexto do Canvas Dom
@@ -166,7 +168,14 @@ class SentinelPerformanceGovernor {
     // ═══════════════════════════════════════════════════════════════════════
     _bindBus(event, handler) {
         if (!this.bus) return;
-        this.bus.on(event, handler);
+        if (typeof this.bus.on !== 'function') {
+    this._trace(
+        'BUS',
+        'Barramento incompatível: método on() ausente.',
+        'ERROR'
+    );
+    return;
+} 
         this._busListeners.push({ event, handler });
     }
 
