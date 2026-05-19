@@ -677,3 +677,33 @@ if (window.SentinelBus) {
 }
 
 export default SovereignHUDViewer;
+// ═══════════════════════════════════════════════════════════════════════
+// KERNEL RUNTIME CONTRACT
+// ═══════════════════════════════════════════════════════════════════════
+
+initialize() {
+    this._trace('RUNTIME', 'Contrato initialize() executado.');
+    this.deferredInitialize();
+
+    return {
+        status: 'NOMINAL'
+    };
+}
+
+heartbeat(deltaTime = 0) {
+    return {
+        fps: this.panels.fps.current,
+        active: this.isActive,
+        delta: deltaTime,
+        thermal: this.thermal.level
+    };
+}
+
+shutdown() {
+    this._trace('RUNTIME', 'Contrato shutdown() executado.');
+    this.destroy();
+
+    return {
+        status: 'OFFLINE'
+    };
+}
