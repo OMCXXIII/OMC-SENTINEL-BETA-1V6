@@ -4,7 +4,7 @@
  * Arquivo: sentinel-performance.js
  * Papel: Homeostase Operacional, Perfilamento Térmico e Prevenção de Colapso
  * Estado: Produção / Hardened (Resistente a falhas e vazamentos)
- * ═══════════════════════════════════════════════════════════════════════
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 
 export const PERFORMANCE_TIERS = Object.freeze({
@@ -19,6 +19,7 @@ class SentinelPerformanceGovernor {
         this.version = "9.5-PROD-HARDENED";
         this.isActive = false;
         this.currentTier = PERFORMANCE_TIERS.HIGH;
+        this._preEmergencyTier = PERFORMANCE_TIERS.HIGH; // Correção 4: Preservação de estado pré-colapso
 
         // METRIC BUFFER & WINDOWS
         this._frameTimeHistory = [];
@@ -71,7 +72,7 @@ class SentinelPerformanceGovernor {
             maxTextures: 0,
             maxUniforms: 0,
             xrSupported: false,
-            legacyLightsDetected: false,
+            legacyLightsDetected: false, // Correção 5: r164 WebGLRenderer deprecation safeguard
             contextLost: false
         };
 
@@ -184,7 +185,9 @@ class SentinelPerformanceGovernor {
         this.capabilities.maxTextures = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
         this.capabilities.maxUniforms = gl.getParameter(this.capabilities.isWebGL2 ? gl.MAX_VERTEX_UNIFORM_BLOCKS : gl.MAX_VERTEX_UNIFORM_VECTORS);
         this.capabilities.xrSupported = !!navigator.xr;
-        this.capabilities.legacyLightsDetected = (renderer.useLegacyLights !== undefined);
+        
+        // Correção 5: Prevenção do aviso de depreciação do Three.js (r164+) referente a useLegacyLights
+        this.capabilities.legacyLightsDetected = !!renderer.useLegacyLights;
 
         // Acopla watchdogs de perda de hardware ao elemento de desenho
         this._attachCanvasWatchdogs(gl.canvas);
@@ -423,19 +426,26 @@ class SentinelPerformanceGovernor {
 
         this.threeRenderer.setPixelRatio(targetPixelRatio);
 
-        // Fix 4: Força desalocação/reajuste interno no framebuffer do WebGL prevenindo borrões residuais e mismatches
-        const width = window.innerWidth;
-        const height = window.innerHeight;
-        this.threeRenderer.setSize(width, height, false);
+        // Correção 6: Proteção do pipeline XR contra jitter de framebuffer e reallocations pesadas
+        if (!this._isXRSessionActive()) {
+            // Fix 4: Força desalocação/reajuste interno no framebuffer do WebGL prevenindo borrões residuais e mismatches
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            this.threeRenderer.setSize(width, height, false);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     // PROTOCOLOS DE EMERGÊNCIA NUCLEARES (Fix 2, Fix 3, Fix 9)
     // ═══════════════════════════════════════════════════════════════════════
     engageEmergencyRenderMode() {
+        // Correção 3: Bloqueio contra loops destrutivos, spam de resize e disparo massivo de eventos
+        if (this.emergency.engaged) return;
+
+        this._preEmergencyTier = this.currentTier; // Armazena o estado real imediatamente anterior ao desastre
         this.emergency.engaged = true;
-        this.emergency.blackoutTriggered = true; // Fix 9: Sincronização do estado real de colapso visual
-        this.currentTier = PERFORMANCE_TIERS.LOW; // Fix 2: Força trava de infraestrutura
+        this.emergency.blackoutTriggered = true;   // Fix 9: Sincronização do estado real de colapso visual
+        this.currentTier = PERFORMANCE_TIERS.LOW;   // Fix 2: Força trava de infraestrutura
         
         this._trace('HOMEOSTASIS', 'PROTOCOLO NUCLEAR RESTRITO ATIVADO: EMERGENCY SAFE RENDER COMPRESS.', 'CRITICAL');
         
@@ -455,6 +465,8 @@ class SentinelPerformanceGovernor {
     }
 
     disengageEmergencyRenderMode() {
+        if (!this.emergency.engaged) return;
+
         this.emergency.engaged = false;
         this.emergency.blackoutTriggered = false; // Libera barreira de blackout
         this._trace('HOMEOSTASIS', 'Desativando modo nuclear de emergência. Restaurando sanidade e pipelines originais.');
@@ -464,14 +476,15 @@ class SentinelPerformanceGovernor {
             this.threeRenderer.shadowMap.enabled = this._originalShadowState;
         }
         
-        this.enforcePerformanceTier(this.currentTier);
+        // Correção 4: Garante que o governor recupere a sanidade de hardware voltando ao tier anterior e não ficando preso em LOW
+        this.enforcePerformanceTier(this._preEmergencyTier);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     // HANDSHAKE DO BARRAMENTO & INTERFACES
     // ═══════════════════════════════════════════════════════════════════════
     _isXRSessionActive() {
-        return window.SentinelEngineXR && window.SentinelEngineXR.isActive;
+        return !!(window.SentinelEngineXR && window.SentinelEngineXR.isActive);
     }
 
     _trace(subsystem, message, level = 'INFO') {
@@ -482,6 +495,9 @@ class SentinelPerformanceGovernor {
     }
 
     _attachSignalBus(busInstance) {
+        // Correção 7: Proteção absoluta contra duplo anexo / vazamento de memória no Kernel Handshake
+        if (this.bus === busInstance) return;
+        
         this.bus = busInstance;
 
         // Fix 1: Vinculação usando o Helper de rastreamento para expurgo posterior
@@ -495,14 +511,18 @@ class SentinelPerformanceGovernor {
             this.historyWindowSize = 60;
         });
 
-        this._bindBus('renderer:hardware_bound', (data) => {
+        // Correção 1: Ajuste de Namespace corporativo ilegal. Modificado de 'renderer:hardware_bound' para 'performance:hardware_bound'
+        this._bindBus('performance:hardware_bound', (data) => {
             if (data && data.renderer) this.detectRendererCapabilities(data.renderer);
         });
     }
 }
 
 const SovereignPerformance = new SentinelPerformanceGovernor();
+
+// Correção 2: Unificação e consistência com os bindings globais do ecossistema do Kernel e HUD
 window.SovereignPerformance = SovereignPerformance;
+window.SentinelPerformance  = SovereignPerformance;
 
 if (window.SovereignKernel) {
     window.SovereignKernel.registerModule('sentinel-performance', SovereignPerformance);
