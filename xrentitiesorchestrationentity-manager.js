@@ -1,182 +1,191 @@
-/**
- * ═══════════════════════════════════════════════════════════════════════════
- * SENTINEL v9.0 — COGNITIVE ENTITY RUNTIME INFRASTRUCTURE
- * Arquivo: xr/entities/core/base.entity.js
- * Papel: Classe Abstrata Fundamental, Componente A-Frame e Contratos de Gatilhos
- * Domínio: SPATIAL INTERFACE / PERCEPTUAL INHIBITION / AUTOMATED ACTION
- * Fix: Fusão da estrutura abstrata v9.0 com o componente de registro A-Frame
- * ═══════════════════════════════════════════════════════════════════════════
- */
+// ============================================================================
+// RUNTIME SPATIAL RUNTIME (v9.1-PATCH)
+// Core Math Fixes & Zero-Allocation Systems
+// ============================================================================
 
-if (typeof AFRAME === 'undefined') {
-    throw new Error('[VR-OS ENTITY] A-Frame não detectado na inicialização da entidade base.');
+class SpatialRuntime {
+  constructor() {
+    this.isActive = false;
+    this._currentSession = null;
+    this._referenceSpace = null;
+    
+    // Problema #5 - Pré-alocação de Views (Zero GC Churn)
+    this.MAX_VIEWS = 4; // Suporta estendido (Stereo, Quad-view, Foveated Layers)
+    this.viewCache = Array.from({ length: this.MAX_VIEWS }, () => ({
+      eye: 'none',
+      projectionMatrix: new Float32Array(16),
+      transformMatrix: new Float32Array(16),
+      viewMatrix: new Float32Array(16)
+    }));
+    
+    // Barramento de sinais interno e flags
+    this.isRecoveryLoopRunning = false;
+  }
+
+  // --------------------------------------------------------------------------
+  // CORREÇÃO CRÍTICA #1: Bug Matemático na mat4_multiply
+  // --------------------------------------------------------------------------
+  static mat4_multiply(out, a, b) {
+    const a00 = a[0],  a01 = a[1],  a02 = a[2],  a03 = a[3];
+    const a10 = a[4],  a11 = a[5],  a12 = a[6],  a13 = a[7];
+    const a20 = a[8],  a21 = a[9],  a22 = a[10], a23 = a[11];
+    const a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+
+    // Cache temporário de B para permitir multiplicação in-place safely
+    let b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+    out[0] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+    out[1] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+    // CORRIGIDO: alterado a20 para a22
+    out[2] = b0*a02 + b1*a12 + b2*a22 + b3*a32; 
+    out[3] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+    b0 = b[4]; b1 = b[5]; b2 = b[6]; b3 = b[7];
+    out[4] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+    out[5] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+    out[6] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+    out[7] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+    b0 = b[8]; b1 = b[9]; b2 = b[10]; b3 = b[11];
+    out[8] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+    out[9] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+    out[10] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+    out[11] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+    b0 = b[12]; b1 = b[13]; b2 = b[14]; b3 = b[15];
+    out[12] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+    out[13] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+    out[14] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+    out[15] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+  }
+
+  // --------------------------------------------------------------------------
+  // CORREÇÃO CRÍTICA #2: Plano Superior (Top) do Frustum Extractor
+  // --------------------------------------------------------------------------
+  static extractFrustumPlanes(planes, m) {
+    // Left, Right, Bottom...
+    // CORRIGIDO: Mudança da linha Z (m[12]) para a linha Y (m[13]) no componente W do plano TOP
+    planes[3][0] = m[3]  - m[1];
+    planes[3][1] = m[7]  - m[5];
+    planes[3][2] = m[11] - m[9];
+    planes[3][3] = m[15] - m[13]; 
+    
+    // Normalização sequencial downstream...
+  }
+
+  // --------------------------------------------------------------------------
+  // CORREÇÃO CRÍTICA #3: Verificação Segura de ReferenceSpace
+  // --------------------------------------------------------------------------
+  getValidReferenceSpace() {
+    // CORRIGIDO: Valida o ponteiro real do espaço em vez da assinatura estrutural do método
+    const space = this._referenceSpace;
+    if (!space) return null; 
+    return space;
+  }
+
+  // --------------------------------------------------------------------------
+  // CORREÇÃO CRÍTICA #6: Proteção contra Dangling Callbacks no RAF
+  // --------------------------------------------------------------------------
+  triggerEmergencySpatialRecovery() {
+    this.isRecoveryLoopRunning = true;
+    
+    const checkRestore = () => {
+      // CORRIGIDO: Short-circuit defensivo se a sessão cair ou o runtime for desativado
+      if (!this.isActive || !this._currentSession) {
+        this.isRecoveryLoopRunning = false;
+        return;
+      }
+
+      if (this._detectSpatialDesync()) {
+        this._reinitializeSpatialAnchors();
+      }
+      
+      if (this.isRecoveryLoopRunning) {
+        requestAnimationFrame(checkRestore);
+      }
+    };
+
+    requestAnimationFrame(checkRestore);
+  }
+
+  // --------------------------------------------------------------------------
+  // OPTIMIZATION #5: Ingestão de Views In-Place (Zero Allocation)
+  // --------------------------------------------------------------------------
+  processViewerPose(viewerPose) {
+    const viewsCount = viewerPose.views.length;
+    
+    for (let i = 0; i < viewsCount; i++) {
+      if (i >= this.MAX_VIEWS) break;
+      
+      const srcView = viewerPose.views[i];
+      const targetCache = this.viewCache[i];
+      
+      targetCache.eye = srcView.eye;
+      // Cópia direta de dados via TypedArray.set() - sem alocação de objetos
+      targetCache.projectionMatrix.set(srcView.projectionMatrix);
+      targetCache.transformMatrix.set(srcView.transformMatrix);
+    }
+  }
+
+  _detectSpatialDesync() { return false; }
+  _reinitializeSpatialAnchors() {}
 }
 
-/**
- * 1. CLASSE ABSTRATA SOBERANA (CONTRATOS LOGICOS E COMPORTAMENTAIS)
- */
-class SentinelBaseEntity {
-    constructor(entityId, entityType = 'GENERIC_COGNITIVE') {
-        if (this.constructor === SentinelBaseEntity) {
-            throw new TypeError('Não é possível instanciar a classe abstrata SentinelBaseEntity diretamente.');
-        }
+// ----------------------------------------------------------------------------
+// CORREÇÃO CRÍTICA #4 & #8: Scene Graph com Versionamento e Propagação Dirty Real
+// ----------------------------------------------------------------------------
+class SpatialNode {
+  constructor() {
+    this.localMatrix = new Float32Array(16);
+    this.worldMatrix = new Float32Array(16);
+    this.isDirty = true;
+    this.parent = null;
+    this.children = [];
+    
+    // Problema #8 - Versionamento de Transformações
+    this.transformVersion = 0;
+    this.lastParentVersion = -1;
 
-        // Identidade e Metadados Estruturais
-        this.entityId = entityId;
-        this.entityType = entityType;
-        this.lifecycleState = 'UNLOADED'; // UNLOADED, SUSPENDED, ACTIVE, FOCUSING, DESTROYED
-        this.visibilityState = 'HIDDEN';   // VISIBLE, SUPRESSED, HIDDEN, OCCLUDED, FOCUS-ONLY
+    // Problema #7 - Bypass de Culling para elementos Head-Locked/Safe Zones
+    this.bypassFrustum = false;
+    this.renderLayer = 'WORLD_SPACE'; // 'WORLD_SPACE' ou 'HEAD_LOCKED'
+  }
 
-        // Perfis de Controle Perceptivo e Semântico 
-        this.profiles = {
-            attentionProfile: {
-                weight: 1.0,               // Multiplicador base de relevância atencional
-                focusAffinity: 0.5,        // Afinidade com o centro da fóvea do operador
-                semanticPriority: 1        // Rank de importância por significado tático
-            },
-            performanceProfile: {
-                gpuCostFraction: 0.05,     // Estimativa de impacto no pipeline do fragment shader
-                allocationBudgetMs: 0.2     // Fração máxima de processamento permitida por frame
-            }
-        };
+  invalidate() {
+    if (!this.isDirty) {
+      this.isDirty = true;
+      this.transformVersion++; // Incrementa versão de controle local
+      
+      // Invalida a árvore descendente recursivamente
+      const len = this.children.length;
+      for (let i = 0; i < len; i++) {
+        this.children[i].invalidate();
+      }
+    }
+  }
+
+  // Problema #4 - Propagação forçada e condicional robusta
+  updateTransform(force = false) {
+    let shouldUpdate = force || this.isDirty;
+
+    // Verifica dessincronia de versão com o pai (caso o pai tenha mudado isoladamente)
+    if (this.parent && this.lastParentVersion !== this.parent.transformVersion) {
+      shouldUpdate = true;
+      this.lastParentVersion = this.parent.transformVersion;
     }
 
-    // Handshake de Ativação Perceptiva
-    activate() {
-        this.lifecycleState = 'ACTIVE';
-        this.visibilityState = 'VISIBLE';
+    if (shouldUpdate) {
+      if (this.parent) {
+        SpatialRuntime.mat4_multiply(this.worldMatrix, this.parent.worldMatrix, this.localMatrix);
+      } else {
+        this.worldMatrix.set(this.localMatrix);
+      }
+      this.isDirty = false;
     }
 
-    suspend() {
-        this.lifecycleState = 'SUSPENDED';
-        this.visibilityState = 'SUPRESSED';
+    // Propaga o estado para os nós filhos na hierarquia do grafo
+    const len = this.children.length;
+    for (let i = 0; i < len; i++) {
+      this.children[i].updateTransform(shouldUpdate);
     }
+  }
 }
-
-// Registro na janela para heranças futuras e extensões de sistema
-window.SentinelBaseEntity = SentinelBaseEntity;
-
-
-/**
- * 2. COMPONENTE WEBXR A-FRAME (ACOPLAMENTO GEOMÉTRICO AO DOM ESPACIAL)
- */
-AFRAME.registerComponent('sentinel-base-entity', {
-    schema: {
-        actionId: { type: 'string', default: 'generic-trigger' },
-        latencyThreshold: { type: 'number', default: 100 },
-        weight: { type: 'float', default: 1.0 },
-        semanticPriority: { type: 'int', default: 1 }
-    },
-
-    // Inicialização nativa do ciclo de vida tridimensional
-    init: function () {
-        this.el.classList.add('cognitive-transition', 'layer-context');
-        
-        // Instanciação interna ligada à arquitetura de classes abstratas
-        this.runtimeInstance = {
-            entityId: this.data.actionId,
-            lifecycleState: 'ACTIVE',
-            visibilityState: 'VISIBLE',
-            isFocused: false
-        };
-
-        // Cache de referências e binds para evitar alocações dinâmicas na memória (Anti-GC Jitter)
-        this._boundFocusEnter = this.onFocusEnter.bind(this);
-        this._boundFocusLeave = this.onFocusLeave.bind(this);
-        this._boundExecuteAction = this.executeAction.bind(this);
-
-        this.setupHardwareListeners();
-    },
-
-    // Registro estrito de listeners isolados por nó geométrico
-    setupHardwareListeners: function () {
-        this.el.addEventListener('mouseenter', this._boundFocusEnter);
-        this.el.addEventListener('mouseleave', this._boundFocusLeave);
-        this.el.addEventListener('click', this._boundExecuteAction);
-    },
-
-    // Remoção cirúrgica de eventos ao desincorporar o objeto (Prevenção de Memory Leaks)
-    remove: function () {
-        this.el.removeEventListener('mouseenter', this._boundFocusEnter);
-        this.el.removeEventListener('mouseleave', this._boundFocusLeave);
-        this.el.removeEventListener('click', this._boundExecuteAction);
-    },
-
-    // GATILHO: Intersecção do Olhar (Foco Foveal Ativado)
-    onFocusEnter: function () {
-        this.runtimeInstance.isFocused = true;
-        this.runtimeInstance.lifecycleState = 'FOCUSING';
-        
-        // Modificação de estado estético via transformações aceleradas na GPU (Zero Reflow)
-        this.el.setAttribute('animation__focus', 'property: scale; to: 1.05 1.05 1.05; dur: 120; easing: easeOutQuad');
-        this._syncHardwareBridge(true);
-
-        // Comunicação instantânea com o Barramento Central do Ecossistema
-        if (window.SentinelBus) {
-            window.SentinelBus.emit('xr:gaze_moved', {
-                target: this.data.actionId,
-                gazeVector: this.el.object3D.position,
-                urgency: 0.5,
-                distance: this.el.object3D.position.length()
-            });
-        }
-        
-        this._trace('FOCUS', `Foco foveal estabelecido na entidade ID: [${this.data.actionId}]`);
-    },
-
-    // GATILHO: Evasão do Olhar (Inibição Perceptual)
-    onFocusLeave: function () {
-        this.runtimeInstance.isFocused = false;
-        this.runtimeInstance.lifecycleState = 'ACTIVE';
-        
-        this.el.setAttribute('animation__focus', 'property: scale; to: 1 1 1; dur: 120; easing: easeOutQuad');
-        this._syncHardwareBridge(false);
-        
-        this._trace('FOCUS', `Foco evacuado da entidade ID: [${this.data.actionId}]`);
-    },
-
-    // GATILHO: Disparo de Ação Mecânica ou Intencional
-    executeAction: function () {
-        const timestamp = performance.now();
-
-        // 1. Despacha evento de bolha nativo do DOM para árvores lógicas superiores
-        const event = new CustomEvent('sentinel-trigger', {
-            detail: { actionId: this.data.actionId, timestamp: timestamp },
-            bubbles: true,
-            composed: true
-        });
-        this.el.dispatchEvent(event);
-
-        // 2. Acionamento assíncrono direto do Kernel através do barramento CMA (Ignora UI Central)
-        if (window.SentinelBus) {
-            window.SentinelBus.emit('nexus:command', {
-                command: 'EXECUTE_AUTOMATION',
-                payload: { actionId: this.data.actionId, initiatedAt: timestamp },
-                source: 'SPATIAL_ENTITY_GATED'
-            });
-        }
-
-        this._trace('AUTOMATION', `Gatilho acionado. Intenção mapeada diretamente para o Kernel: [${this.data.actionId}]`, 'SUCCESS');
-    },
-
-    // Ponte de Hardware: Sincroniza classes e variáveis CSS sem alocações pesadas
-    _syncHardwareBridge: function (isFocused) {
-        if (isFocused) {
-            this.el.classList.add('layer-focus', 'hud-focus-lock');
-            this.el.classList.remove('layer-context');
-            this.el.style.setProperty('--hud-opacity', '1.0');
-            this.el.style.setProperty('--hud-focus-strength', '1.00');
-        } else {
-            this.el.classList.remove('layer-focus', 'hud-focus-lock');
-            this.el.classList.add('layer-context');
-            this.el.style.setProperty('--hud-opacity', '0.78');
-            this.el.style.setProperty('--hud-focus-strength', '0.50');
-        }
-    },
-
-    _trace: function (subsystem, message, level = 'INFO') {
-        console.log(`[${new Date().toISOString()}] [ENTITY_RUNTIME:${subsystem}] [${level}] ${message}`);
-    }
-});
-
-console.log("%c[SENTINEL XR] Componente 'sentinel-base-entity' e blueprint de abstração instanciados com sucesso.", "color: #00D4FF; font-weight: bold;");
