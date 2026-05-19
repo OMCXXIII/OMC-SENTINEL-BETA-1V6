@@ -1,19 +1,18 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SENTINEL v9.0 — HIGH-PRECISION SIGNAL BUS (OPERATIONAL NERVOUS SYSTEM)
+ * SENTINEL v9.5 — HIGH-PRECISION SIGNAL BUS (OPERATIONAL NERVOUS SYSTEM)
  * Arquivo: sentinel-bus.js
  * Papel: Barramento Assíncrono Verde com Fila de Prioridades e Despacho por Quadros
  * Governança: Totalmente subordinado ao SovereignKernel e ao seu Scheduler.
- * Fix: Implementação de Priority Queues, Anti-Flood, Anti-Cascade, Controle de 
- * Backpressure e Validação Rígida de Namespaces Corporativos.
- * ═══════════════════════════════════════════════════════════════════════════
+ * Fix: Acoplamento de Contrato Soberano (v9.5), Auto-Registro e Purga de Memória.
+ * ═══════════════════════════════════════════════════════════════════════
  */
 
-// D) VALIDAÇÃO RÍGIDA DE EVENT NAMESPACES
 const VALID_NAMESPACES = new Set(['kernel', 'xr', 'hud', 'memory', 'attention', 'performance', 'system', 'nexus', 'boot']);
+
 class SentinelSignalBus {
     constructor() {
-        this.version = "9.0-NERVOUS-BUS";
+        this.version = "9.5-NERVOUS-BUS";
         this._handlers = new Map();
         this._sticky = new Map();
         this._history = [];
@@ -195,6 +194,37 @@ class SentinelSignalBus {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // G) KERNEL RUNTIME CONTRACT (v9.5 INTEGRATION)
+    // ═══════════════════════════════════════════════════════════════════════
+    async initialize() {
+        this.trace('SYSTEM', 'Handshake de inicialização do barramento concluído de forma soberana.');
+        this._bootCompleted = true;
+        return true;
+    }
+
+    heartbeat() {
+        if (window.SovereignKernel) {
+            window.SovereignKernel.heartbeat('sentinel-bus');
+        }
+        return true;
+    }
+
+    shutdown() {
+        this.trace('SYSTEM', 'Paralisando sinapses. Iniciando purga total de barramento.');
+        
+        this._handlers.clear();
+        this._sticky.clear();
+        this._history = [];
+        
+        Object.keys(this._queues).forEach(queue => {
+            this._queues[queue] = [];
+        });
+
+        this._bootCompleted = false;
+        return true;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // E) TRACE SYSTEM EM TEMPO REAL
     // ═══════════════════════════════════════════════════════════════════════
     trace(subsystem, message, level = 'INFO') {
@@ -221,5 +251,10 @@ class SentinelSignalBus {
 // Instanciação e exposição única na infraestrutura do ecossistema
 const SentinelBus = new SentinelSignalBus();
 window.SentinelBus = SentinelBus;
+
+// Mecanismo de Auto-Injeção Autônoma no Registro do Kernel
+if (window.SovereignKernel) {
+    window.SovereignKernel.registerModule('sentinel-bus', SentinelBus);
+}
 
 export default SentinelBus;
