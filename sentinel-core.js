@@ -1,17 +1,16 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SENTINEL v9.0 — SOVEREIGN COMPOSITION INFRASTRUCTURE (CORE CORE)
+ * SENTINEL v9.5 — SOVEREIGN COMPOSITION INFRASTRUCTURE (CORE CORE)
  * Arquivo: sentinel-core.js
  * Papel: Service Locator, Module Bridges e Cache Atômico de Estado L1/L2
  * Governança: Subordinado diretamente ao SovereignKernel; centraliza bridges.
- * Fix: Implementação de Runtime API, Service Locator, Module Bridges,
- * Runtime State Cache, Lifecycle Hooks e Integrações de Hardware (XR/Attention/Memory).
+ * Fix: Implementação do Kernel Runtime Contract v9.5 e Auto-Registro Soberano.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 class SentinelCoreComposition {
     constructor() {
-        this.version = "9.0-CORE-COMPOSITION";
+        this.version = "9.5-CORE-COMPOSITION";
         this.isActive = false;
 
         // B) SERVICE LOCATOR REGISTRY (Catálogo Centralizado de Componentes)
@@ -190,6 +189,36 @@ class SentinelCoreComposition {
         };
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // KERNEL RUNTIME CONTRACT (v9.5)
+    // ═══════════════════════════════════════════════════════════════════════
+    async initialize() {
+        this._trace('LIFECYCLE', 'Handshake soberano do Core iniciado.');
+        await this.initializeCore();
+        this._trace('LIFECYCLE', 'Core estabilizado e operacional.');
+        return true;
+    }
+
+    heartbeat() {
+        if (window.SovereignKernel) {
+            window.SovereignKernel.heartbeat('sentinel-core');
+        }
+        return {
+            active: this.isActive,
+            cycles: this._stateCache.ops.cycles,
+            services: this._services.size
+        };
+    }
+
+    shutdown() {
+        this._trace('LIFECYCLE', 'Recebido comando soberano de shutdown.');
+        this.shutdownCore();
+        return true;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TRACE SYSTEM EM TEMPO REAL
+    // ═══════════════════════════════════════════════════════════════════════
     _trace(subsystem, message, level = 'INFO') {
         const formatted = `[${new Date().toISOString()}] [CORE-COMPOSITION:${subsystem}] [${level}] ${message}`;
         if (level === 'CRITICAL' || level === 'ERROR') console.error(formatted);
@@ -204,5 +233,10 @@ window.SentinelCore = SovereignCore;
 
 // Vincula temporariamente para compatibilidade com stubs legados
 window.StateStore = SovereignCore;
+
+// Auto-registro soberano no kernel
+if (window.SovereignKernel) {
+    window.SovereignKernel.registerModule('sentinel-core', SovereignCore);
+}
 
 export default SovereignCore;
