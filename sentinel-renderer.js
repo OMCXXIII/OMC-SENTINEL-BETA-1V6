@@ -157,6 +157,62 @@ class SentinelSovereignRenderer {
         const record = this._occlusionRegistry.get(entityId);
         if (record) {
             record.isOccluded = isOccluded;
+            /**
+ * SENTINEL CYBER GLASS SHADER
+ * Pipeline soberano visual holográfico
+ */
+
+if (window.AFRAME && !AFRAME.shaders['sentinel-cyber-glass']) {
+
+  AFRAME.registerShader('sentinel-cyber-glass', {
+
+    schema: {
+      color: { type: 'color', default: '#00ffee' },
+      opacity: { type: 'number', default: 0.35 }
+    },
+
+    vertexShader: `
+      varying vec2 vUv;
+
+      void main() {
+
+        vUv = uv;
+
+        gl_Position =
+          projectionMatrix *
+          modelViewMatrix *
+          vec4(position, 1.0);
+
+      }
+    `,
+
+    fragmentShader: `
+      precision mediump float;
+
+      varying vec2 vUv;
+
+      uniform vec3 color;
+      uniform float opacity;
+
+      void main() {
+
+        float glow =
+          0.5 +
+          0.5 *
+          sin(vUv.y * 40.0);
+
+        gl_FragColor =
+          vec4(color * glow, opacity);
+
+      }
+    `
+  });
+
+  console.log(
+    '%c SHADER REGISTERED: sentinel-cyber-glass ',
+    'background:#001122;color:#00ffee;font-weight:bold;padding:4px;'
+  );
+}
         }
     }
 
