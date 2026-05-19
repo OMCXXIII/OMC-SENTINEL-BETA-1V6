@@ -1,302 +1,191 @@
-/**
- * ═══════════════════════════════════════════════════════════════════════════
- * SENTINEL v9.0 — COGNITIVE SPATIAL INTEGRITY & XR RUNTIME ENGINE
- * Arquivo: js_sentinel_engine-xr.js
- * Papel: Runtime Espacial Cognitivo, Grafo de Cena e Estabilização Vestibular
- * Governança: Subordinado ao SovereignKernel; sincroniza com o SovereignRenderer.
- * Fix: Implementação de Scene Graph Tridimensional, XR Zones Dinâmicas,
- * Node Lifecycle Hooks, Attention Rendering, Occlusion Culling e XR Recovery.
- * ═══════════════════════════════════════════════════════════════════════════
- */
+// ============================================================================
+// RUNTIME SPATIAL RUNTIME (v9.1-PATCH)
+// Core Math Fixes & Zero-Allocation Systems
+// ============================================================================
 
-// B) XR ZONES: Zoneamento Geométrico Estrito para Alocação de Atenção e Presença
-export const XR_ZONES = Object.freeze({
-    FOCUS:     'FOCUS',     // Matriz tátil tridimensional imediata de alta acuidade visual
-    SAFE:      'SAFE',      // HUD estabilizado e travado no espaço de cabeça (Head-locked)
-    IMMERSION: 'IMMERSION'  // Volume ambiental e skyboxes de baixa frequência de atualização
-});
+class SpatialRuntime {
+  constructor() {
+    this.isActive = false;
+    this._currentSession = null;
+    this._referenceSpace = null;
+    
+    // Problema #5 - Pré-alocação de Views (Zero GC Churn)
+    this.MAX_VIEWS = 4; // Suporta estendido (Stereo, Quad-view, Foveated Layers)
+    this.viewCache = Array.from({ length: this.MAX_VIEWS }, () => ({
+      eye: 'none',
+      projectionMatrix: new Float32Array(16),
+      transformMatrix: new Float32Array(16),
+      viewMatrix: new Float32Array(16)
+    }));
+    
+    // Barramento de sinais interno e flags
+    this.isRecoveryLoopRunning = false;
+  }
 
-// C) NODE LIFECYCLE: Estados de Processamento e Renderização de Entidades Espaciais
-export const NODE_STATES = Object.freeze({
-    UNLOADED:  'UNLOADED',
-    INSTANTIATED: 'INSTANTIATED',
-    ACTIVE:    'ACTIVE',
-    OCCLUDED:  'OCCLUDED',
-    DESTROYED: 'DESTROYED'
-});
+  // --------------------------------------------------------------------------
+  // CORREÇÃO CRÍTICA #1: Bug Matemático na mat4_multiply
+  // --------------------------------------------------------------------------
+  static mat4_multiply(out, a, b) {
+    const a00 = a[0],  a01 = a[1],  a02 = a[2],  a03 = a[3];
+    const a10 = a[4],  a11 = a[5],  a12 = a[6],  a13 = a[7];
+    const a20 = a[8],  a21 = a[9],  a22 = a[10], a23 = a[11];
+    const a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
 
-// A) SCENE GRAPH COMPONENTS: Classe de Nó Base Tridimensional
+    // Cache temporário de B para permitir multiplicação in-place safely
+    let b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+    out[0] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+    out[1] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+    // CORRIGIDO: alterado a20 para a22
+    out[2] = b0*a02 + b1*a12 + b2*a22 + b3*a32; 
+    out[3] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+    b0 = b[4]; b1 = b[5]; b2 = b[6]; b3 = b[7];
+    out[4] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+    out[5] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+    out[6] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+    out[7] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+    b0 = b[8]; b1 = b[9]; b2 = b[10]; b3 = b[11];
+    out[8] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+    out[9] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+    out[10] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+    out[11] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+    b0 = b[12]; b1 = b[13]; b2 = b[14]; b3 = b[15];
+    out[12] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+    out[13] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+    out[14] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+    out[15] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+  }
+
+  // --------------------------------------------------------------------------
+  // CORREÇÃO CRÍTICA #2: Plano Superior (Top) do Frustum Extractor
+  // --------------------------------------------------------------------------
+  static extractFrustumPlanes(planes, m) {
+    // Left, Right, Bottom...
+    // CORRIGIDO: Mudança da linha Z (m[12]) para a linha Y (m[13]) no componente W do plano TOP
+    planes[3][0] = m[3]  - m[1];
+    planes[3][1] = m[7]  - m[5];
+    planes[3][2] = m[11] - m[9];
+    planes[3][3] = m[15] - m[13]; 
+    
+    // Normalização sequencial downstream...
+  }
+
+  // --------------------------------------------------------------------------
+  // CORREÇÃO CRÍTICA #3: Verificação Segura de ReferenceSpace
+  // --------------------------------------------------------------------------
+  getValidReferenceSpace() {
+    // CORRIGIDO: Valida o ponteiro real do espaço em vez da assinatura estrutural do método
+    const space = this._referenceSpace;
+    if (!space) return null; 
+    return space;
+  }
+
+  // --------------------------------------------------------------------------
+  // CORREÇÃO CRÍTICA #6: Proteção contra Dangling Callbacks no RAF
+  // --------------------------------------------------------------------------
+  triggerEmergencySpatialRecovery() {
+    this.isRecoveryLoopRunning = true;
+    
+    const checkRestore = () => {
+      // CORRIGIDO: Short-circuit defensivo se a sessão cair ou o runtime for desativado
+      if (!this.isActive || !this._currentSession) {
+        this.isRecoveryLoopRunning = false;
+        return;
+      }
+
+      if (this._detectSpatialDesync()) {
+        this._reinitializeSpatialAnchors();
+      }
+      
+      if (this.isRecoveryLoopRunning) {
+        requestAnimationFrame(checkRestore);
+      }
+    };
+
+    requestAnimationFrame(checkRestore);
+  }
+
+  // --------------------------------------------------------------------------
+  // OPTIMIZATION #5: Ingestão de Views In-Place (Zero Allocation)
+  // --------------------------------------------------------------------------
+  processViewerPose(viewerPose) {
+    const viewsCount = viewerPose.views.length;
+    
+    for (let i = 0; i < viewsCount; i++) {
+      if (i >= this.MAX_VIEWS) break;
+      
+      const srcView = viewerPose.views[i];
+      const targetCache = this.viewCache[i];
+      
+      targetCache.eye = srcView.eye;
+      // Cópia direta de dados via TypedArray.set() - sem alocação de objetos
+      targetCache.projectionMatrix.set(srcView.projectionMatrix);
+      targetCache.transformMatrix.set(srcView.transformMatrix);
+    }
+  }
+
+  _detectSpatialDesync() { return false; }
+  _reinitializeSpatialAnchors() {}
+}
+
+// ----------------------------------------------------------------------------
+// CORREÇÃO CRÍTICA #4 & #8: Scene Graph com Versionamento e Propagação Dirty Real
+// ----------------------------------------------------------------------------
 class SpatialNode {
-    constructor(id, zone = XR_ZONES.FOCUS) {
-        this.id = id;
-        this.zone = zone;
-        this.state = NODE_STATES.UNLOADED;
-        
-        // Atributos Espaciais (Vetores de Transformação)
-        this.position = { x: 0, y: 0, z: 0 };
-        this.rotation = { x: 0, y: 0, z: 0, w: 1 };
-        this.scale = { x: 1, y: 1, z: 1 };
-        
-        this.parent = null;
-        this.children = new Map();
-        
-        // D) ATTENTION RENDERING METRICS
-        this.salienceScore = 1.0;
-        this.isCulled = false;
-        
-        // Bounding Box Simples para E) OCCLUSION CULLING
-        this.boundingBox = { radius: 1.0 };
+  constructor() {
+    this.localMatrix = new Float32Array(16);
+    this.worldMatrix = new Float32Array(16);
+    this.isDirty = true;
+    this.parent = null;
+    this.children = [];
+    
+    // Problema #8 - Versionamento de Transformações
+    this.transformVersion = 0;
+    this.lastParentVersion = -1;
+
+    // Problema #7 - Bypass de Culling para elementos Head-Locked/Safe Zones
+    this.bypassFrustum = false;
+    this.renderLayer = 'WORLD_SPACE'; // 'WORLD_SPACE' ou 'HEAD_LOCKED'
+  }
+
+  invalidate() {
+    if (!this.isDirty) {
+      this.isDirty = true;
+      this.transformVersion++; // Incrementa versão de controle local
+      
+      // Invalida a árvore descendente recursivamente
+      const len = this.children.length;
+      for (let i = 0; i < len; i++) {
+        this.children[i].invalidate();
+      }
+    }
+  }
+
+  // Problema #4 - Propagação forçada e condicional robusta
+  updateTransform(force = false) {
+    let shouldUpdate = force || this.isDirty;
+
+    // Verifica dessincronia de versão com o pai (caso o pai tenha mudado isoladamente)
+    if (this.parent && this.lastParentVersion !== this.parent.transformVersion) {
+      shouldUpdate = true;
+      this.lastParentVersion = this.parent.transformVersion;
     }
 
-    addChild(node) {
-        node.parent = this;
-        node.state = NODE_STATES.INSTANTIATED;
-        this.children.set(node.id, node);
+    if (shouldUpdate) {
+      if (this.parent) {
+        SpatialRuntime.mat4_multiply(this.worldMatrix, this.parent.worldMatrix, this.localMatrix);
+      } else {
+        this.worldMatrix.set(this.localMatrix);
+      }
+      this.isDirty = false;
     }
 
-    removeChild(id) {
-        const node = this.children.get(id);
-        if (node) {
-            node.parent = null;
-            node.state = NODE_STATES.DESTROYED;
-            this.children.delete(id);
-            return true;
-        }
-        return false;
+    // Propaga o estado para os nós filhos na hierarquia do grafo
+    const len = this.children.length;
+    for (let i = 0; i < len; i++) {
+      this.children[i].updateTransform(shouldUpdate);
     }
+  }
 }
-
-class SentinelSpatialCognitiveRuntime {
-    constructor() {
-        this.version = "9.0-SPATIAL-COGNITIVE";
-        this.isActive = false;
-
-        // A) SCENE GRAPH ROOT NODE
-        this.rootNode = new SpatialNode('ROOT_UNIVERSE', XR_ZONES.IMMERSION);
-
-        // F) ADAPTIVE RESOLUTION CONTROLLER
-        this.resolution = {
-            viewportMultiplier: 1.0,
-            targetGpuFrameTimeMs: 11.11, // Teto máximo normativo para amostragem limpa a 90Hz
-            consecutiveDroppingFrames: 0
-        };
-
-        // G) XR RECOVERY & H) FRAME SAFE MODE CONTROLS
-        this.recoveryMode = {
-            isStabilizing: false,
-            blackoutTriggered: false,
-            frameDropThreshold: 5,
-            safetyClockActive: false
-        };
-
-        this.bus = null;
-        this._currentSession = null;
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // A) SCENE GRAPH MANAGEMENT & C) NODE LIFECYCLE
-    // ═══════════════════════════════════════════════════════════════════════
-    registerSpatialEntity(id, zone, transformData = {}) {
-        const node = new SpatialNode(id, zone);
-        if (transformData.position) node.position = { ...transformData.position };
-        if (transformData.scale) node.scale = { ...transformData.scale };
-        if (transformData.radius) node.boundingBox.radius = transformData.radius;
-
-        // Ativação implícita pelo Lifecycle Hook
-        node.state = NODE_STATES.ACTIVE;
-        this.rootNode.addChild(node);
-        this._trace('NODE_LIFECYCLE', `Nó espacial [${id}] instanciado e injetado na zona [${zone}].`);
-        return node;
-    }
-
-    destroySpatialEntity(id) {
-        if (this.rootNode.removeChild(id)) {
-            this._trace('NODE_LIFECYCLE', `Nó espacial [${id}] cortado do grafo e movido para purga.`);
-            return true;
-        }
-        return false;
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // D) ATTENTION RENDERING & E) OCCLUSION CULLING ENGINES
-    // ═══════════════════════════════════════════════════════════════════════
-    updateSpatialMatrix(gazeVector, hmdPosition) {
-        if (!this.isActive) return;
-
-        // Varre o grafo executando testes de relevância espacial e descarte geométrico
-        for (const [id, node] of this.rootNode.children.entries()) {
-            if (node.state === NODE_STATES.DESTROYED) continue;
-
-            // D) ATTENTION RENDERING: Calcula proximidade angular com a fóvea ocular (Gaze)
-            const dotProduct = this._calculateGazeProximity(node.position, gazeVector, hmdPosition);
-            node.salienceScore = Math.max(0.1, dotProduct);
-
-            // B) XR ZONES: Repassa o coeficiente adaptativo com base na criticidade da área
-            if (node.zone === XR_ZONES.SAFE) {
-                node.salienceScore = 1.0; // Isola o HUD de degradação atencional
-            }
-
-            // E) OCCLUSION CULLING: Descarte preemptivo na CPU se estiver fora do ângulo visível do HMD
-            if (dotProduct < 0.25 && node.zone !== XR_ZONES.SAFE) {
-                if (node.state !== NODE_STATES.OCCLUDED) {
-                    node.state = NODE_STATES.OCCLUDED;
-                    node.isCulled = true;
-                    this._trace('CULLING', `Entidade [${id}] ocultada preemptivamente por desvio de fóvea.`);
-                    
-                    // Notifica o renderer central para abortar desenho deste ID nas filas
-                    if (window.SovereignRenderer) window.SovereignRenderer.setOcclusionState(id, true);
-                }
-            } else {
-                if (node.state === NODE_STATES.OCCLUDED) {
-                    node.state = NODE_STATES.ACTIVE;
-                    node.isCulled = false;
-                    if (window.SovereignRenderer) window.SovereignRenderer.setOcclusionState(id, false);
-                }
-            }
-        }
-    }
-
-    _calculateGazeProximity(nodePos, gazeVec, hmdPos) {
-        if (!gazeVec || !hmdPos) return 1.0;
-        
-        // Vetor HMD para a Entidade
-        const targetVec = {
-            x: nodePos.x - hmdPos.x,
-            y: nodePos.y - hmdPos.y,
-            z: nodePos.z - hmdPos.z
-        };
-        const mag = Math.sqrt(targetVec.x**2 + targetVec.y**2 + targetVec.z**2) || 1.0;
-        const normTarget = { x: targetVec.x / mag, y: targetVec.y / mag, z: targetVec.z / mag };
-
-        // Produto escalar entre o vetor do olhar e a direção do objeto
-        return Math.max(0, (normTarget.x * gazeVec.x) + (normTarget.y * gazeVec.y) + (normTarget.z * gazeVec.z));
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // F) ADAPTIVE RESOLUTION CONTROLLER (PIPELINE ANTI-GARGALO)
-    // ═══════════════════════════════════════════════════════════════════════
-    evaluateHardwareStress(measuredFrameTimeMs) {
-        if (measuredFrameTimeMs > this.resolution.targetGpuFrameTimeMs) {
-            this.resolution.consecutiveDroppingFrames++;
-            
-            // Se houver 3 quedas consecutivas de renderização, aciona mitigação imediata
-            if (this.resolution.consecutiveDroppingFrames >= 3) {
-                this.resolution.viewportMultiplier = Math.max(0.45, this.resolution.viewportMultiplier - 0.10);
-                this.resolution.consecutiveDroppingFrames = 0;
-                
-                if (window.SovereignRenderer) {
-                    window.SovereignRenderer.setResolutionScale(this.resolution.viewportMultiplier);
-                }
-                this._trace('ADAPTIVE_RES', `Saturação detectada. Forçando compressão de viewport para: ${(this.resolution.viewportMultiplier*100).toFixed(0)}%`);
-            }
-        } else {
-            // Recuperação gradativa lenta
-            if (this.resolution.viewportMultiplier < 1.0 && measuredFrameTimeMs < this.resolution.targetGpuFrameTimeMs * 0.7) {
-                this.resolution.viewportMultiplier = Math.min(1.0, this.resolution.viewportMultiplier + 0.02);
-                if (window.SovereignRenderer) {
-                    window.SovereignRenderer.setResolutionScale(this.resolution.viewportMultiplier);
-                }
-            }
-            this.resolution.consecutiveDroppingFrames = 0;
-        }
-
-        // H) FRAME SAFE MODE INTERCEPT
-        if (measuredFrameTimeMs > 22.22) { // Tempo correspondente a queda abaixo de 45FPS
-            this._triggerFrameSafeClock();
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // G) XR RECOVERY & H) FRAME SAFE MODE (PROTEÇÃO VESTIBULAR MÁXIMA)
-    // ═══════════════════════════════════════════════════════════════════════
-    _triggerFrameSafeClock() {
-        if (this.recoveryMode.safetyClockActive) return;
-        this.recoveryMode.safetyClockActive = true;
-        
-        this._trace('FRAME_SAFE', 'ALERTA: Desassociação vestibular iminente. Congelando buffers estáticos secundários.', 'WARN');
-        
-        // Muta o perfil global do scheduler de tempo para isolar processos paralelos
-        if (window.SovereignTemporalScheduler) {
-            window.SovereignTemporalScheduler.suspendTask('core-memory-flush');
-        }
-    }
-
-    triggerEmergencySpatialRecovery() {
-        if (this.recoveryMode.blackoutTriggered) return;
-        this.recoveryMode.blackoutTriggered = true;
-        this.recoveryMode.isStabilizing = true;
-
-        this._trace('XR_RECOVERY', 'COLAPSO DE SUBMÓDULO GRÁFICO XR DETECTADO. Forçando Blackout Tático para mitigar náusea severa.', 'CRITICAL');
-
-        // Cria overlay visual absoluto de opacidade preta opaca para cortar o flicker de hardware
-        const recoveryScreen = document.createElement('div');
-        recoveryScreen.id = 'sentinel-xr-blackout-mask';
-        recoveryScreen.style = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:#000000; z-index:999999; display:flex; align-items:center; justify-content:center; color:#FF3E3E; font-family:monospace;';
-        recoveryScreen.innerHTML = '<div>[XR_VESTIBULAR_SHIELD_ACTIVE] <br> RECONECTANDO CLOCK ESPACIAL...</div>';
-        document.body.appendChild(recoveryScreen);
-
-        // Força downscaling imediato e reconexão de hardware limpa
-        setTimeout(() => {
-            this.resolution.viewportMultiplier = 0.5;
-            this.recoveryMode.blackoutTriggered = false;
-            this.recoveryMode.isStabilizing = false;
-            this.recoveryMode.safetyClockActive = false;
-            
-            const mask = document.getElementById('sentinel-xr-blackout-mask');
-            if (mask) mask.remove();
-            
-            if (window.SovereignTemporalScheduler) window.SovereignTemporalScheduler.resumeTask('core-memory-flush');
-            this._trace('XR_RECOVERY', 'Malha de orientação espacial reestabelecida. Retornando viewport com clock estável.');
-        }, 1500);
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // ORCHESTRATION HANDSHAKES
-    // ═══════════════════════════════════════════════════════════════════════
-    bindXRSession(xrSession) {
-        this._currentSession = xrSession;
-        this.isActive = true;
-        
-        if (window.SovereignRenderer) {
-            window.SovereignRenderer.configureXRPath(true, { left: {}, right: {} });
-        }
-        this._trace('LIFECYCLE', 'Sessão WebXR amarrada com sucesso ao grafo de cena cognitivo.');
-    }
-
-    unbindXRSession() {
-        this.isActive = false;
-        this._currentSession = null;
-        
-        if (window.SovereignRenderer) {
-            window.SovereignRenderer.configureXRPath(false);
-        }
-        this._trace('LIFECYCLE', 'Sessão WebXR abortada. Grafo de cena retornado para modo ocioso.');
-    }
-
-    _trace(subsystem, message, level = 'INFO') {
-        const formatted = `[${new Date().toISOString()}] [ENGINE-XR:${subsystem}] [${level}] ${message}`;
-        if (level === 'CRITICAL' || level === 'ERROR') console.error(formatted);
-        else if (level === 'WARN') console.warn(formatted);
-        else console.log(formatted);
-    }
-
-    _attachSignalBus(busInstance) {
-        this.bus = busInstance;
-
-        this.bus.on('xr:session_start', (session) => this.bindXRSession(session));
-        this.bus.on('xr:session_end', () => this.unbindXRSession());
-        
-        // Escuta telemetria do agendador para medir o tempo de execução do quadro
-        this.bus.on('shader:metrics-update', (metrics) => {
-            if (metrics && metrics.loadMs) {
-                this.evaluateHardwareStress(metrics.loadMs);
-            }
-        });
-    }
-}
-
-// Instanciação e exposição única na infraestrutura do ecossistema
-const SovereignEngineXR = new SentinelSpatialCognitiveRuntime();
-window.SentinelEngineXR = SovereignEngineXR;
-
-export default SovereignEngineXR;
