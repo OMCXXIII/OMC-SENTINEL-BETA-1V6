@@ -1,11 +1,12 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SENTINEL v9.0 — ADAPTIVE HOMEOSTASIS ENGINE (PERFORMANCE GOVERNOR)
+ * SENTINEL v9.5 — ADAPTIVE HOMEOSTASIS ENGINE (PERFORMANCE GOVERNOR)
  * Arquivo: sentinel-performance.js
  * Papel: Homeostase Operacional, Perfilamento Térmico e Prevenção de Colapso
  * Governança: Totalmente subordinado ao SovereignKernel; dita regras de Throttling.
  * Fix: Implementação de Thermal Estimation, GPU Saturation Index, Adaptive
  * Degradation, Predictive Collapse Logic e Escalonamento Estrito de Tiers.
+ * Integração: Three.js r164 Legacy Lights Detection, A-Frame 1.6.0, Dynamic Pixel Ratio.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -19,7 +20,7 @@ export const PERFORMANCE_TIERS = Object.freeze({
 
 class SentinelPerformanceGovernor {
     constructor() {
-        this.version = "9.0-HOMEOSTASIS-GOVERNOR";
+        this.version = "9.5-HOMEOSTASIS-GOVERNOR";
         this.isActive = false;
         this.currentTier = PERFORMANCE_TIERS.HIGH;
 
@@ -58,7 +59,122 @@ class SentinelPerformanceGovernor {
             forceMinimalHud: false
         };
 
+        // V9.5 HARDWARE INTERFACES & PROFILER ADDITIONS
+        this.threeRenderer = null;
+        this.aframeScene = null;
+        this.capabilities = {
+            isWebGL2: false,
+            maxTextures: 0,
+            maxUniforms: 0,
+            xrSupported: false,
+            legacyLightsDetected: false
+        };
+
+        this.profiler = {
+            cpuFrameCostMs: 0.0,
+            gpuFrameCostMs: 0.0,
+            drawCalls: 0,
+            geometriesCount: 0,
+            texturesCount: 0
+        };
+
+        this.emergency = {
+            engaged: false,
+            blackoutTriggered: false
+        };
+
         this.bus = null;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // KERNEL RUNTIME CONTRACT (v9.5) & AUTO-REGISTRO SOBERANO
+    // ═══════════════════════════════════════════════════════════════════════
+    async initialize() {
+        this._trace('LIFECYCLE', 'Iniciando handshake do regulador homeostático v9.5...');
+        
+        // Auto-acoplagem ao barramento nervoso global
+        if (window.SentinelBus) {
+            this._attachSignalBus(window.SentinelBus);
+        } else {
+            this._trace('LIFECYCLE', 'Barramento global não detectado durante init. Aguardando injeção.', 'WARN');
+        }
+
+        // Tenta capturar contextos gráficos globais persistentes pré-existentes
+        this._scanGlobalContexts();
+
+        this.initializeGovernor();
+        return true;
+    }
+
+    heartbeat() {
+        return {
+            active: this.isActive,
+            tier: this.currentTier,
+            saturation: this.gpu.saturationIndex,
+            thermal: this.thermal.estimatedTemperatureC,
+            emergencyEngaged: this.emergency.engaged,
+            profiler: {
+                drawCalls: this.profiler.drawCalls,
+                cpuCost: this.profiler.cpuFrameCostMs
+            }
+        };
+    }
+
+    shutdown() {
+        this._trace('LIFECYCLE', 'Comando de purga de estado recebido pelo SovereignKernel.');
+        this.shutdownGovernor();
+        
+        // Desvinculação total das escutas físicas
+        this.bus = null;
+        this.threeRenderer = null;
+        this.aframeScene = null;
+        this.emergency.engaged = false;
+        this.emergency.blackoutTriggered = false;
+        
+        return true;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // THREE.JS R164 & A-FRAME 1.6.0 ENGINE INTEGRATION
+    // ═══════════════════════════════════════════════════════════════════════
+    detectRendererCapabilities(renderer) {
+        if (!renderer) return;
+        this.threeRenderer = renderer;
+
+        const gl = renderer.getContext();
+        this.capabilities.isWebGL2 = (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext);
+        this.capabilities.maxTextures = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
+        this.capabilities.maxUniforms = gl.getParameter(this.capabilities.isWebGL2 ? gl.MAX_VERTEX_UNIFORM_BLOCKS : gl.MAX_VERTEX_UNIFORM_VECTORS);
+        this.capabilities.xrSupported = !!navigator.xr;
+        
+        // r164 deprecation split detection (.useLegacyLights removido em builds estritas)
+        this.capabilities.legacyLightsDetected = (renderer.useLegacyLights !== undefined);
+
+        this._trace('CAPABILITIES', `WebGL2: ${this.capabilities.isWebGL2} | MaxTextures: ${this.capabilities.maxTextures} | LegacyLights: ${this.capabilities.legacyLightsDetected}`);
+    }
+
+    attachAFrameScene(sceneEl) {
+        if (!sceneEl) return;
+        this.aframeScene = sceneEl;
+        this._trace('AFRAME_INTEGRATION', 'Cena A-Frame 1.6.0 mapeada e ancorada ao Governor.');
+
+        if (sceneEl.hasLoaded) {
+            this._bindAFrameStructures();
+        } else {
+            sceneEl.addEventListener('loaded', () => this._bindAFrameStructures());
+        }
+    }
+
+    _bindAFrameStructures() {
+        if (this.aframeScene && this.aframeScene.renderer) {
+            this.detectRendererCapabilities(this.aframeScene.renderer);
+        }
+    }
+
+    _scanGlobalContexts() {
+        if (window.AFRAME && window.AFRAME.scenes && window.AFRAME.scenes[0]) {
+            this.attachAFrameScene(window.AFRAME.scenes[0]);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -77,9 +193,9 @@ class SentinelPerformanceGovernor {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // METRIC COLLECTION INPUTS & B) GPU SATURATION INDEXING
+    // METRIC COLLECTION INPUTS, RENDERING PROFILER & B) GPU SATURATION INDEXING
     // ═══════════════════════════════════════════════════════════════════════
-    recordFrameMetrics(actualFrameTimeMs, targetIntervalMs) {
+    recordFrameMetrics(actualFrameTimeMs, targetIntervalMs, cpuTimeSplitMs = 0) {
         if (!this.isActive) return;
 
         // Mantém a janela móvel limpa
@@ -96,12 +212,27 @@ class SentinelPerformanceGovernor {
         this.gpu.saturationIndex = this.gpu.averageFrameTimeMs / targetIntervalMs;
         this.gpu.fillratePressure = Math.min(1.5, actualFrameTimeMs / (targetIntervalMs * 0.85));
 
+        // Profiler avançado de engine em tempo real
+        this.profiler.cpuFrameCostMs = cpuTimeSplitMs;
+        this.profiler.gpuFrameCostMs = Math.max(0, actualFrameTimeMs - cpuTimeSplitMs);
+
+        this._harvestRendererTelemetry();
+
         // Executa estimadores de hardware complementares
         this._estimateThermalLoad(actualFrameTimeMs);
         this._evaluatePredictiveCollapse(actualFrameTimeMs, targetIntervalMs);
         
         // Dispara ciclo homeostático adaptativo
         this._performHomeostaticArbitration();
+    }
+
+    _harvestRendererTelemetry() {
+        if (this.threeRenderer && this.threeRenderer.info) {
+            const info = this.threeRenderer.info;
+            this.profiler.drawCalls = info.render.calls || 0;
+            this.profiler.geometriesCount = info.memory.geometries || 0;
+            this.profiler.texturesCount = info.memory.textures || 0;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -121,12 +252,16 @@ class SentinelPerformanceGovernor {
         this.prediction.collapseProbability = Math.min(1.0, frameDropRisk + thermalRisk);
 
         // Se a probabilidade de colapso cinestésico ultrapassar 80%, aciona o escudo de blackout tático
-        if (this.prediction.collapseProbability > 0.80 && this.currentTier === PERFORMANCE_TIERS.XR) {
-            this._trace('COLLAPSE_PREVENTION', 'Risco iminente de desassociação vestibular detectado. Disparando interrupção de emergência.', 'CRITICAL');
-            if (window.SentinelEngineXR) {
-                window.SentinelEngineXR.triggerEmergencySpatialRecovery();
+        if (this.prediction.collapseProbability > 0.80) {
+            if (this.currentTier === PERFORMANCE_TIERS.XR) {
+                this._trace('COLLAPSE_PREVENTION', 'Risco iminente de desassociação vestibular detectado. Disparando interrupção de emergência.', 'CRITICAL');
+                if (window.SentinelEngineXR) {
+                    window.SentinelEngineXR.triggerEmergencySpatialRecovery();
+                }
+                this.prediction.consecutiveFrameDrops = 0; // Reseta após a interrupção
+            } else if (this.prediction.consecutiveFrameDrops >= 8 && !this.emergency.engaged) {
+                this.engageEmergencyRenderMode();
             }
-            this.prediction.consecutiveFrameDrops = 0; // Reseta após a interrupção
         }
     }
 
@@ -154,6 +289,9 @@ class SentinelPerformanceGovernor {
         }
         // Regra 3: Reidratação Gradual sob folga estável de hardware
         else if (this.gpu.saturationIndex < 0.60 && this.thermal.estimatedTemperatureC < this.thermal.warningThresholdC) {
+            if (this.emergency.engaged) {
+                this.disengageEmergencyRenderMode();
+            }
             if (this.currentTier === PERFORMANCE_TIERS.LOW) desiredTier = PERFORMANCE_TIERS.MEDIUM;
             else if (this.currentTier === PERFORMANCE_TIERS.MEDIUM && !this._isXRSessionActive()) desiredTier = PERFORMANCE_TIERS.HIGH;
         }
@@ -166,11 +304,14 @@ class SentinelPerformanceGovernor {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // F) PERFORMANCE TIERS CONTROL HANDLERS (AÇÕES DE THROTTLING)
+    // F) PERFORMANCE TIERS CONTROL HANDLERS & PIXEL RATIO SCALING
     // ═══════════════════════════════════════════════════════════════════════
     enforcePerformanceTier(tier) {
         this.currentTier = tier;
         this._trace('GOVERNOR', `Nível de homeostase reconfigurado com sucesso para: [${tier}]`);
+
+        // Ajusta dinamicamente a amostragem física de fragmentos (Pixel Ratio Adaptivo)
+        this._scaleRendererPixelRatio();
 
         if (!this.bus) return;
 
@@ -201,6 +342,56 @@ class SentinelPerformanceGovernor {
                 document.documentElement.style.setProperty('--hud-density', '1.00');
                 break;
         }
+    }
+
+    _scaleRendererPixelRatio() {
+        if (!this.threeRenderer) return;
+
+        let targetPixelRatio = window.devicePixelRatio || 1;
+        switch (this.currentTier) {
+            case PERFORMANCE_TIERS.LOW: targetPixelRatio *= 0.50; break;
+            case PERFORMANCE_TIERS.MEDIUM: targetPixelRatio *= 0.75; break;
+            case PERFORMANCE_TIERS.HIGH: targetPixelRatio = Math.min(targetPixelRatio, 2.0); break;
+            case PERFORMANCE_TIERS.XR: targetPixelRatio = Math.min(targetPixelRatio, 1.25); break; // Teto para evitar estouro de fillrate ocular
+        }
+
+        if (this.emergency.engaged) targetPixelRatio *= 0.70; // Penalização nuclear cumulativa
+
+        this.threeRenderer.setPixelRatio(targetPixelRatio);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODO "EMERGENCY SAFE RENDER" (NUCLEAR FALLBACK)
+    // ═══════════════════════════════════════════════════════════════════════
+    engageEmergencyRenderMode() {
+        this.emergency.engaged = true;
+        this._trace('HOMEOSTASIS', 'ATIVANDO PROTOCOLO NUCLEAR RESTRITO: EMERGENCY SAFE RENDER.', 'CRITICAL');
+        
+        if (this.bus) {
+            this.bus.emit('performance:emergency_engaged', { thermal: this.thermal.estimatedTemperatureC });
+        }
+
+        // Força compressão instantânea de viewport e interface via CSS Reativo
+        document.documentElement.style.setProperty('--fx-quality', '0.05');
+        document.documentElement.style.setProperty('--hud-density', '0.10');
+        
+        this._scaleRendererPixelRatio();
+
+        // Intervenção direta nos pipelines e mapas do Three.js para alívio tático imediato
+        if (this.threeRenderer) {
+            this.threeRenderer.shadowMap.enabled = false; // Desliga mapeamento de sombras em runtime
+        }
+    }
+
+    disengageEmergencyRenderMode() {
+        this.emergency.engaged = false;
+        this._trace('HOMEOSTASIS', 'Desativando modo de emergência. Restaurando subsistemas de renderização padrão.');
+
+        if (this.threeRenderer) {
+            // Restaura mapeamento de sombras caso a cena exija
+            this.threeRenderer.shadowMap.enabled = true;
+        }
+        this.enforcePerformanceTier(this.currentTier);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -240,11 +431,21 @@ class SentinelPerformanceGovernor {
             this.enforcePerformanceTier(PERFORMANCE_TIERS.HIGH);
             this.historyWindowSize = 60;
         });
+
+        // Escuta gatilhos de acoplamento tardio vindos do motor gráfico
+        this.bus.on('renderer:hardware_bound', (data) => {
+            if (data && data.renderer) this.detectRendererCapabilities(data.renderer);
+        });
     }
 }
 
 // Instanciação e exposição única na infraestrutura do ecossistema
 const SovereignPerformance = new SentinelPerformanceGovernor();
 window.SovereignPerformance = SovereignPerformance;
+
+// Auto-registro soberano direto no kernel central
+if (window.SovereignKernel) {
+    window.SovereignKernel.registerModule('sentinel-performance', SovereignPerformance);
+}
 
 export default SovereignPerformance;
