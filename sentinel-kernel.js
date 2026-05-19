@@ -6,7 +6,7 @@
  * Padrão: ECMAScript Modules (ESM) Nativos com Isolamento de Escopo
  * Fix: Implementação completa do Registry, Grafo de Dependências, Health Matrix,
  * Ciclo de Vida Síncrono/Assíncrono e Motores de Recuperação Térmica/GPU.
- * ═══════════════════════════════════════════════════════════════════════════
+ * ═══════════════════════════════════════════════════════════════════════
  */
 
 class SentinelKernel {
@@ -30,7 +30,7 @@ class SentinelKernel {
             'sentinel-hud':           ['engine-xr', 'attention-manager']
         };
 
-        // G) HARDWARE GOVERNANCE (Estruturas de Controle Metabólico)
+        // G) HARDWARE GOVERNANCE (Estruturas de Controle Metabolic)
         this.hardwareGovernance = {
             gpuBudgetMs: 11.11,        // Meta estrita para travar em 90Hz estáveis
             currentGpuLoadMs: 0.0,
@@ -41,10 +41,11 @@ class SentinelKernel {
 
         this._bootLock = false;
         this.bus = null;
+        this.watchdogInterval = null; // Injetado para monitoria ativa de threads
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // A) INTERFACE PÚBLICA DO RUNTIME REGISTRY
+    // A) INTERFACE PÚBLICA DO RUNTIME REGISTRY & HEARTBEAT SYSTEM
     // ═══════════════════════════════════════════════════════════════════════
     registerModule(name, instance) {
         if (!name || !instance) {
@@ -74,6 +75,17 @@ class SentinelKernel {
         return this._moduleHealth.get(name) || null;
     }
 
+    heartbeat(name) {
+        const moduleMeta = this._moduleHealth.get(name);
+        if (!moduleMeta) return false;
+
+        moduleMeta.lastHeartbeat = performance.now();
+        if (moduleMeta.status === 'STALE' || moduleMeta.status === 'REGISTERED') {
+            moduleMeta.status = 'INITIALIZED';
+        }
+        return true;
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // C) ORQUESTRADOR DO CICLO DE VIDA (BOOT ORCHESTRATION)
     // ═══════════════════════════════════════════════════════════════════════
@@ -96,6 +108,9 @@ class SentinelKernel {
 
             // Fase 3: READY (Abertura da Viewport e desbloqueio do loop de renderização)
             await this.bootPhase('READY');
+            
+            // Inicialização do Watchdog de Proteção Ativa antes de liberar a thread principal
+            this.startWatchdog();
             return true;
         } catch (fatalError) {
             this.trace('KERNEL', 'CRITICAL', `Colapso crítico durante boot de sistemas: ${fatalError.message}`);
@@ -140,7 +155,7 @@ class SentinelKernel {
         const deps = this.dependencies[name] || [];
         for (const dep of deps) {
             const depHealth = this._moduleHealth.get(dep);
-            if (!depHealth || depHealth.status !== 'INITIALIZED') {
+            if (!depHealth || (depHealth.status !== 'INITIALIZED' && depHealth.status !== 'REGISTERED')) {
                 this.trace('SCHEDULER', 'ERROR', `Bloqueio de Inicialização: [${name}] depende do nó falho ou ausente: [${dep}]`);
                 throw new Error(`Quebra de integridade de grafo para o módulo: ${name}`);
             }
@@ -162,6 +177,28 @@ class SentinelKernel {
             this.trace('SCHEDULER', 'ERROR', `Falha ao acionar rotina de ativação no nó [${name}]: ${err.message}`);
             this.recoverModule(name);
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // D) WATCHDOG THREAD ENGINE
+    // ═══════════════════════════════════════════════════════════════════════
+    startWatchdog() {
+        if (this.watchdogInterval) return;
+
+        this.watchdogInterval = setInterval(() => {
+            const now = performance.now();
+            this._moduleHealth.forEach((meta, name) => {
+                // Previne checar módulos que ainda não completaram o handshake inicial de boot
+                if (meta.status === 'REGISTERED') return;
+
+                const delta = now - meta.lastHeartbeat;
+                if (delta > 5000) { // Janela limite de 5 segundos de dessincronização
+                    this.trace('WATCHDOG', 'WARN', `Heartbeat perdido do módulo [${name}]. Delta: ${delta.toFixed(2)}ms`);
+                    meta.status = 'STALE';
+                    this.recoverModule(name);
+                }
+            });
+        }, 2000); // Varredura a cada 2 segundos
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -188,6 +225,10 @@ class SentinelKernel {
     }
 
     shutdown() {
+        if (this.watchdogInterval) {
+            clearInterval(this.watchdogInterval);
+            this.watchdogInterval = null;
+        }
         this.activePhase = 'SHUTDOWN';
         this.onShutdown();
     }
@@ -215,7 +256,6 @@ class SentinelKernel {
         health.recoveryAttempts++;
         this.trace('RECOVERY', 'WARN', `Tentativa de auto-recuperação cirúrgica [${health.recoveryAttempts}/3] no nó: [${name}]`);
         
-        // Re-executa isoladamente a montagem do nó corrompido
         setTimeout(() => {
             this.loadModule(name);
         }, 150 * health.recoveryAttempts);
@@ -226,7 +266,7 @@ class SentinelKernel {
         let absoluteCollapse = false;
 
         this._moduleHealth.forEach((meta, name) => {
-            if (meta.status === 'FAULTY') {
+            if (meta.status === 'FAULTY' || meta.status === 'STALE') {
                 this.trace('RECOVERY', 'WARN', `Purgando nó instável para tentar reinicialização a frio: [${name}]`);
                 if (this.dependencies[name] && this.dependencies[name].length === 0) {
                     this.loadModule(name);
@@ -248,7 +288,7 @@ class SentinelKernel {
         
         if (this.bus) {
             this.bus.emit('kernel:emergency_fallback', { reason: reason, ts: performance.now() });
-            this.bus.emit('system:nsdr-trigger'); // Reduz dinamicamente a atividade visual periférica
+            this.bus.emit('system:nsdr-trigger'); 
         }
     }
 
@@ -292,7 +332,7 @@ class SentinelKernel {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // H) MOTOR DE RASTREAMENTO E TELEMETRIA (TRACE ENGINE)
+    // H) MOTOR DE RASTREAMENTO E TELEMETRIA (TRACE ENGINE & SNAPSHOT)
     // ═══════════════════════════════════════════════════════════════════════
     trace(namespace, level, message) {
         const timestamp = new Date().toISOString();
@@ -313,7 +353,14 @@ class SentinelKernel {
         }
     }
 
-    // Bind dos barramentos táticos e escutas de orquestração interna
+    exportRegistrySnapshot() {
+        const snapshot = {};
+        this._moduleHealth.forEach((meta, name) => {
+            snapshot[name] = { ...meta };
+        });
+        return snapshot;
+    }
+
     _bindCoreEvents() {
         if (!this.bus) return;
 
@@ -331,7 +378,6 @@ class SentinelKernel {
     }
 }
 
-// Instanciação e exposição única na raiz do ecossistema
 const SovereignKernel = new SentinelKernel();
 window.SovereignKernel = SovereignKernel;
 
