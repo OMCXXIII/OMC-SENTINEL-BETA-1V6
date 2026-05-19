@@ -362,7 +362,11 @@ class SentinelKernel {
         this._clockAnimationId = requestAnimationFrame(runClock);
     }
 
-    beforeFrame() {}
+    beforeFrame() {
+    if (this.bus && typeof this.bus.dispatchFrame === 'function') {
+        this.bus.dispatchFrame();
+    }
+}
 
     afterFrame() {
         this.regulateFrameBudget();
