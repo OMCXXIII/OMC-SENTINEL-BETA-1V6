@@ -166,7 +166,7 @@ class SentinelPerformanceGovernor {
     // ═══════════════════════════════════════════════════════════════════════
     // HELPER DE MEMÓRIA PARA O BARRAMENTO (Fix 1)
     // ═══════════════════════════════════════════════════════════════════════
-    _bindBus(event, handler) {
+    _bindBus(event, handler) 
         if (!this.bus) return;
         if (typeof this.bus.on !== 'function') {
     this._trace(
